@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: inventari-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://YOUR-FRONTEND.onrender.com
+      - key: PORT
+        value: 3001
+
+  - type: web
+    name: inventari-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://YOUR-BACKEND.onrender.com/api
+

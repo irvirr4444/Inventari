@@ -1,0 +1,16 @@
+{
+  "name": "inventari",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm -w backend run dev\" \"npm -w frontend run dev\"",
+    "build": "npm -w backend run build && npm -w frontend run build",
+    "lint": "npm -w backend run lint && npm -w frontend run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}

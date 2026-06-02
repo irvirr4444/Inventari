@@ -1,12 +1,14 @@
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import rateLimit from '@fastify/rate-limit'
+import fastifyStatic from '@fastify/static'
 import ExcelJS from 'exceljs'
 import Fastify from 'fastify'
 import type { FastifyReply } from 'fastify'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { createSupabaseAdmin } from './supabase.js'
 
@@ -23,6 +25,8 @@ const EnvSchema = z.object({
 
 const SESSION_COOKIE = 'inventari_session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const FRONTEND_DIST_DIR = path.join(REPO_ROOT, 'frontend', 'dist')
 
 export async function buildApp() {
   const env = EnvSchema.parse(process.env)
@@ -869,6 +873,29 @@ export async function buildApp() {
     reply.header('Content-Disposition', `attachment; filename="Permbledhje ${stamp}.xlsx"`)
     return buf
   })
+
+  if (fs.existsSync(FRONTEND_DIST_DIR)) {
+    await app.register(fastifyStatic, {
+      root: FRONTEND_DIST_DIR,
+      prefix: '/',
+    })
+
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) {
+        reply.code(404).send({ error: 'Not found' })
+        return
+      }
+
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        reply.code(404).send({ error: 'Not found' })
+        return
+      }
+
+      reply.sendFile('index.html')
+    })
+  } else {
+    app.log.warn({ frontendDistDir: FRONTEND_DIST_DIR }, 'Frontend dist folder not found; serving API only.')
+  }
 
   return app
 }

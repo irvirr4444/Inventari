@@ -279,20 +279,20 @@ export function DashboardPage() {
   const summaryError = summaryKosoveQuery.error ?? summaryShqiperiQuery.error
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="dashboard-stack">
       {/* ═══════════════════════════════════════════════════════════════
           ACTION ENTRY (TOP)
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="card">
-        <div className="row" style={{ marginBottom: 20 }}>
+      <div className="card action-card">
+        <div className="row action-header">
           <h2>Regjistro Veprim</h2>
           <div className="spacer" />
-          <div className="row" style={{ gap: 16 }}>
+          <div className="row action-controls">
             <div className="row" style={{ gap: 8 }}>
               <span className="muted" style={{ fontSize: 13 }}>Shteti</span>
               <CountrySelector />
             </div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row action-date-control" style={{ gap: 8 }}>
               <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
               <input
                 ref={dateRef}
@@ -327,112 +327,114 @@ export function DashboardPage() {
           </div>
 
           {/* Action Items Table */}
-          <table className="table table-fixed">
-            <colgroup>
-              <col style={{ width: '35%' }} />
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '12%' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Produkti</th>
-                <th>Cmimi/Njesi</th>
-                <th>Sasia</th>
-                <th style={{ textAlign: 'right' }}>Totali</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {actionItems.map((it) => {
-                const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
-                return (
-                  <tr key={it.key}>
-                    <td>
-                      <select
-                        className="select"
-                        value={it.kodi_produktit}
-                        onChange={(e) => updateActionItem(it.key, 'kodi_produktit', e.target.value)}
-                        style={{ width: '100%' }}
-                      >
-                        <option value="">Zgjedh produktin…</option>
-                        {(productsQuery.data ?? []).map((p) => (
-                          <option
-                            key={p.id}
-                            value={p.kodi}
-                            disabled={actionItems.some(
-                              (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
-                            )}
-                          >
-                            {p.emri} ({p.kodi})
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        className="input"
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={it.cmimi_njesi}
-                        onChange={(e) =>
-                          updateActionItem(
-                            it.key,
-                            'cmimi_njesi',
-                            e.target.value.startsWith('-') ? '' : e.target.value
-                          )
-                        }
-                        placeholder="0.00"
-                        style={{ width: '100%' }}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="input"
-                        type="number"
-                        min={1}
-                        value={it.sasia}
-                        onChange={(e) => updateActionItem(it.key, 'sasia', Number(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="num">{fmt(lineTotal)}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        className="btn ghost sm"
-                        onClick={() => removeActionItem(it.key)}
-                        disabled={actionItems.length <= 1}
-                        aria-label="Fshij produktin nga veprimi"
-                        title={actionItems.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
-                        style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
-                      >
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll action-table-wrap">
+            <table className="table table-fixed action-table">
+              <colgroup>
+                <col style={{ width: '35%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '12%' }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Produkti</th>
+                  <th>Cmimi/Njesi</th>
+                  <th>Sasia</th>
+                  <th style={{ textAlign: 'right' }}>Totali</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {actionItems.map((it) => {
+                  const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
+                  return (
+                    <tr key={it.key}>
+                      <td>
+                        <select
+                          className="select"
+                          value={it.kodi_produktit}
+                          onChange={(e) => updateActionItem(it.key, 'kodi_produktit', e.target.value)}
+                          style={{ width: '100%' }}
+                        >
+                          <option value="">Zgjedh produktin…</option>
+                          {(productsQuery.data ?? []).map((p) => (
+                            <option
+                              key={p.id}
+                              value={p.kodi}
+                              disabled={actionItems.some(
+                                (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
+                              )}
+                            >
+                              {p.emri} ({p.kodi})
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          className="input"
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          value={it.cmimi_njesi}
+                          onChange={(e) =>
+                            updateActionItem(
+                              it.key,
+                              'cmimi_njesi',
+                              e.target.value.startsWith('-') ? '' : e.target.value
+                            )
+                          }
+                          placeholder="0.00"
+                          style={{ width: '100%' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="input"
+                          type="number"
+                          min={1}
+                          value={it.sasia}
+                          onChange={(e) => updateActionItem(it.key, 'sasia', Number(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="num">{fmt(lineTotal)}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="btn ghost sm"
+                          onClick={() => removeActionItem(it.key)}
+                          disabled={actionItems.length <= 1}
+                          aria-label="Fshij produktin nga veprimi"
+                          title={actionItems.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
+                          style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {/* Footer */}
-          <div className="row" style={{ marginTop: 16 }}>
+          <div className="row action-footer">
             <button type="button" className="btn" onClick={addActionItem}>
               + Shto produkt
             </button>
             <div className="spacer" />
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row action-total" style={{ gap: 8 }}>
               <span className="muted">Total:</span>
               <span className="num-lg">{fmt(actionTotal)}</span>
             </div>
             <button
               type="submit"
-              className="btn primary"
+              className="btn primary action-submit"
               disabled={actionMutation.isPending}
               style={{ marginLeft: 16 }}
             >
@@ -460,10 +462,10 @@ export function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           BOTTOM ROW: PRODUCTS (left) + SUMMARY (right)
       ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20 }}>
+      <div className="dashboard-grid">
         {/* PRODUCTS */}
-        <div className="card">
-          <div className="row" style={{ marginBottom: 16 }}>
+        <div className="card products-card">
+          <div className="row section-header products-header">
             <h3>Produkte</h3>
             <div className="spacer" />
             <button type="button" className="btn" onClick={() => setShowAddProduct(true)}>
@@ -487,115 +489,117 @@ export function DashboardPage() {
           )}
 
           {/* Products Table */}
-          <table className="table">
-            <thead>
-              <tr>
-                <th style={{ width: 80 }}>Kodi</th>
-                <th>Emri</th>
-                <th>Pershkrimi</th>
-                <th style={{ textAlign: 'center', width: 100 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
-                    Gjendje
-                  </span>
-                </th>
-                <th style={{ textAlign: 'center', width: 100 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
-                    Gjendje
-                  </span>
-                </th>
-                <th style={{ width: 100 }} />
-              </tr>
-            </thead>
-            <tbody>
-              {(productsQuery.data ?? []).length === 0 ? (
+          <div className="table-scroll products-table-wrap">
+            <table className="table products-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
-                    Nuk ka produkte. Shto produktin e pare me butonin me lart.
-                  </td>
+                  <th style={{ width: 80 }}>Kodi</th>
+                  <th>Emri</th>
+                  <th>Pershkrimi</th>
+                  <th style={{ textAlign: 'center', width: 100 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
+                      Gjendje
+                    </span>
+                  </th>
+                  <th style={{ textAlign: 'center', width: 100 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
+                      Gjendje
+                    </span>
+                  </th>
+                  <th style={{ width: 100 }} />
                 </tr>
-              ) : (
-                (productsQuery.data ?? []).map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <code style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.kodi}</code>
-                    </td>
-                    <td style={{ fontWeight: 500 }}>{p.emri}</td>
-                    <td className="muted" style={{ fontSize: 13 }}>
-                      {p.pershkrimi || '—'}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="stock-badge">{fmtInt(p.gjendje_kosove)}</span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="stock-badge">{fmtInt(p.gjendje_shqiperi)}</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setEditing(p)}
-                          aria-label="Ndrysho produktin"
-                          title="Ndrysho"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M12 20h9" />
-                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="btn danger sm"
-                          onClick={() => {
-                            setProductError(null)
-                            setDeletingProduct(p)
-                          }}
-                          disabled={deleteProductMut.isPending}
-                          aria-label="Fshij produktin"
-                          title="Fshij"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3 6h18" />
-                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                          </svg>
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {(productsQuery.data ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                      Nuk ka produkte. Shto produktin e pare me butonin me lart.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  (productsQuery.data ?? []).map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <code style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.kodi}</code>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{p.emri}</td>
+                      <td className="muted" style={{ fontSize: 13 }}>
+                        {p.pershkrimi || '—'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="stock-badge">{fmtInt(p.gjendje_kosove)}</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="stock-badge">{fmtInt(p.gjendje_shqiperi)}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="btn sm"
+                            onClick={() => setEditing(p)}
+                            aria-label="Ndrysho produktin"
+                            title="Ndrysho"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn danger sm"
+                            onClick={() => {
+                              setProductError(null)
+                              setDeletingProduct(p)
+                            }}
+                            disabled={deleteProductMut.isPending}
+                            aria-label="Fshij produktin"
+                            title="Fshij"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* SUMMARY / EXPORTS */}
-        <div className="card">
-          <div className="row" style={{ marginBottom: 16 }}>
+        <div className="card summary-panel">
+          <div className="row summary-header">
             <h3>Permbledhje</h3>
             <div className="spacer" />
             {summaryIsFetching && (
@@ -628,9 +632,9 @@ export function DashboardPage() {
           </div>
 
           {/* Date Range */}
-          <div style={{ marginBottom: 16 }}>
+          <div className="summary-period">
             <label className="label">Periudha</label>
-            <div className="form-row-equal" style={{ marginTop: 6 }}>
+            <div className="form-row-equal summary-date-grid">
               <div className="form-group">
                 <span className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Nga</span>
                 <input

@@ -45,16 +45,21 @@ on conflict (kodi) do nothing;
 -- 3) Update veprimi FK to point to (kodi) only
 alter table public.veprimi drop constraint if exists veprimi_produkti_fk;
 
+-- 4) Drop stock trigger/function (we'll recreate after swap)
+drop trigger if exists veprimi_apply_stock_trg on public.veprimi;
+drop function if exists public.apply_veprimi_to_stock();
+
+-- 5) Swap tables
+drop table public.produkti;
+alter table public.produkti_new rename to produkti;
+
+-- 6) Re-add FK and stock trigger/function referencing the FINAL table name (`produkti`)
 alter table public.veprimi
   add constraint veprimi_produkti_fk
   foreign key (kodi_produktit)
-  references public.produkti_new (kodi)
+  references public.produkti (kodi)
   on update cascade
   on delete restrict;
-
--- 4) Replace stock trigger to update the correct column
-drop trigger if exists veprimi_apply_stock_trg on public.veprimi;
-drop function if exists public.apply_veprimi_to_stock();
 
 create or replace function public.apply_veprimi_to_stock()
 returns trigger
@@ -66,7 +71,7 @@ begin
   select
     case when new.shteti = 'XK' then gjendje_kosove else gjendje_shqiperi end
     into current_qty
-  from public.produkti_new
+  from public.produkti
   where kodi = new.kodi_produktit
   for update;
 
@@ -79,14 +84,14 @@ begin
       raise exception 'Nuk ka gjendje te mjaftueshme. Gjendje=%, Kerkuar=%', current_qty, new.sasia;
     end if;
 
-    update public.produkti_new
+    update public.produkti
       set
         gjendje_kosove = case when new.shteti = 'XK' then gjendje_kosove - new.sasia else gjendje_kosove end,
         gjendje_shqiperi = case when new.shteti = 'AL' then gjendje_shqiperi - new.sasia else gjendje_shqiperi end,
         updated_at = now()
     where kodi = new.kodi_produktit;
   else
-    update public.produkti_new
+    update public.produkti
       set
         gjendje_kosove = case when new.shteti = 'XK' then gjendje_kosove + new.sasia else gjendje_kosove end,
         gjendje_shqiperi = case when new.shteti = 'AL' then gjendje_shqiperi + new.sasia else gjendje_shqiperi end,
@@ -102,10 +107,6 @@ create trigger veprimi_apply_stock_trg
 after insert on public.veprimi
 for each row
 execute function public.apply_veprimi_to_stock();
-
--- 5) Swap tables
-drop table public.produkti;
-alter table public.produkti_new rename to produkti;
 
 commit;
 

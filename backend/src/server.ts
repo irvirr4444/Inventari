@@ -134,6 +134,27 @@ export async function buildApp() {
   app.delete('/api/products/:id', async (req, reply) => {
     const params = z.object({ id: z.string().uuid() }).parse(req.params)
 
+    const { data: product, error: productReadError } = await supabase
+      .from('produkti')
+      .select('kodi')
+      .eq('id', params.id)
+      .single()
+
+    if (productReadError) {
+      reply.code(400)
+      return { error: productReadError.message }
+    }
+
+    const { error: actionsDeleteError } = await supabase
+      .from('veprimi')
+      .delete()
+      .eq('kodi_produktit', product.kodi)
+
+    if (actionsDeleteError) {
+      reply.code(400)
+      return { error: actionsDeleteError.message }
+    }
+
     const { error } = await supabase.from('produkti').delete().eq('id', params.id)
     if (error) {
       reply.code(400)

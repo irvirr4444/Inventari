@@ -101,6 +101,27 @@ input[type='date'] {
   cursor: pointer;
 }
 
+.date-input {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.date-input-display {
+  width: 100%;
+  cursor: pointer;
+}
+
+.date-input-native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    LAYOUT
    ═══════════════════════════════════════════════════════════════ */
@@ -192,7 +213,11 @@ input[type='date'] {
 }
 
 .table-scroll .products-table {
-  min-width: 720px;
+  min-width: 0;
+}
+
+.products-table-wrap {
+  overflow-x: visible;
 }
 
 .action-footer {
@@ -406,6 +431,54 @@ textarea.input {
 /* Fixed table layout - prevents column shifting */
 .table-fixed {
   table-layout: fixed;
+}
+
+.products-table {
+  table-layout: fixed;
+}
+
+.product-name-cell {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-description-cell {
+  position: relative;
+  font-size: 13px;
+}
+
+.product-description-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-description-text[data-full]:hover::after {
+  content: attr(data-full);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.product-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -876,7 +949,7 @@ h3 {
     justify-content: space-between;
   }
 
-  .action-date-control .input {
+  .action-date-control .date-input {
     width: 170px !important;
   }
 
@@ -894,8 +967,22 @@ h3 {
     min-width: 700px;
   }
 
-  .table-scroll .products-table {
-    min-width: 680px;
+  .products-table th,
+  .products-table td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+
+  .products-table .flagIcon {
+    display: none;
+  }
+
+  .product-actions {
+    gap: 4px;
+  }
+
+  .product-actions .btn.sm {
+    padding: 5px 7px;
   }
 
   .action-footer {
@@ -961,7 +1048,7 @@ h3 {
     padding: 12px;
   }
 
-  .action-date-control .input {
+  .action-date-control .date-input {
     width: 150px !important;
   }
 

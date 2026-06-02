@@ -38,6 +38,12 @@ function isoDateDaysAgo(days: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function formatDisplayDate(isoDate: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+  if (!match) return isoDate
+  return `${match[3]}/${match[2]}/${match[1]}`
+}
+
 function fmt(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -55,7 +61,6 @@ export function DashboardPage() {
   // ─────────────────────────────────────────────────────────────
   const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
   const [actionDate, setActionDate] = React.useState(todayISODate())
-  const dateRef = React.useRef<HTMLInputElement | null>(null)
   const [actionItems, setActionItems] = React.useState<ActionItem[]>([
     { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
   ])
@@ -203,13 +208,6 @@ export function DashboardPage() {
   // ─────────────────────────────────────────────────────────────
   // HANDLERS
   // ─────────────────────────────────────────────────────────────
-  const openDatePicker = React.useCallback(() => {
-    const el = dateRef.current
-    if (!el) return
-    el.focus()
-    ;(el as unknown as { showPicker?: () => void }).showPicker?.()
-  }, [])
-
   const submitAction = (e: React.FormEvent) => {
     e.preventDefault()
     setActionError(null)
@@ -294,15 +292,7 @@ export function DashboardPage() {
             </div>
             <div className="row action-date-control" style={{ gap: 8 }}>
               <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
-              <input
-                ref={dateRef}
-                className="input"
-                type="date"
-                value={actionDate}
-                onChange={(e) => setActionDate(e.target.value)}
-                onClick={openDatePicker}
-                style={{ width: 150 }}
-              />
+              <DateInput value={actionDate} onChange={setActionDate} style={{ width: 150 }} />
             </div>
           </div>
         </div>
@@ -491,24 +481,32 @@ export function DashboardPage() {
           {/* Products Table */}
           <div className="table-scroll products-table-wrap">
             <table className="table products-table">
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '16%' }} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th style={{ width: 80 }}>Kodi</th>
+                  <th>Kodi</th>
                   <th>Emri</th>
                   <th>Pershkrimi</th>
-                  <th style={{ textAlign: 'center', width: 100 }}>
+                  <th style={{ textAlign: 'center' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
                       Gjendje
                     </span>
                   </th>
-                  <th style={{ textAlign: 'center', width: 100 }}>
+                  <th style={{ textAlign: 'center' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
                       Gjendje
                     </span>
                   </th>
-                  <th style={{ width: 100 }} />
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -524,9 +522,15 @@ export function DashboardPage() {
                       <td>
                         <code style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.kodi}</code>
                       </td>
-                      <td style={{ fontWeight: 500 }}>{p.emri}</td>
-                      <td className="muted" style={{ fontSize: 13 }}>
-                        {p.pershkrimi || '—'}
+                      <td className="product-name-cell">{p.emri}</td>
+                      <td className="muted product-description-cell">
+                        <span
+                          className="product-description-text"
+                          title={p.pershkrimi || undefined}
+                          data-full={p.pershkrimi || undefined}
+                        >
+                          {p.pershkrimi || '—'}
+                        </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span className="stock-badge">{fmtInt(p.gjendje_kosove)}</span>
@@ -535,7 +539,7 @@ export function DashboardPage() {
                         <span className="stock-badge">{fmtInt(p.gjendje_shqiperi)}</span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <div className="product-actions">
                           <button
                             type="button"
                             className="btn sm"
@@ -637,23 +641,11 @@ export function DashboardPage() {
             <div className="form-row-equal summary-date-grid">
               <div className="form-group">
                 <span className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Nga</span>
-                <input
-                  className="input"
-                  type="date"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  style={{ width: '100%' }}
-                />
+                <DateInput value={from} onChange={setFrom} style={{ width: '100%' }} />
               </div>
               <div className="form-group">
                 <span className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Deri</span>
-                <input
-                  className="input"
-                  type="date"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  style={{ width: '100%' }}
-                />
+                <DateInput value={to} onChange={setTo} style={{ width: '100%' }} />
               </div>
             </div>
           </div>
@@ -848,6 +840,54 @@ function SummaryMiniCard(props: {
       <div className="summary-label">{props.label}</div>
       <div className="summary-value">{fmtInt(props.quantity)}</div>
       <div className="summary-sub">{fmt(props.value)} €</div>
+    </div>
+  )
+}
+
+function DateInput(props: {
+  value: string
+  onChange: (value: string) => void
+  style?: React.CSSProperties
+}) {
+  const pickerRef = React.useRef<HTMLInputElement | null>(null)
+
+  const openPicker = React.useCallback(() => {
+    const picker = pickerRef.current
+    if (!picker) return
+    picker.focus()
+    ;(picker as unknown as { showPicker?: () => void }).showPicker?.()
+  }, [])
+
+  return (
+    <div
+      className="date-input"
+      style={props.style}
+      role="button"
+      tabIndex={0}
+      onClick={openPicker}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openPicker()
+        }
+      }}
+    >
+      <input
+        className="input date-input-display"
+        type="text"
+        value={formatDisplayDate(props.value)}
+        readOnly
+        aria-label="Zgjedh daten"
+      />
+      <input
+        ref={pickerRef}
+        className="date-input-native"
+        type="date"
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
     </div>
   )
 }

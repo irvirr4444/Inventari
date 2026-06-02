@@ -253,6 +253,16 @@ export function DashboardPage() {
   }
 
   const updateActionItem = (key: string, field: keyof ActionItem, value: string | number) => {
+    if (
+      field === 'kodi_produktit' &&
+      typeof value === 'string' &&
+      value &&
+      actionItems.some((x) => x.key !== key && x.kodi_produktit === value)
+    ) {
+      setSnackbar('Ky produkt eshte tashme ne liste')
+      return
+    }
+
     setActionItems((prev) =>
       prev.map((x) => (x.key === key ? { ...x, [field]: value } : x))
     )
@@ -348,7 +358,13 @@ export function DashboardPage() {
                       >
                         <option value="">Zgjedh produktin…</option>
                         {(productsQuery.data ?? []).map((p) => (
-                          <option key={p.id} value={p.kodi}>
+                          <option
+                            key={p.id}
+                            value={p.kodi}
+                            disabled={actionItems.some(
+                              (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
+                            )}
+                          >
                             {p.emri} ({p.kodi})
                           </option>
                         ))}
@@ -391,9 +407,11 @@ export function DashboardPage() {
                         className="btn ghost sm"
                         onClick={() => removeActionItem(it.key)}
                         disabled={actionItems.length <= 1}
+                        aria-label="Fshij produktin nga veprimi"
                         title={actionItems.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
+                        style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
                       >
-                        Fshij
+                        ×
                       </button>
                     </td>
                   </tr>
@@ -674,7 +692,15 @@ export function DashboardPage() {
       {confirmActionOpen && (
         <ConfirmModal
           title="Finalizo veprimin?"
-          message={`Ky veprim do te regjistrohet per ${country === 'XK' ? 'Kosove' : 'Shqiperi'} me total ${fmt(actionTotal)} €.`}
+          message={
+            <span>
+              {lloji} ne {country === 'XK' ? 'Kosove' : 'Shqiperi'} me total{' '}
+              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                {fmt(actionTotal)}
+              </strong>
+              .
+            </span>
+          }
           confirmLabel={actionMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
           tone="primary"
           loading={actionMutation.isPending}
@@ -741,7 +767,7 @@ export function DashboardPage() {
 
 function ConfirmModal(props: {
   title: string
-  message: string
+  message: React.ReactNode
   confirmLabel: string
   tone: 'primary' | 'success' | 'danger'
   loading: boolean
@@ -750,10 +776,10 @@ function ConfirmModal(props: {
 }) {
   return (
     <div className="modal-overlay" onClick={() => !props.loading && props.onCancel()}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+      <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div style={{ marginBottom: 18 }}>
           <h3>{props.title}</h3>
-          <p className="muted" style={{ margin: '8px 0 0', fontSize: 14 }}>
+          <p className="muted confirm-message">
             {props.message}
           </p>
         </div>

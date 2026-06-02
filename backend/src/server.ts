@@ -1,6 +1,8 @@
 import cors from '@fastify/cors'
 import ExcelJS from 'exceljs'
 import Fastify from 'fastify'
+import fs from 'node:fs'
+import path from 'node:path'
 import { z } from 'zod'
 import { createSupabaseAdmin } from './supabase.js'
 
@@ -432,77 +434,78 @@ export async function buildApp() {
     ].join('|')
   }
 
-  function styleInventariWorkbook(sheet: ExcelJS.Worksheet) {
-    sheet.mergeCells('A1:C1')
-    sheet.mergeCells('D1:H1')
-    sheet.mergeCells('J1:N1')
-
-    sheet.getCell('A1').value = 'PRODUKTI'
-    sheet.getCell('D1').value = 'KOSOVA'
-    sheet.getCell('J1').value = 'SHQIPERIA'
-
-    const headers = [
-      'Kodi',
-      'Produkti',
-      'Pershkrimi',
-      'Data',
-      'Cmimi/Njesi',
-      'Sasi',
-      'Vlefta',
-      'Gjendje',
-      '',
-      'Data',
-      'Cmimi/Njesi',
-      'Sasi',
-      'Vlefta',
-      'Gjendje',
-    ]
-    sheet.getRow(2).values = headers
-
-    sheet.columns = [
-      { key: 'kodi', width: 16 },
-      { key: 'produkti', width: 24 },
-      { key: 'pershkrimi', width: 28 },
-      { key: 'xk_data', width: 13 },
-      { key: 'xk_cmimi', width: 14 },
-      { key: 'xk_sasi', width: 11 },
-      { key: 'xk_vlefta', width: 14 },
-      { key: 'xk_gjendje', width: 12 },
-      { key: 'spacer', width: 4 },
-      { key: 'al_data', width: 13 },
-      { key: 'al_cmimi', width: 14 },
-      { key: 'al_sasi', width: 11 },
-      { key: 'al_vlefta', width: 14 },
-      { key: 'al_gjendje', width: 12 },
+  function findExcelTemplatePath() {
+    const candidates = [
+      path.resolve(process.cwd(), 'docs/excel/Inventari Excel Template.xlsx'),
+      path.resolve(process.cwd(), '../docs/excel/Inventari Excel Template.xlsx'),
+      path.resolve(process.cwd(), '../../docs/excel/Inventari Excel Template.xlsx'),
     ]
 
-    const groupFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF17365D' } } as const
-    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } } as const
-    const border = {
+    const templatePath = candidates.find((candidate) => fs.existsSync(candidate))
+    if (!templatePath) {
+      throw new Error('Excel template not found at docs/excel/Inventari Excel Template.xlsx')
+    }
+    return templatePath
+  }
+
+  async function loadInventariTemplateWorkbook() {
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.readFile(findExcelTemplatePath())
+
+    const sheet = workbook.getWorksheet('Sheet1') ?? workbook.worksheets[0]
+    if (!sheet) throw new Error('Excel template does not contain a worksheet.')
+
+    for (let rowNumber = 3; rowNumber <= sheet.rowCount; rowNumber += 1) {
+      const row = sheet.getRow(rowNumber)
+      for (let col = 1; col <= 14; col += 1) {
+        row.getCell(col).value = null
+      }
+    }
+
+    return { workbook, sheet }
+  }
+
+  function writeInventariDataRow(
+    sheet: ExcelJS.Worksheet,
+    rowNumber: number,
+    values: Array<string | number | null>,
+  ) {
+    const templateRow = sheet.getRow(3)
+    const row = sheet.getRow(rowNumber)
+    const dataBorder = {
       top: { style: 'thin', color: { argb: 'FFB7C9D9' } },
       left: { style: 'thin', color: { argb: 'FFB7C9D9' } },
       bottom: { style: 'thin', color: { argb: 'FFB7C9D9' } },
       right: { style: 'thin', color: { argb: 'FFB7C9D9' } },
     } as const
 
-    for (const address of ['A1', 'D1', 'J1']) {
-      const cell = sheet.getCell(address)
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
-      cell.fill = groupFill
-      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    row.height = templateRow.height
+    for (let col = 1; col <= 14; col += 1) {
+      const cell = row.getCell(col)
+      cell.style = { ...templateRow.getCell(col).style }
+      cell.border = dataBorder
+      cell.value = values[col - 1] ?? null
     }
 
-    sheet.getRow(1).height = 24
-    sheet.getRow(2).height = 22
+    for (const col of [5, 7, 11, 13]) {
+      row.getCell(col).numFmt = '#,##0.00'
+    }
+    for (const col of [6, 8, 12, 14]) {
+      row.getCell(col).numFmt = '#,##0'
+    }
 
-    sheet.getRow(2).eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FF17365D' } }
-      cell.fill = headerFill
-      cell.alignment = { horizontal: 'center', vertical: 'middle' }
-      cell.border = border
-    })
+    return row
+  }
 
-    sheet.views = [{ state: 'frozen', ySplit: 2 }]
+  function clearInventariRowsAfterData(sheet: ExcelJS.Worksheet, firstEmptyRow: number) {
+    for (let rowNumber = firstEmptyRow; rowNumber <= sheet.rowCount; rowNumber += 1) {
+      const row = sheet.getRow(rowNumber)
+      for (let col = 1; col <= 14; col += 1) {
+        const cell = row.getCell(col)
+        cell.value = null
+        cell.style = {}
+      }
+    }
   }
 
   // Exports
@@ -633,16 +636,8 @@ export async function buildApp() {
 
     const actionsThroughTo = actionRows.filter((action) => !query.to || action.data <= query.to)
 
-    const workbook = new ExcelJS.Workbook()
-    const sheet = workbook.addWorksheet('Sheet1')
-    styleInventariWorkbook(sheet)
-
-    const border = {
-      top: { style: 'thin', color: { argb: 'FFE1EAF2' } },
-      left: { style: 'thin', color: { argb: 'FFE1EAF2' } },
-      bottom: { style: 'thin', color: { argb: 'FFE1EAF2' } },
-      right: { style: 'thin', color: { argb: 'FFE1EAF2' } },
-    } as const
+    const { workbook, sheet } = await loadInventariTemplateWorkbook()
+    let nextDataRow = 3
 
     for (const action of actionsThroughTo) {
       const product = productsByCode.get(action.kodi_produktit)
@@ -711,36 +706,40 @@ export async function buildApp() {
       }
 
       if (rowValues) {
-        const row = sheet.addRow(rowValues)
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          cell.border = border
-          cell.alignment = {
-            vertical: 'middle',
-            horizontal: [5, 6, 7, 8, 11, 12, 13, 14].includes(colNumber)
-              ? 'right'
-              : 'left',
-          }
-        })
-
-        for (const col of [5, 7, 11, 13]) {
-          row.getCell(col).numFmt = '#,##0.00'
-        }
-        for (const col of [6, 8, 12, 14]) {
-          row.getCell(col).numFmt = '#,##0'
-        }
+        writeInventariDataRow(sheet, nextDataRow, rowValues)
+        nextDataRow += 1
       }
     }
 
-    if (sheet.rowCount === 2) {
-      sheet.addRow(['', 'Nuk ka veprime per kete periudhe.', '', '', '', '', '', '', '', '', '', '', '', ''])
+    if (nextDataRow === 3) {
+      writeInventariDataRow(sheet, nextDataRow, [
+        '',
+        'Nuk ka veprime per kete periudhe.',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+      ])
+      nextDataRow += 1
     }
+
+    clearInventariRowsAfterData(sheet, nextDataRow)
 
     const buf = await workbook.xlsx.writeBuffer()
     reply.header(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-    reply.header('Content-Disposition', 'attachment; filename="veprime.xlsx"')
+    const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replaceAll(':', '-')
+    reply.header('Content-Disposition', `attachment; filename="Permbledhje ${stamp}.xlsx"`)
     return buf
   })
 

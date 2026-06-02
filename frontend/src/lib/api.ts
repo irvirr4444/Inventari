@@ -97,12 +97,17 @@ export async function createActionBatch(input: {
   lloji: 'Hyrje' | 'Dalje'
   data?: string
   items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
-}): Promise<Veprimi[]> {
-  const res = await http<{ data: Veprimi[] }>(`/actions`, {
+}): Promise<{
+  data: Veprimi[]
+  meta?: { mirrored_to_albania?: boolean; mirrored_count?: number }
+}> {
+  return http<{
+    data: Veprimi[]
+    meta?: { mirrored_to_albania?: boolean; mirrored_count?: number }
+  }>(`/actions`, {
     method: 'POST',
     body: JSON.stringify(input),
   })
-  return res.data
 }
 
 export async function listActions(opts: {

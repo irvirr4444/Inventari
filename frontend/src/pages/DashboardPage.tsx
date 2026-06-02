@@ -61,6 +61,7 @@ export function DashboardPage() {
   ])
   const [actionError, setActionError] = React.useState<string | null>(null)
   const [confirmActionOpen, setConfirmActionOpen] = React.useState(false)
+  const [snackbar, setSnackbar] = React.useState<string | null>(null)
 
   // ─────────────────────────────────────────────────────────────
   // PRODUCTS STATE
@@ -125,8 +126,13 @@ export function DashboardPage() {
             sasia: Number(i.sasia) || 0,
           })),
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       setActionError(null)
+      setSnackbar(
+        result.meta?.mirrored_to_albania
+          ? `U regjistrua Dalje ne Kosove dhe Hyrje ne Shqiperi per ${result.meta.mirrored_count ?? 0} produkte.`
+          : 'Veprimi u regjistrua me sukses.',
+      )
       setActionItems([{ key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }])
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['products'] }),
@@ -136,6 +142,12 @@ export function DashboardPage() {
     },
     onError: (e) => setActionError(e instanceof Error ? e.message : 'Error'),
   })
+
+  React.useEffect(() => {
+    if (!snackbar) return
+    const timer = window.setTimeout(() => setSnackbar(null), 4500)
+    return () => window.clearTimeout(timer)
+  }, [snackbar])
 
   const createProductMut = useMutation({
     mutationFn: () =>
@@ -271,7 +283,7 @@ export function DashboardPage() {
               <CountrySelector />
             </div>
             <div className="row" style={{ gap: 8 }}>
-              <span className="muted" style={{ fontSize: 13 }}>Data</span>
+              <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
               <input
                 ref={dateRef}
                 className="input"
@@ -716,6 +728,12 @@ export function DashboardPage() {
           onSave={(p) => updateProductMut.mutate(p)}
           saving={updateProductMut.isPending}
         />
+      )}
+
+      {snackbar && (
+        <div className="snackbar" role="status" aria-live="polite">
+          {snackbar}
+        </div>
       )}
     </div>
   )

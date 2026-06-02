@@ -238,14 +238,35 @@ export async function buildApp() {
       sasia: it.sasia,
     }))
 
-    const { data, error } = await supabase.from('veprimi').insert(rows).select('*')
+    const mirrorRows =
+      body.shteti === 'XK' && body.lloji === 'Dalje'
+        ? body.items.map((it) => ({
+            lloji: 'Hyrje' as const,
+            data: body.data ?? undefined,
+            shteti: 'AL' as const,
+            kodi_produktit: it.kodi_produktit,
+            cmimi_njesi: it.cmimi_njesi,
+            sasia: it.sasia,
+          }))
+        : []
+
+    const { data, error } = await supabase
+      .from('veprimi')
+      .insert([...rows, ...mirrorRows])
+      .select('*')
 
     if (error) {
       reply.code(400)
       return { error: error.message }
     }
 
-    return { data }
+    return {
+      data,
+      meta: {
+        mirrored_to_albania: mirrorRows.length > 0,
+        mirrored_count: mirrorRows.length,
+      },
+    }
   })
 
   app.get('/api/actions', async (req) => {
@@ -372,6 +393,118 @@ export async function buildApp() {
     return data ?? []
   }
 
+  type ProductExportRow = {
+    kodi: string
+    emri: string
+    pershkrimi: string | null
+    gjendje_kosove: number | null
+    gjendje_shqiperi: number | null
+  }
+
+  type ActionExportRow = {
+    id: string
+    lloji: 'Hyrje' | 'Dalje'
+    data: string
+    shteti: 'XK' | 'AL'
+    kodi_produktit: string
+    cmimi_njesi: number | string
+    sasia: number
+    created_at: string
+  }
+
+  function signedQty(row: ActionExportRow) {
+    const qty = Number(row.sasia ?? 0)
+    return row.lloji === 'Dalje' ? -qty : qty
+  }
+
+  function isWithinExportRange(row: ActionExportRow, query: { from?: string; to?: string }) {
+    if (query.from && row.data < query.from) return false
+    if (query.to && row.data > query.to) return false
+    return true
+  }
+
+  function transferKey(row: ActionExportRow) {
+    return [
+      row.data,
+      row.kodi_produktit,
+      String(row.cmimi_njesi),
+      String(row.sasia),
+    ].join('|')
+  }
+
+  function styleInventariWorkbook(sheet: ExcelJS.Worksheet) {
+    sheet.mergeCells('A1:C1')
+    sheet.mergeCells('D1:H1')
+    sheet.mergeCells('J1:N1')
+
+    sheet.getCell('A1').value = 'PRODUKTI'
+    sheet.getCell('D1').value = 'KOSOVA'
+    sheet.getCell('J1').value = 'SHQIPERIA'
+
+    const headers = [
+      'Kodi',
+      'Produkti',
+      'Pershkrimi',
+      'Data',
+      'Cmimi/Njesi',
+      'Sasi',
+      'Vlefta',
+      'Gjendje',
+      '',
+      'Data',
+      'Cmimi/Njesi',
+      'Sasi',
+      'Vlefta',
+      'Gjendje',
+    ]
+    sheet.getRow(2).values = headers
+
+    sheet.columns = [
+      { key: 'kodi', width: 16 },
+      { key: 'produkti', width: 24 },
+      { key: 'pershkrimi', width: 28 },
+      { key: 'xk_data', width: 13 },
+      { key: 'xk_cmimi', width: 14 },
+      { key: 'xk_sasi', width: 11 },
+      { key: 'xk_vlefta', width: 14 },
+      { key: 'xk_gjendje', width: 12 },
+      { key: 'spacer', width: 4 },
+      { key: 'al_data', width: 13 },
+      { key: 'al_cmimi', width: 14 },
+      { key: 'al_sasi', width: 11 },
+      { key: 'al_vlefta', width: 14 },
+      { key: 'al_gjendje', width: 12 },
+    ]
+
+    const groupFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF17365D' } } as const
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAF7' } } as const
+    const border = {
+      top: { style: 'thin', color: { argb: 'FFB7C9D9' } },
+      left: { style: 'thin', color: { argb: 'FFB7C9D9' } },
+      bottom: { style: 'thin', color: { argb: 'FFB7C9D9' } },
+      right: { style: 'thin', color: { argb: 'FFB7C9D9' } },
+    } as const
+
+    for (const address of ['A1', 'D1', 'J1']) {
+      const cell = sheet.getCell(address)
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+      cell.fill = groupFill
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    }
+
+    sheet.getRow(1).height = 24
+    sheet.getRow(2).height = 22
+
+    sheet.getRow(2).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FF17365D' } }
+      cell.fill = headerFill
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      cell.border = border
+    })
+
+    sheet.views = [{ state: 'frozen', ySplit: 2 }]
+  }
+
   // Exports
   app.get('/api/exports/actions.csv', async (req, reply) => {
     const query = z
@@ -431,35 +564,175 @@ export async function buildApp() {
       })
       .parse((req.query ?? {}) as Record<string, unknown>)
 
-    const rows = await queryActionsForExport(query)
+    const [{ data: products, error: productsError }, { data: allActions, error: actionsError }] =
+      await Promise.all([
+        supabase
+          .from('produkti')
+          .select('kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi')
+          .order('emri', { ascending: true }),
+        supabase
+          .from('veprimi')
+          .select('id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,created_at')
+          .order('data', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true }),
+      ])
+
+    if (productsError) throw productsError
+    if (actionsError) throw actionsError
+
+    const productRows = (products ?? []) as ProductExportRow[]
+    const actionRows = ((allActions ?? []) as ActionExportRow[]).sort((a, b) => {
+      const dateDiff = a.data.localeCompare(b.data)
+      if (dateDiff !== 0) return dateDiff
+      const createdDiff = a.created_at.localeCompare(b.created_at)
+      if (createdDiff !== 0) return createdDiff
+
+      const aIsKosovoOut = a.shteti === 'XK' && a.lloji === 'Dalje'
+      const bIsKosovoOut = b.shteti === 'XK' && b.lloji === 'Dalje'
+      const aIsAlbaniaIn = a.shteti === 'AL' && a.lloji === 'Hyrje'
+      const bIsAlbaniaIn = b.shteti === 'AL' && b.lloji === 'Hyrje'
+
+      if (transferKey(a) === transferKey(b)) {
+        if (aIsKosovoOut && bIsAlbaniaIn) return -1
+        if (aIsAlbaniaIn && bIsKosovoOut) return 1
+      }
+
+      return a.id.localeCompare(b.id)
+    })
+    const productsByCode = new Map(productRows.map((p) => [p.kodi, p]))
+    const mirrorCounts = new Map<string, number>()
+
+    for (const action of actionRows) {
+      if (action.shteti === 'XK' && action.lloji === 'Dalje') {
+        const key = transferKey(action)
+        mirrorCounts.set(key, (mirrorCounts.get(key) ?? 0) + 1)
+      }
+    }
+
+    const currentStock = new Map<string, { XK: number; AL: number }>()
+    const runningStock = new Map<string, { XK: number; AL: number }>()
+
+    for (const p of productRows) {
+      currentStock.set(p.kodi, {
+        XK: Number(p.gjendje_kosove ?? 0),
+        AL: Number(p.gjendje_shqiperi ?? 0),
+      })
+    }
+
+    // Derive the stock at the beginning of history by reversing real DB movements.
+    for (const action of actionRows) {
+      const stock = currentStock.get(action.kodi_produktit)
+      if (!stock) continue
+      stock[action.shteti] -= signedQty(action)
+    }
+
+    for (const [kodi, stock] of currentStock) {
+      runningStock.set(kodi, { ...stock })
+    }
+
+    const actionsThroughTo = actionRows.filter((action) => !query.to || action.data <= query.to)
 
     const workbook = new ExcelJS.Workbook()
-    const sheet = workbook.addWorksheet('Veprime')
+    const sheet = workbook.addWorksheet('Sheet1')
+    styleInventariWorkbook(sheet)
 
-    sheet.columns = [
-      { header: 'ID', key: 'id', width: 38 },
-      { header: 'Lloji', key: 'lloji', width: 10 },
-      { header: 'Data', key: 'data', width: 12 },
-      { header: 'Shteti', key: 'shteti', width: 8 },
-      { header: 'Kodi', key: 'kodi_produktit', width: 18 },
-      { header: 'Cmimi/Njesi', key: 'cmimi_njesi', width: 14 },
-      { header: 'Sasia', key: 'sasia', width: 10 },
-      { header: 'Totali', key: 'totali', width: 14 },
-      { header: 'Krijuar', key: 'created_at', width: 24 },
-    ]
+    const border = {
+      top: { style: 'thin', color: { argb: 'FFE1EAF2' } },
+      left: { style: 'thin', color: { argb: 'FFE1EAF2' } },
+      bottom: { style: 'thin', color: { argb: 'FFE1EAF2' } },
+      right: { style: 'thin', color: { argb: 'FFE1EAF2' } },
+    } as const
 
-    for (const r of rows) {
-      sheet.addRow({
-        id: r.id,
-        lloji: r.lloji,
-        data: r.data,
-        shteti: r.shteti,
-        kodi_produktit: r.kodi_produktit,
-        cmimi_njesi: r.cmimi_njesi,
-        sasia: r.sasia,
-        totali: r.totali,
-        created_at: r.created_at,
-      })
+    for (const action of actionsThroughTo) {
+      const product = productsByCode.get(action.kodi_produktit)
+      const stock = runningStock.get(action.kodi_produktit)
+      if (!product || !stock) continue
+
+      const qty = signedQty(action)
+      const unitPrice = Number(action.cmimi_njesi ?? 0)
+      const key = transferKey(action)
+      const isMirroredAlbaniaIn =
+        action.shteti === 'AL' &&
+        action.lloji === 'Hyrje' &&
+        (mirrorCounts.get(key) ?? 0) > 0
+
+      stock[action.shteti] += qty
+
+      let rowValues: Array<string | number | null> | null = null
+
+      if (isMirroredAlbaniaIn) {
+        mirrorCounts.set(key, (mirrorCounts.get(key) ?? 1) - 1)
+      } else if (isWithinExportRange(action, query)) {
+        if (action.shteti === 'XK') {
+          rowValues = [
+            product.kodi,
+            product.emri,
+            product.pershkrimi ?? '',
+            action.data,
+            unitPrice,
+            qty,
+            unitPrice * qty,
+            stock.XK,
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+          ]
+
+          if (action.lloji === 'Dalje') {
+            const alQty = Number(action.sasia ?? 0)
+            rowValues[9] = action.data
+            rowValues[10] = unitPrice
+            rowValues[11] = alQty
+            rowValues[12] = unitPrice * alQty
+            rowValues[13] = stock.AL + alQty
+          }
+        } else if (action.shteti === 'AL') {
+          rowValues = [
+            product.kodi,
+            product.emri,
+            product.pershkrimi ?? '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            action.data,
+            unitPrice,
+            qty,
+            unitPrice * qty,
+            stock.AL,
+          ]
+        }
+      }
+
+      if (rowValues) {
+        const row = sheet.addRow(rowValues)
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          cell.border = border
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: [5, 6, 7, 8, 11, 12, 13, 14].includes(colNumber)
+              ? 'right'
+              : 'left',
+          }
+        })
+
+        for (const col of [5, 7, 11, 13]) {
+          row.getCell(col).numFmt = '#,##0.00'
+        }
+        for (const col of [6, 8, 12, 14]) {
+          row.getCell(col).numFmt = '#,##0'
+        }
+      }
+    }
+
+    if (sheet.rowCount === 2) {
+      sheet.addRow(['', 'Nuk ka veprime per kete periudhe.', '', '', '', '', '', '', '', '', '', '', '', ''])
     }
 
     const buf = await workbook.xlsx.writeBuffer()

@@ -11,6 +11,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers,
+    credentials: 'include',
   })
 
   if (!res.ok) {
@@ -44,6 +45,24 @@ export type Veprimi = {
   sasia: number
   totali?: number
   created_at?: string
+}
+
+export async function login(input: { email: string; password: string }): Promise<void> {
+  await http<{ ok: true }>(`/login`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function logout(): Promise<void> {
+  await http<{ ok: true }>(`/logout`, {
+    method: 'POST',
+  })
+}
+
+export async function currentSession(): Promise<boolean> {
+  const res = await http<{ ok: boolean }>(`/session`)
+  return res.ok
 }
 
 export async function listProducts(opts: {

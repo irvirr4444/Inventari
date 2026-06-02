@@ -11,7 +11,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^17.2.0",
     "exceljs": "^4.4.0",

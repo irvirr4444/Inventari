@@ -111,6 +111,36 @@ input[type='date'] {
   padding: 28px var(--space-xl);
 }
 
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  width: min(440px, 100%);
+}
+
+.auth-card h1 {
+  font-size: 28px;
+}
+
+.auth-error {
+  background: var(--danger-bg);
+  border-radius: 8px;
+  color: var(--danger);
+  font-size: 13px;
+  padding: 10px 14px;
+}
+
+.app-actions {
+  position: fixed;
+  right: 24px;
+  top: 18px;
+  z-index: 20;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    CARDS
    ═══════════════════════════════════════════════════════════════ */

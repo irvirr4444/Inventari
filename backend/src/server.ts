@@ -1,6 +1,10 @@
 import cors from '@fastify/cors'
+import cookie from '@fastify/cookie'
+import rateLimit from '@fastify/rate-limit'
 import ExcelJS from 'exceljs'
 import Fastify from 'fastify'
+import type { FastifyReply } from 'fastify'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
@@ -10,24 +14,53 @@ const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_KEY: z.string().min(20),
   CORS_ORIGIN: z.string().optional(),
+  login_email: z.string().email().optional(),
+  login_password: z.string().min(1).optional(),
+  LOGIN_EMAIL: z.string().email().optional(),
+  LOGIN_PASSWORD: z.string().min(1).optional(),
+  SESSION_SECRET: z.string().min(32).optional(),
 })
+
+const SESSION_COOKIE = 'inventari_session'
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
 
 export async function buildApp() {
   const env = EnvSchema.parse(process.env)
+  const loginEmail = (env.login_email ?? env.LOGIN_EMAIL)?.trim().toLowerCase()
+  const loginPassword = (env.login_password ?? env.LOGIN_PASSWORD)?.trim()
+  const sessionSecret = env.SESSION_SECRET ?? env.SUPABASE_SERVICE_KEY
+
+  if (!loginEmail || !loginPassword) {
+    throw new Error('Missing login_email/login_password in environment.')
+  }
 
   const app = Fastify({
     logger: true,
   })
 
-  app.setErrorHandler((err, _req, reply) => {
+  app.setErrorHandler((err, req, reply) => {
     const statusCode = reply.statusCode >= 400 ? reply.statusCode : 500
+    req.log.error(err)
     reply.code(statusCode).send({
-      error: err instanceof Error ? err.message : 'Internal error',
+      error:
+        statusCode >= 500
+          ? 'Internal error'
+          : err instanceof Error
+            ? err.message
+            : 'Request failed',
     })
   })
 
   await app.register(cors, {
     origin: env.CORS_ORIGIN ?? true,
+    credentials: true,
+  })
+
+  await app.register(cookie)
+  await app.register(rateLimit, {
+    global: false,
+    max: 5,
+    timeWindow: '1 minute',
   })
 
   const supabase = createSupabaseAdmin({
@@ -36,6 +69,100 @@ export async function buildApp() {
   })
 
   app.get('/api/health', async () => ({ ok: true }))
+
+  function signSession(payload: string) {
+    return crypto.createHmac('sha256', sessionSecret).update(payload).digest('base64url')
+  }
+
+  function createSessionToken() {
+    const payload = JSON.stringify({
+      sub: 'admin',
+      exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
+      nonce: crypto.randomBytes(16).toString('base64url'),
+    })
+    const encodedPayload = Buffer.from(payload).toString('base64url')
+    return `${encodedPayload}.${signSession(encodedPayload)}`
+  }
+
+  function verifySessionToken(token: string | undefined) {
+    if (!token) return false
+    const [encodedPayload, signature] = token.split('.')
+    if (!encodedPayload || !signature) return false
+
+    const expected = signSession(encodedPayload)
+    const actualBuffer = Buffer.from(signature)
+    const expectedBuffer = Buffer.from(expected)
+    if (
+      actualBuffer.length !== expectedBuffer.length ||
+      !crypto.timingSafeEqual(actualBuffer, expectedBuffer)
+    ) {
+      return false
+    }
+
+    try {
+      const raw = Buffer.from(encodedPayload, 'base64url').toString('utf8')
+      const parsed = z.object({ sub: z.literal('admin'), exp: z.number() }).parse(JSON.parse(raw))
+      return parsed.exp > Math.floor(Date.now() / 1000)
+    } catch {
+      return false
+    }
+  }
+
+  function setSessionCookie(reply: FastifyReply) {
+    reply.setCookie(SESSION_COOKIE, createSessionToken(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    })
+  }
+
+  function clearSessionCookie(reply: FastifyReply) {
+    reply.clearCookie(SESSION_COOKIE, { path: '/' })
+  }
+
+  app.addHook('preHandler', async (req, reply) => {
+    if (!req.url.startsWith('/api/')) return
+    if (
+      req.url.startsWith('/api/login') ||
+      req.url.startsWith('/api/logout') ||
+      req.url.startsWith('/api/session') ||
+      req.url.startsWith('/api/health')
+    ) {
+      return
+    }
+
+    if (!verifySessionToken(req.cookies[SESSION_COOKIE])) {
+      reply.code(401).send({ error: 'Unauthorized' })
+    }
+  })
+
+  app.post('/api/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const body = z
+      .object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      })
+      .parse(req.body)
+
+    if (body.email.trim().toLowerCase() !== loginEmail || body.password.trim() !== loginPassword) {
+      reply.code(401)
+      return { error: 'Invalid credentials' }
+    }
+
+    setSessionCookie(reply)
+    return { ok: true }
+  })
+
+  app.post('/api/logout', async (_req, reply) => {
+    clearSessionCookie(reply)
+    return { ok: true }
+  })
+
+  app.get('/api/session', async (req) => ({
+    ok: verifySessionToken(req.cookies[SESSION_COOKIE]),
+  }))
 
   // Products
   app.get('/api/products', async (req) => {

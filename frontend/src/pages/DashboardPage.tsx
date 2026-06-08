@@ -6,6 +6,7 @@ import {
   createActionBatch,
   createProduct,
   deleteProduct,
+  exportProductsUrl,
   exportUrl,
   listProducts,
   updateProduct,
@@ -26,6 +27,9 @@ type SummaryData = {
   out_qty: number
   out_value: number
 }
+
+type ProductSortKey = 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
+type SortDirection = 'asc' | 'desc'
 
 function todayISODate() {
   const d = new Date()
@@ -74,12 +78,15 @@ export function DashboardPage() {
   const [showAddProduct, setShowAddProduct] = React.useState(false)
   const [newKodi, setNewKodi] = React.useState('')
   const [newEmri, setNewEmri] = React.useState('')
-  const [newPershkrimi, setNewPershkrimi] = React.useState('')
   const [newGjendjeKosove, setNewGjendjeKosove] = React.useState(0)
   const [newGjendjeShqiperi, setNewGjendjeShqiperi] = React.useState(0)
   const [editing, setEditing] = React.useState<Produkti | null>(null)
   const [deletingProduct, setDeletingProduct] = React.useState<Produkti | null>(null)
   const [productError, setProductError] = React.useState<string | null>(null)
+  const [productSort, setProductSort] = React.useState<{ key: ProductSortKey; direction: SortDirection }>({
+    key: 'kodi',
+    direction: 'asc',
+  })
 
   // ─────────────────────────────────────────────────────────────
   // ANALYTICS STATE
@@ -113,6 +120,27 @@ export function DashboardPage() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
+
+  const sortedProducts = React.useMemo(() => {
+    const products = [...(productsQuery.data ?? [])]
+    const multiplier = productSort.direction === 'asc' ? 1 : -1
+
+    products.sort((a, b) => {
+      const aValue = a[productSort.key]
+      const bValue = b[productSort.key]
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * multiplier
+      }
+
+      return String(aValue).localeCompare(String(bValue), undefined, {
+        sensitivity: 'base',
+        numeric: true,
+      }) * multiplier
+    })
+
+    return products
+  }, [productSort, productsQuery.data])
 
   // ─────────────────────────────────────────────────────────────
   // MUTATIONS
@@ -159,7 +187,6 @@ export function DashboardPage() {
       createProduct({
         kodi: newKodi.trim(),
         emri: newEmri.trim(),
-        pershkrimi: newPershkrimi.trim() || undefined,
         gjendje_kosove: Number(newGjendjeKosove) || 0,
         gjendje_shqiperi: Number(newGjendjeShqiperi) || 0,
       }),
@@ -167,7 +194,6 @@ export function DashboardPage() {
       setProductError(null)
       setNewKodi('')
       setNewEmri('')
-      setNewPershkrimi('')
       setNewGjendjeKosove(0)
       setNewGjendjeShqiperi(0)
       setShowAddProduct(false)
@@ -181,7 +207,6 @@ export function DashboardPage() {
       updateProduct(p.id, {
         kodi: p.kodi.trim(),
         emri: p.emri.trim(),
-        pershkrimi: p.pershkrimi?.trim() || null,
         gjendje_kosove: p.gjendje_kosove,
         gjendje_shqiperi: p.gjendje_shqiperi,
       }),
@@ -264,6 +289,18 @@ export function DashboardPage() {
     setActionItems((prev) =>
       prev.map((x) => (x.key === key ? { ...x, [field]: value } : x))
     )
+  }
+
+  const changeProductSort = (key: ProductSortKey) => {
+    setProductSort((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }))
+  }
+
+  const productSortArrow = (key: ProductSortKey) => {
+    if (productSort.key !== key) return '↕'
+    return productSort.direction === 'asc' ? '↑' : '↓'
   }
 
   const actionTotal = actionItems.reduce(
@@ -461,6 +498,24 @@ export function DashboardPage() {
             <button type="button" className="btn" onClick={() => setShowAddProduct(true)}>
               + Shto produkt
             </button>
+            <a className="btn" href={exportProductsUrl()} title="Shkarko Excel">
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M12 15V3" />
+              </svg>
+              Excel
+            </a>
           </div>
 
           {productError && !showAddProduct && (
@@ -482,54 +537,91 @@ export function DashboardPage() {
           <div className="table-scroll products-table-wrap">
             <table className="table products-table">
               <colgroup>
-                <col style={{ width: '12%' }} />
                 <col style={{ width: '18%' }} />
-                <col style={{ width: '26%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '16%' }} />
+                <col style={{ width: '34%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '12%' }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th>Kodi</th>
-                  <th>Emri</th>
-                  <th>Pershkrimi</th>
-                  <th style={{ textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
-                      Gjendje
-                    </span>
+                  <th aria-sort={productSort.key === 'kodi' ? productSort.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
+                    <button type="button" className="sort-header" onClick={() => changeProductSort('kodi')}>
+                      <span>Kodi</span>
+                      <span className="sort-arrow" aria-hidden="true">{productSortArrow('kodi')}</span>
+                    </button>
                   </th>
-                  <th style={{ textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <th aria-sort={productSort.key === 'emri' ? productSort.direction === 'asc' ? 'ascending' : 'descending' : 'none'}>
+                    <button type="button" className="sort-header" onClick={() => changeProductSort('emri')}>
+                      <span>Emri</span>
+                      <span className="sort-arrow" aria-hidden="true">{productSortArrow('emri')}</span>
+                    </button>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center' }}
+                    aria-sort={
+                      productSort.key === 'gjendje_kosove'
+                        ? productSort.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="sort-header centered"
+                      onClick={() => changeProductSort('gjendje_kosove')}
+                    >
+                      <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
+                      <span>Gjendje</span>
+                      <span className="sort-arrow" aria-hidden="true">
+                        {productSortArrow('gjendje_kosove')}
+                      </span>
+                    </button>
+                  </th>
+                  <th
+                    style={{ textAlign: 'center' }}
+                    aria-sort={
+                      productSort.key === 'gjendje_shqiperi'
+                        ? productSort.direction === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="sort-header centered"
+                      onClick={() => changeProductSort('gjendje_shqiperi')}
+                    >
                       <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
-                      Gjendje
-                    </span>
+                      <span>Gjendje</span>
+                      <span className="sort-arrow" aria-hidden="true">
+                        {productSortArrow('gjendje_shqiperi')}
+                      </span>
+                    </button>
                   </th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {(productsQuery.data ?? []).length === 0 ? (
+                {sortedProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
                       Nuk ka produkte. Shto produktin e pare me butonin me lart.
                     </td>
                   </tr>
                 ) : (
-                  (productsQuery.data ?? []).map((p) => (
+                  sortedProducts.map((p) => (
                     <tr key={p.id}>
-                      <td>
-                        <code style={{ fontSize: 13, color: 'var(--text-muted)' }}>{p.kodi}</code>
+                      <td className="product-text-cell">
+                        <code className="product-text" data-full={p.kodi} title={p.kodi}>
+                          {p.kodi}
+                        </code>
                       </td>
-                      <td className="product-name-cell">{p.emri}</td>
-                      <td className="muted product-description-cell">
-                        <span
-                          className="product-description-text"
-                          title={p.pershkrimi || undefined}
-                          data-full={p.pershkrimi || undefined}
-                        >
-                          {p.pershkrimi || '—'}
+                      <td className="product-name-cell product-text-cell">
+                        <span className="product-text" data-full={p.emri} title={p.emri}>
+                          {p.emri}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
@@ -665,7 +757,7 @@ export function DashboardPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+          <div className="summary-countries">
             <CountrySummary
               country="XK"
               name="Kosovo"
@@ -725,14 +817,12 @@ export function DashboardPage() {
         <AddProductModal
           kodi={newKodi}
           emri={newEmri}
-          pershkrimi={newPershkrimi}
           gjendjeKosove={newGjendjeKosove}
           gjendjeShqiperi={newGjendjeShqiperi}
           error={productError}
           saving={createProductMut.isPending}
           onKodiChange={setNewKodi}
           onEmriChange={setNewEmri}
-          onPershkrimiChange={setNewPershkrimi}
           onGjendjeKosoveChange={setNewGjendjeKosove}
           onGjendjeShqiperiChange={setNewGjendjeShqiperi}
           onSubmit={submitNewProduct}
@@ -895,14 +985,12 @@ function DateInput(props: {
 function AddProductModal(props: {
   kodi: string
   emri: string
-  pershkrimi: string
   gjendjeKosove: number
   gjendjeShqiperi: number
   error: string | null
   saving: boolean
   onKodiChange: (value: string) => void
   onEmriChange: (value: string) => void
-  onPershkrimiChange: (value: string) => void
   onGjendjeKosoveChange: (value: number) => void
   onGjendjeShqiperiChange: (value: number) => void
   onSubmit: (e: React.FormEvent) => void
@@ -990,17 +1078,6 @@ function AddProductModal(props: {
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="label">Pershkrimi (opsionale)</label>
-            <textarea
-              className="input"
-              value={props.pershkrimi}
-              onChange={(e) => props.onPershkrimiChange(e.target.value)}
-              placeholder="Pershkrim i shkurter..."
-              style={{ minHeight: 80 }}
-            />
-          </div>
-
           {props.error && (
             <div
               style={{
@@ -1037,7 +1114,6 @@ function EditModal(props: {
 }) {
   const [kodi, setKodi] = React.useState(props.product.kodi)
   const [emri, setEmri] = React.useState(props.product.emri)
-  const [pershkrimi, setPershkrimi] = React.useState(props.product.pershkrimi ?? '')
   const [xk, setXk] = React.useState(props.product.gjendje_kosove)
   const [al, setAl] = React.useState(props.product.gjendje_shqiperi)
 
@@ -1122,17 +1198,6 @@ function EditModal(props: {
             </div>
           </div>
 
-          {/* Row 3: Pershkrimi */}
-          <div className="form-group">
-            <label className="label">Pershkrimi</label>
-            <textarea
-              className="input"
-              value={pershkrimi}
-              onChange={(e) => setPershkrimi(e.target.value)}
-              style={{ minHeight: 80 }}
-            />
-          </div>
-
           {/* Submit */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
             <button type="button" className="btn" onClick={props.onClose}>
@@ -1146,7 +1211,6 @@ function EditModal(props: {
                   ...props.product,
                   kodi,
                   emri,
-                  pershkrimi,
                   gjendje_kosove: xk,
                   gjendje_shqiperi: al,
                 })

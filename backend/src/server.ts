@@ -11,6 +11,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { createSupabaseAdmin } from './supabase.js'
+import { styleHeaderRow, autoSizeColumns, applyBordersToDataRows } from './excel.js'
 
 const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
@@ -179,7 +180,7 @@ export async function buildApp() {
     let q = supabase
       .from('produkti')
       .select(
-        'id,kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
+        'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
       )
       .order('emri', { ascending: true })
 
@@ -198,7 +199,6 @@ export async function buildApp() {
       .object({
         kodi: z.string().min(1),
         emri: z.string().min(1),
-        pershkrimi: z.string().optional(),
         gjendje_kosove: z.number().int().nonnegative().optional(),
         gjendje_shqiperi: z.number().int().nonnegative().optional(),
       })
@@ -209,12 +209,11 @@ export async function buildApp() {
       .insert({
         kodi: body.kodi,
         emri: body.emri,
-        pershkrimi: body.pershkrimi ?? null,
         gjendje_kosove: body.gjendje_kosove ?? 0,
         gjendje_shqiperi: body.gjendje_shqiperi ?? 0,
       })
       .select(
-        'id,kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
+        'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
       )
       .single()
 
@@ -232,7 +231,6 @@ export async function buildApp() {
       .object({
         kodi: z.string().min(1).optional(),
         emri: z.string().min(1).optional(),
-        pershkrimi: z.string().nullable().optional(),
         gjendje_kosove: z.number().int().nonnegative().optional(),
         gjendje_shqiperi: z.number().int().nonnegative().optional(),
       })
@@ -243,15 +241,13 @@ export async function buildApp() {
       .update({
         kodi: body.kodi,
         emri: body.emri,
-        pershkrimi:
-          body.pershkrimi === undefined ? undefined : body.pershkrimi,
         gjendje_kosove: body.gjendje_kosove,
         gjendje_shqiperi: body.gjendje_shqiperi,
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.id)
       .select(
-        'id,kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
+        'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
       )
       .single()
 
@@ -440,7 +436,7 @@ export async function buildApp() {
 
     const { data, error } = await supabase
       .from('produkti')
-      .select('id,kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi,updated_at')
+      .select('id,kodi,emri,gjendje_kosove,gjendje_shqiperi,updated_at')
       .order('emri', { ascending: true })
 
     if (error) throw error
@@ -449,7 +445,6 @@ export async function buildApp() {
         id: p.id,
         kodi: p.kodi,
         emri: p.emri,
-        pershkrimi: p.pershkrimi ?? null,
         gjendje:
           query.shteti === 'XK'
             ? Number(p.gjendje_kosove ?? 0)
@@ -529,7 +524,6 @@ export async function buildApp() {
   type ProductExportRow = {
     kodi: string
     emri: string
-    pershkrimi: string | null
     gjendje_kosove: number | null
     gjendje_shqiperi: number | null
   }
@@ -688,6 +682,38 @@ export async function buildApp() {
     return lines.join('\n')
   })
 
+  app.get('/api/exports/products.xlsx', async (_req, reply) => {
+    const { data, error } = await supabase
+      .from('produkti')
+      .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
+      .order('kodi', { ascending: true })
+
+    if (error) throw error
+
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Produkte')
+
+    sheet.addRow(['Kodi', 'Emri', 'Gjendje Kosove', 'Gjendje Shqiperi'])
+
+    for (const p of data ?? []) {
+      sheet.addRow([p.kodi, p.emri, p.gjendje_kosove, p.gjendje_shqiperi])
+    }
+
+    styleHeaderRow(sheet)
+    applyBordersToDataRows(sheet, 2)
+    autoSizeColumns(sheet, 80)
+
+    const buf = await workbook.xlsx.writeBuffer()
+    reply.header(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    const now = new Date()
+    const stamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    reply.header('Content-Disposition', `attachment; filename="Produkte ${stamp}.xlsx"`)
+    return buf
+  })
+
   app.get('/api/exports/actions.xlsx', async (req, reply) => {
     const query = z
       .object({
@@ -702,7 +728,7 @@ export async function buildApp() {
       await Promise.all([
         supabase
           .from('produkti')
-          .select('kodi,emri,pershkrimi,gjendje_kosove,gjendje_shqiperi')
+          .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
           .order('emri', { ascending: true }),
         supabase
           .from('veprimi')
@@ -794,7 +820,7 @@ export async function buildApp() {
           rowValues = [
             product.kodi,
             product.emri,
-            product.pershkrimi ?? '',
+            '',
             action.data,
             unitPrice,
             qty,
@@ -820,7 +846,7 @@ export async function buildApp() {
           rowValues = [
             product.kodi,
             product.emri,
-            product.pershkrimi ?? '',
+            '',
             '',
             '',
             '',
@@ -869,7 +895,8 @@ export async function buildApp() {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-    const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19).replaceAll(':', '-')
+    const now = new Date()
+    const stamp = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     reply.header('Content-Disposition', `attachment; filename="Permbledhje ${stamp}.xlsx"`)
     return buf
   })

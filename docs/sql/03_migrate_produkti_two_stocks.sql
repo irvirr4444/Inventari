@@ -1,15 +1,15 @@
 -- MIGRATION: move from per-country products to a single product row with 2 stock columns.
 --
 -- Old design:
---   produkti(kodi, emri, pershkrimi, gjendje, shteti, ...)
+--   produkti(kodi, emri, gjendje, shteti, ...)
 --   veprimi(..., shteti, kodi_produktit, ...) FK (kodi_produktit, shteti) -> produkti(kodi, shteti)
 --
 -- New design:
---   produkti(kodi, emri, pershkrimi, gjendje_kosove, gjendje_shqiperi, ...)
+--   produkti(kodi, emri, gjendje_kosove, gjendje_shqiperi, ...)
 --   veprimi(..., shteti, kodi_produktit, ...) FK kodi_produktit -> produkti(kodi)
 --
 -- IMPORTANT:
--- - This merges old rows by `kodi`. If your `emri/pershkrimi` differ per country, we keep one value (MAX()).
+-- - This merges old rows by `kodi`. If your `emri` differs per country, we keep one value (MAX()).
 -- - Run this in Supabase SQL editor.
 
 begin;
@@ -21,7 +21,6 @@ create table if not exists public.produkti_new (
   id uuid primary key default gen_random_uuid(),
   kodi text not null unique,
   emri text not null,
-  pershkrimi text,
   gjendje_kosove integer not null default 0 check (gjendje_kosove >= 0),
   gjendje_shqiperi integer not null default 0 check (gjendje_shqiperi >= 0),
   created_at timestamptz not null default now(),
@@ -29,11 +28,10 @@ create table if not exists public.produkti_new (
 );
 
 -- 2) Copy + merge old data
-insert into public.produkti_new (kodi, emri, pershkrimi, gjendje_kosove, gjendje_shqiperi, created_at, updated_at)
+insert into public.produkti_new (kodi, emri, gjendje_kosove, gjendje_shqiperi, created_at, updated_at)
 select
   kodi,
   max(emri) as emri,
-  max(pershkrimi) as pershkrimi,
   coalesce(sum(case when shteti = 'XK' then gjendje else 0 end), 0) as gjendje_kosove,
   coalesce(sum(case when shteti = 'AL' then gjendje else 0 end), 0) as gjendje_shqiperi,
   now(),

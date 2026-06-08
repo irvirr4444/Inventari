@@ -127,7 +127,7 @@ input[type='date'] {
    ═══════════════════════════════════════════════════════════════ */
 
 .container {
-  max-width: 1140px;
+  max-width: 1480px;
   margin: 0 auto;
   padding: 28px var(--space-xl);
 }
@@ -184,7 +184,7 @@ input[type='date'] {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) minmax(400px, 0.36fr);
   gap: 20px;
 }
 
@@ -193,6 +193,24 @@ input[type='date'] {
 .products-card,
 .summary-panel {
   min-width: 0;
+}
+
+.summary-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-panel > .summary-countries {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary-panel > .summary-countries > .summary-country {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .table-scroll {
@@ -217,7 +235,21 @@ input[type='date'] {
 }
 
 .products-table-wrap {
-  overflow-x: visible;
+  max-height: calc(43px + (49px * 9));
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: none;
+}
+
+.products-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.products-table thead th {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.98));
+  box-shadow: 0 1px 0 var(--border-light);
 }
 
 .action-footer {
@@ -344,6 +376,13 @@ input[type='date'] {
   border-radius: 6px;
 }
 
+.products-header .btn {
+  min-height: 31px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    INPUTS & SELECTS
    ═══════════════════════════════════════════════════════════════ */
@@ -412,6 +451,36 @@ textarea.input {
   padding-bottom: 10px;
 }
 
+.sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+}
+
+.sort-header.centered {
+  justify-content: center;
+}
+
+.sort-header:hover {
+  color: var(--text);
+}
+
+.sort-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
 .table td {
   border-bottom: 1px solid #eaf2fb;
 }
@@ -439,17 +508,13 @@ textarea.input {
 
 .product-name-cell {
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.product-description-cell {
+.product-text-cell {
   position: relative;
-  font-size: 13px;
 }
 
-.product-description-text {
+.product-text {
   display: block;
   max-width: 100%;
   overflow: hidden;
@@ -457,22 +522,26 @@ textarea.input {
   white-space: nowrap;
 }
 
-.product-description-text[data-full]:hover::after {
+.product-text[data-full]:hover::after {
   content: attr(data-full);
   position: absolute;
-  left: 0;
-  top: calc(100% + 6px);
+  left: 10px;
+  top: calc(100% + 4px);
   z-index: 50;
   width: max-content;
-  max-width: min(360px, calc(100vw - 48px));
-  padding: 10px 12px;
+  max-width: min(520px, calc(100vw - 48px));
+  padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: var(--shadow-md);
   color: var(--text);
-  white-space: normal;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
+  text-transform: none;
+  white-space: normal;
 }
 
 .product-actions {
@@ -538,8 +607,8 @@ h3 {
 }
 
 .summary-card.compact {
-  padding: 11px 13px;
-  border-radius: 10px;
+  padding: 14px 16px;
+  border-radius: 11px;
   border-left-width: 3px;
 }
 
@@ -567,8 +636,8 @@ h3 {
 }
 
 .summary-card.compact .summary-label {
-  font-size: 10px;
-  margin-bottom: 2px;
+  font-size: 11px;
+  margin-bottom: 4px;
 }
 
 .summary-card .summary-value {
@@ -580,7 +649,7 @@ h3 {
 }
 
 .summary-card.compact .summary-value {
-  font-size: 21px;
+  font-size: 24px;
 }
 
 .summary-card .summary-sub {
@@ -591,30 +660,43 @@ h3 {
 }
 
 .summary-card.compact .summary-sub {
-  font-size: 12px;
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 .summary-country {
   background: rgba(232, 241, 251, 0.62);
   border: 1px solid rgba(201, 216, 234, 0.75);
-  border-radius: 13px;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 16px;
 }
 
 .summary-country-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 9px;
-  font-size: 13px;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
   font-weight: 600;
   color: #143356;
 }
 
+.summary-country-title .flagIcon {
+  width: 24px;
+  height: 17px;
+}
+
 .summary-mini-grid {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 9px;
+  gap: 12px;
+}
+
+.summary-mini-grid > .summary-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* ═══════════════════════════════════════════════════════════════

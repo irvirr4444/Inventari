@@ -19,7 +19,6 @@ create table if not exists public.produkti (
   id uuid primary key default gen_random_uuid(),
   kodi text not null unique,
   emri text not null,
-  pershkrimi text,
   gjendje_kosove integer not null default 0 check (gjendje_kosove >= 0),
   gjendje_shqiperi integer not null default 0 check (gjendje_shqiperi >= 0),
   created_at timestamptz not null default now(),

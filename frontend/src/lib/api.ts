@@ -28,7 +28,6 @@ export type Produkti = {
   id: string
   kodi: string
   emri: string
-  pershkrimi: string | null
   gjendje_kosove: number
   gjendje_shqiperi: number
   created_at?: string
@@ -77,7 +76,6 @@ export async function listProducts(opts: {
 export async function createProduct(input: {
   kodi: string
   emri: string
-  pershkrimi?: string
   gjendje_kosove?: number
   gjendje_shqiperi?: number
 }): Promise<Produkti> {
@@ -93,7 +91,6 @@ export async function updateProduct(
   patch: {
     kodi?: string
     emri?: string
-    pershkrimi?: string | null
     gjendje_kosove?: number
     gjendje_shqiperi?: number
   },
@@ -149,14 +146,13 @@ export async function listActions(opts: {
 export async function analyticsStock(shteti: Country): Promise<Produkti[]> {
   const qs = new URLSearchParams({ shteti })
   const res = await http<{
-    data: Array<{ id: string; kodi: string; emri: string; pershkrimi: string | null; gjendje: number }>
+    data: Array<{ id: string; kodi: string; emri: string; gjendje: number }>
   }>(`/analytics/stock?${qs.toString()}`)
   // Map into Produkti-like objects with the requested country in `gjendje_*` for convenience
   return res.data.map((p) => ({
     id: p.id,
     kodi: p.kodi,
     emri: p.emri,
-    pershkrimi: p.pershkrimi,
     gjendje_kosove: shteti === 'XK' ? p.gjendje : 0,
     gjendje_shqiperi: shteti === 'AL' ? p.gjendje : 0,
   }))
@@ -184,5 +180,9 @@ export function exportUrl(
   if (opts.to) qs.set('to', opts.to)
   if (opts.lloji) qs.set('lloji', opts.lloji)
   return `${API_BASE}/exports/actions.${format}?${qs.toString()}`
+}
+
+export function exportProductsUrl(): string {
+  return `${API_BASE}/exports/products.xlsx`
 }
 

@@ -47,9 +47,16 @@
   --transition-normal: 0.2s ease;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at 12% 8%, rgba(47, 125, 246, 0.28), transparent 28%),
     radial-gradient(circle at 88% 18%, rgba(92, 176, 255, 0.18), transparent 26%),
@@ -127,8 +134,10 @@ input[type='date'] {
    ═══════════════════════════════════════════════════════════════ */
 
 .container {
+  height: 100dvh;
   max-width: 1480px;
   margin: 0 auto;
+  overflow: hidden;
   padding: 28px var(--space-xl);
 }
 
@@ -166,6 +175,9 @@ input[type='date'] {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .action-header,
@@ -186,6 +198,9 @@ input[type='date'] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(400px, 0.36fr);
   gap: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dashboard-grid > .card,
@@ -193,6 +208,17 @@ input[type='date'] {
 .products-card,
 .summary-panel {
   min-width: 0;
+  min-height: 0;
+}
+
+.action-card {
+  flex: 0 0 auto;
+}
+
+.products-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .summary-panel {

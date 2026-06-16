@@ -854,7 +854,7 @@ h3 {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TOGGLE BUTTONS (Hyrje/Dalje)
+   TOGGLE BUTTONS (Hyrje/Dalje/Transfer)
    ═══════════════════════════════════════════════════════════════ */
 
 .toggle-group {
@@ -897,6 +897,25 @@ h3 {
   background: linear-gradient(180deg, #ff5b52, var(--danger));
   color: #fff;
   box-shadow: 0 8px 16px rgba(255, 59, 48, 0.20);
+}
+
+.toggle-btn.active.transfer {
+  background: linear-gradient(180deg, var(--primary-hover), var(--primary));
+  color: #fff;
+  box-shadow: 0 8px 16px rgba(47, 125, 246, 0.22);
+}
+
+.transfer-hint {
+  display: inline-flex;
+  align-items: center;
+  margin: -8px 0 16px;
+  border: 1px solid rgba(47, 125, 246, 0.18);
+  border-radius: 999px;
+  background: rgba(47, 125, 246, 0.08);
+  color: #143356;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1064,7 +1083,7 @@ h3 {
   .toggle-group {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
   }
 
   .toggle-btn {

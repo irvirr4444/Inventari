@@ -36,7 +36,7 @@ export type Produkti = {
 
 export type Veprimi = {
   id: string
-  lloji: 'Hyrje' | 'Dalje'
+  lloji: 'Hyrje' | 'Dalje' | 'Transfer'
   data: string
   shteti: Country
   kodi_produktit: string
@@ -110,16 +110,31 @@ export async function deleteProduct(id: string): Promise<void> {
 
 export async function createActionBatch(input: {
   shteti: Country
-  lloji: 'Hyrje' | 'Dalje'
+  destination_shteti?: Country
+  lloji: 'Hyrje' | 'Dalje' | 'Transfer'
   data?: string
   items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
 }): Promise<{
   data: Veprimi[]
-  meta?: { mirrored_to_albania?: boolean; mirrored_count?: number }
+  meta?: {
+    mirrored_to_albania?: boolean
+    mirrored_count?: number
+    transfer?: boolean
+    transfer_count?: number
+    transfer_from?: Country
+    transfer_to?: Country
+  }
 }> {
   return http<{
     data: Veprimi[]
-    meta?: { mirrored_to_albania?: boolean; mirrored_count?: number }
+    meta?: {
+      mirrored_to_albania?: boolean
+      mirrored_count?: number
+      transfer?: boolean
+      transfer_count?: number
+      transfer_from?: Country
+      transfer_to?: Country
+    }
   }>(`/actions`, {
     method: 'POST',
     body: JSON.stringify(input),
@@ -182,7 +197,14 @@ export function exportUrl(
   return `${API_BASE}/exports/actions.${format}?${qs.toString()}`
 }
 
-export function exportProductsUrl(): string {
-  return `${API_BASE}/exports/products.xlsx`
+export function exportProductsUrl(opts: {
+  sortKey: 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
+  sortDirection: 'asc' | 'desc'
+}): string {
+  const qs = new URLSearchParams({
+    sortKey: opts.sortKey,
+    sortDirection: opts.sortDirection,
+  })
+  return `${API_BASE}/exports/products.xlsx?${qs.toString()}`
 }
 

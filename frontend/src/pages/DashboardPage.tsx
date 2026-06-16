@@ -28,6 +28,7 @@ type SummaryData = {
   out_value: number
 }
 
+type ActionType = 'Hyrje' | 'Dalje' | 'Transfer'
 type ProductSortKey = 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
 type SortDirection = 'asc' | 'desc'
 
@@ -56,6 +57,10 @@ function fmtInt(n: number): string {
   return n.toLocaleString('en-US')
 }
 
+function countryLabel(country: Country) {
+  return country === 'XK' ? 'Kosove' : 'Shqiperi'
+}
+
 export function DashboardPage() {
   const { country } = useCountry()
   const qc = useQueryClient()
@@ -63,7 +68,7 @@ export function DashboardPage() {
   // ─────────────────────────────────────────────────────────────
   // ACTION ENTRY STATE
   // ─────────────────────────────────────────────────────────────
-  const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
+  const [lloji, setLloji] = React.useState<ActionType>('Hyrje')
   const [actionDate, setActionDate] = React.useState(todayISODate())
   const [actionItems, setActionItems] = React.useState<ActionItem[]>([
     { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
@@ -121,6 +126,8 @@ export function DashboardPage() {
     refetchOnWindowFocus: true,
   })
 
+  const transferDestination: Country = country === 'XK' ? 'AL' : 'XK'
+
   const sortedProducts = React.useMemo(() => {
     const products = [...(productsQuery.data ?? [])]
     const multiplier = productSort.direction === 'asc' ? 1 : -1
@@ -149,6 +156,7 @@ export function DashboardPage() {
     mutationFn: () =>
       createActionBatch({
         shteti: country,
+        destination_shteti: lloji === 'Transfer' ? transferDestination : undefined,
         lloji,
         data: actionDate,
         items: actionItems
@@ -162,7 +170,9 @@ export function DashboardPage() {
     onSuccess: async (result) => {
       setActionError(null)
       setSnackbar(
-        result.meta?.mirrored_to_albania
+        result.meta?.transfer
+          ? `Transfer nga ${countryLabel(result.meta.transfer_from ?? country)} ne ${countryLabel(result.meta.transfer_to ?? transferDestination)} u regjistrua per ${result.meta.transfer_count ?? 0} produkte.`
+          : result.meta?.mirrored_to_albania
           ? `U regjistrua Dalje ne Kosove dhe Hyrje ne Shqiperi per ${result.meta.mirrored_count ?? 0} produkte.`
           : 'Veprimi u regjistrua me sukses.',
       )
@@ -351,7 +361,20 @@ export function DashboardPage() {
             >
               Dalje (OUT)
             </button>
+            <button
+              type="button"
+              className={`toggle-btn ${lloji === 'Transfer' ? 'active transfer' : ''}`}
+              onClick={() => setLloji('Transfer')}
+            >
+              Transfer
+            </button>
           </div>
+
+          {lloji === 'Transfer' && (
+            <div className="transfer-hint">
+              Transfer: {countryLabel(country)} → {countryLabel(transferDestination)}
+            </div>
+          )}
 
           {/* Action Items Table */}
           <div className="table-scroll action-table-wrap">
@@ -498,7 +521,14 @@ export function DashboardPage() {
             <button type="button" className="btn" onClick={() => setShowAddProduct(true)}>
               + Shto produkt
             </button>
-            <a className="btn" href={exportProductsUrl()} title="Shkarko Excel">
+            <a
+              className="btn"
+              href={exportProductsUrl({
+                sortKey: productSort.key,
+                sortDirection: productSort.direction,
+              })}
+              title="Shkarko Excel"
+            >
               <svg
                 aria-hidden="true"
                 width="14"
@@ -782,7 +812,10 @@ export function DashboardPage() {
           title="Finalizo veprimin?"
           message={
             <span>
-              {lloji} ne {country === 'XK' ? 'Kosove' : 'Shqiperi'} me total{' '}
+              {lloji === 'Transfer'
+                ? `Transfer nga ${countryLabel(country)} ne ${countryLabel(transferDestination)}`
+                : `${lloji} ne ${countryLabel(country)}`}{' '}
+              me total{' '}
               <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
                 {fmt(actionTotal)}
               </strong>

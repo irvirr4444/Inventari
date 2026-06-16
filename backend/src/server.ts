@@ -297,18 +297,24 @@ export async function buildApp() {
     cmimi_njesi: z.number().nonnegative(),
     sasia: z.number().int().positive(),
   })
+  type ActionItemInput = z.infer<typeof ActionItemSchema>
+
+  const ActionInputTypeSchema = z.enum(['Hyrje', 'Dalje', 'Transfer'])
+  const CountrySchema = z.enum(['XK', 'AL'])
 
   const ActionBatchSchema = z.object({
-    lloji: z.enum(['Hyrje', 'Dalje']),
+    lloji: ActionInputTypeSchema,
     data: z.string().optional(), // YYYY-MM-DD
-    shteti: z.enum(['XK', 'AL']),
+    shteti: CountrySchema,
+    destination_shteti: CountrySchema.optional(),
     items: z.array(ActionItemSchema).min(1),
   })
 
   const ActionSingleSchema = z.object({
-    lloji: z.enum(['Hyrje', 'Dalje']),
+    lloji: ActionInputTypeSchema,
     data: z.string().optional(), // YYYY-MM-DD
-    shteti: z.enum(['XK', 'AL']),
+    shteti: CountrySchema,
+    destination_shteti: CountrySchema.optional(),
     kodi_produktit: z.string().min(1),
     cmimi_njesi: z.number().nonnegative(),
     sasia: z.number().int().positive(),
@@ -320,13 +326,20 @@ export async function buildApp() {
   // - batch (items: [...]) to match your “one action includes many products” UI
   app.post('/api/actions', async (req, reply) => {
     const parsed = z.union([ActionBatchSchema, ActionSingleSchema]).parse(req.body)
-    const body =
+    const body: {
+      lloji: 'Hyrje' | 'Dalje' | 'Transfer'
+      data?: string
+      shteti: 'XK' | 'AL'
+      destination_shteti?: 'XK' | 'AL'
+      items: ActionItemInput[]
+    } =
       'items' in parsed
         ? parsed
         : {
             lloji: parsed.lloji,
             data: parsed.data,
             shteti: parsed.shteti,
+            destination_shteti: parsed.destination_shteti,
             items: [
               {
                 kodi_produktit: parsed.kodi_produktit,
@@ -336,8 +349,19 @@ export async function buildApp() {
             ],
           }
 
+    if (body.lloji === 'Transfer') {
+      if (!body.destination_shteti) {
+        reply.code(400)
+        return { error: 'Transfer kerkon destinacion.' }
+      }
+      if (body.destination_shteti === body.shteti) {
+        reply.code(400)
+        return { error: 'Destinacioni i transferit duhet te jete ndryshe nga burimi.' }
+      }
+    }
+
     // Best-effort stock validation (strict correctness comes from the DB trigger/RPC)
-    if (body.lloji === 'Dalje') {
+    if (body.lloji === 'Dalje' || body.lloji === 'Transfer') {
       for (const it of body.items) {
         const { data: p, error: pErr } = await supabase
           .from('produkti')
@@ -358,14 +382,34 @@ export async function buildApp() {
       }
     }
 
-    const rows = body.items.map((it) => ({
-      lloji: body.lloji,
-      data: body.data ?? undefined,
-      shteti: body.shteti,
-      kodi_produktit: it.kodi_produktit,
-      cmimi_njesi: it.cmimi_njesi,
-      sasia: it.sasia,
-    }))
+    const rows =
+      body.lloji === 'Transfer' && body.destination_shteti
+        ? body.items.flatMap((it) => [
+            {
+              lloji: 'Dalje' as const,
+              data: body.data ?? undefined,
+              shteti: body.shteti,
+              kodi_produktit: it.kodi_produktit,
+              cmimi_njesi: it.cmimi_njesi,
+              sasia: it.sasia,
+            },
+            {
+              lloji: 'Hyrje' as const,
+              data: body.data ?? undefined,
+              shteti: body.destination_shteti,
+              kodi_produktit: it.kodi_produktit,
+              cmimi_njesi: it.cmimi_njesi,
+              sasia: it.sasia,
+            },
+          ])
+        : body.items.map((it) => ({
+            lloji: body.lloji as 'Hyrje' | 'Dalje',
+            data: body.data ?? undefined,
+            shteti: body.shteti,
+            kodi_produktit: it.kodi_produktit,
+            cmimi_njesi: it.cmimi_njesi,
+            sasia: it.sasia,
+          }))
 
     const mirrorRows =
       body.shteti === 'XK' && body.lloji === 'Dalje'
@@ -392,6 +436,10 @@ export async function buildApp() {
     return {
       data,
       meta: {
+        transfer: body.lloji === 'Transfer',
+        transfer_count: body.lloji === 'Transfer' ? body.items.length : 0,
+        transfer_from: body.lloji === 'Transfer' ? body.shteti : undefined,
+        transfer_to: body.lloji === 'Transfer' ? body.destination_shteti : undefined,
         mirrored_to_albania: mirrorRows.length > 0,
         mirrored_count: mirrorRows.length,
       },
@@ -682,20 +730,41 @@ export async function buildApp() {
     return lines.join('\n')
   })
 
-  app.get('/api/exports/products.xlsx', async (_req, reply) => {
+  app.get('/api/exports/products.xlsx', async (req, reply) => {
+    const query = z
+      .object({
+        sortKey: z.enum(['kodi', 'emri', 'gjendje_kosove', 'gjendje_shqiperi']).default('kodi'),
+        sortDirection: z.enum(['asc', 'desc']).default('asc'),
+      })
+      .parse((req.query ?? {}) as Record<string, unknown>)
+
     const { data, error } = await supabase
       .from('produkti')
       .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
-      .order('kodi', { ascending: true })
 
     if (error) throw error
+
+    const productRows = [...(data ?? [])].sort((a, b) => {
+      const multiplier = query.sortDirection === 'asc' ? 1 : -1
+      const aValue = a[query.sortKey]
+      const bValue = b[query.sortKey]
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * multiplier
+      }
+
+      return String(aValue).localeCompare(String(bValue), undefined, {
+        sensitivity: 'base',
+        numeric: true,
+      }) * multiplier
+    })
 
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('Produkte')
 
     sheet.addRow(['Kodi', 'Emri', 'Gjendje Kosove', 'Gjendje Shqiperi'])
 
-    for (const p of data ?? []) {
+    for (const p of productRows) {
       sheet.addRow([p.kodi, p.emri, p.gjendje_kosove, p.gjendje_shqiperi])
     }
 

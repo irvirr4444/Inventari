@@ -9,14 +9,14 @@ React client for the Inventari inventory platform. This README covers local deve
 - React 19 + TypeScript
 - Vite 8
 - TanStack Query for server state
-- Plain CSS in `src/index.css` (no component library)
+- Plain CSS in `src/styles/` (import hub via `src/index.css`; no component library)
 
 The browser talks only to the backend API. Supabase credentials stay on the server.
 
 ### Prerequisites
 
 - Node.js 20+
-- Backend running on `http://localhost:3001` (see repo root `README.md`)
+- Backend running on `http://localhost:3001` (see [backend/README.md](../backend/README.md) and repo root [README.md](../README.md))
 
 ### Setup
 
@@ -46,7 +46,7 @@ Vite serves the app on `http://localhost:5173` and proxies `/api` to the backend
 | `npm -w frontend run lint` | Run ESLint |
 | `npm -w frontend run preview` | Preview the production build |
 
-From the repo root, `npm run dev` starts backend and frontend together.
+From the repo root: `npm run dev` starts backend and frontend together. `npm run test` runs shared + backend unit tests (frontend has no test suite yet).
 
 ### Environment
 
@@ -63,26 +63,38 @@ In development, Vite proxies `/api` to `http://localhost:3001`. In production, s
 ```text
 frontend/
   src/
-    App.tsx              Login gate and authenticated shell
-    main.tsx             App bootstrap + React Query provider
-    index.css            Global styles and dashboard layout
-    components/
-      ConfirmModal.tsx   Shared confirmation dialog
-      DateInput.tsx      Date picker control
-      HistoryModal.tsx   Action history (Historiku)
+    App.tsx                    Login gate and authenticated shell
+    main.tsx                   App bootstrap + React Query provider
+    index.css                  Imports styles/index.css hub
+    styles/                    Design tokens, components, features, responsive
+    components/                Modal, ConfirmModal, DateInput, Snackbar, icons, …
+    hooks/                     useSnackbar, useActionItems
+    features/
+      actions/                 ActionEntryPanel, ActionItemsTable, TransferModal
+      products/                ProductsPanel, ProductFormModal
+      summary/                 SummaryPanel, CountrySummary
+      history/                 HistoryModal and edit/list submodules
     pages/
-      DashboardPage.tsx  Main inventory UI (actions, products, summary)
+      DashboardPage.tsx        Composes feature panels (~180 lines)
+      LoginPage.tsx            Login form
+      useDashboardPage.ts      Dashboard state, queries, mutations
     lib/
-      api.ts             Backend API client
-      country.tsx        Country context + selector (XK / AL)
-      format.ts          Date/number formatting, productLabel, sortProductsByKodi
-  public/                Static assets (flags, icons)
-  vite.config.ts         Dev server + API proxy
+      api.ts                   Backend API client
+      country.tsx              Country context + selector (XK / AL)
+      format.ts                Re-exports shared formatters + UI helpers
+      queryKeys.ts             React Query key factories
+      invalidateAppData.ts     Cache invalidation helper
+      dates.ts                 Date helpers
+    types/
+      actionItem.ts            Action line-item draft type
+  public/                      Static assets (flags, icons)
+  vite.config.ts               Dev server + API proxy + @inventari/shared alias
+packages/shared/               Zod schemas, productLabel, buildSummaryByCountry (workspace)
 ```
 
 ### UI architecture
 
-`DashboardPage.tsx` is the main screen. It is organized into three areas:
+`DashboardPage.tsx` composes feature modules under `src/features/`. The screen has three areas:
 
 1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize. **Historiku** opens the action history modal.
 2. **Products card** — sortable product table, add/edit/delete, Excel export.
@@ -124,11 +136,15 @@ frontend/
 - Green success snackbar for registered actions/transfers, successful history edits/deletes, and product deletion.
 - Dark default snackbar for validation messages (e.g. duplicate product in a row).
 
-Shared pieces:
+**Shared UI and hooks**:
 
-- `ActionItemsTable` (in `DashboardPage.tsx`) — product rows for main form and transfer modal.
-- `TransferModal` — full transfer workflow.
-- `ConfirmModal`, `DateInput`, `HistoryModal` — in `src/components/`.
+- `features/actions/ActionItemsTable` — product rows for action form and transfer modal.
+- `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`.
+- `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
+- `hooks/useActionItems` — line-item add/remove/validate (used twice: action + transfer).
+- `hooks/useSnackbar` — toast state + auto-dismiss (dashboard + login).
+- `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
+- `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
 
 Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. New actions get a `batch_id`; history lists grouped batches only.
 
@@ -163,11 +179,24 @@ createActionBatch({
 
 ### Styling notes
 
+Styles live under `src/styles/` and are imported via `src/index.css`:
+
+| File | Contents |
+| --- | --- |
+| `tokens.css` | CSS variables (`:root`) |
+| `base.css` | Links, cursor states |
+| `components/date-input.css` | Date picker |
+| `components/forms.css` | Form layout |
+| `components/modals.css` | Modals, snackbar, stacked overlay |
+| `components/stock-badges.css` | Stock badges |
+| `features/dashboard.css` | Layout, cards, tables, toggles |
+| `features/summary.css` | Permbledhje panel |
+| `features/history.css` | Historiku modal |
+| `responsive.css` | Breakpoints |
+
 - Dashboard layout is viewport-locked with internal scrolling in the products table.
-- Modal styles live under `.modal-overlay`, `.modal-content`, and `.transfer-modal`.
 - Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals.
-- Success snackbars use `.snackbar.success` (green); modals use `.modal-close-btn` (×) instead of text “Mbyll”.
-- Action buttons use shared `.btn`, `.toggle-btn`, and `.table` classes from `index.css`.
+- Success snackbars use `.snackbar.success` (green); modals use `.modal-close-btn` (×).
 
 ---
 

@@ -21,6 +21,7 @@ npm run dev
 | --- | --- | --- |
 | `backend` | `backend/` | Fastify API, Supabase access, Excel exports |
 | `frontend` | `frontend/` | React dashboard UI |
+| `@inventari/shared` | `packages/shared/` | Zod schemas, shared types, `productLabel`, `buildSummaryByCountry` |
 
 ## Scripts
 
@@ -29,6 +30,7 @@ npm run dev
 | `npm run dev` | Start backend and frontend together |
 | `npm run build` | Build backend and frontend |
 | `npm run lint` | Lint both workspaces |
+| `npm run test` | Run shared + backend unit tests |
 
 ## Environment
 
@@ -52,7 +54,10 @@ The browser does not use Supabase keys directly. All data goes through the backe
 ## Documentation
 
 - **Frontend UI and product behavior:** [frontend/README.md](frontend/README.md)
-- **Transfer workflow:** handled entirely in the **Transfero** popup on the dashboard (`Hyrje` / `Dalje` stay on the main action card)
+- **Backend API and architecture:** [backend/README.md](backend/README.md)
+- **Local development:** [docs/local-dev.md](docs/local-dev.md)
+- **Deploy (Render):** [docs/render.md](docs/render.md)
+- **SQL migrations:** [docs/sql/](docs/sql/)
 
 ## Features
 

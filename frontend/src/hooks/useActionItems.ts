@@ -1,0 +1,69 @@
+import * as React from 'react'
+import {
+  createEmptyActionItem,
+  type ActionItemDraft,
+} from '../types/actionItem'
+
+export type ActionItemsValidationResult =
+  | { ok: true; items: ActionItemDraft[] }
+  | { ok: false; error: string }
+
+export function validateActionItems(items: ActionItemDraft[]): ActionItemsValidationResult {
+  const clean = items.filter((i) => i.kodi_produktit.trim())
+  if (clean.length === 0) {
+    return { ok: false, error: 'Shto te pakten nje produkt.' }
+  }
+  for (const it of clean) {
+    if (Number(it.sasia) <= 0) {
+      return { ok: false, error: 'Sasia duhet te jete > 0.' }
+    }
+    if (Number(it.cmimi_njesi) < 0) {
+      return { ok: false, error: 'Cmimi/Njesi duhet te jete >= 0.' }
+    }
+  }
+  return { ok: true, items: clean }
+}
+
+export function useActionItems(onDuplicate?: (kodi: string) => void) {
+  const [items, setItems] = React.useState<ActionItemDraft[]>([createEmptyActionItem()])
+
+  const reset = React.useCallback(() => {
+    setItems([createEmptyActionItem()])
+  }, [])
+
+  const addItem = React.useCallback(() => {
+    setItems((prev) => [...prev, createEmptyActionItem()])
+  }, [])
+
+  const removeItem = React.useCallback((key: string) => {
+    setItems((prev) => prev.filter((x) => x.key !== key))
+  }, [])
+
+  const updateItem = React.useCallback(
+    (key: string, field: keyof ActionItemDraft, value: string | number) => {
+      if (
+        field === 'kodi_produktit' &&
+        typeof value === 'string' &&
+        value &&
+        items.some((x) => x.key !== key && x.kodi_produktit === value)
+      ) {
+        onDuplicate?.(value)
+        return
+      }
+
+      setItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
+    },
+    [items, onDuplicate],
+  )
+
+  const total = React.useMemo(
+    () =>
+      items.reduce(
+        (sum, it) => sum + (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0),
+        0,
+      ),
+    [items],
+  )
+
+  return { items, setItems, reset, addItem, removeItem, updateItem, total }
+}

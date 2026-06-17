@@ -1,4 +1,6 @@
 import type { Country } from './country'
+import { countryLabel as sharedCountryLabel, productLabel as sharedProductLabel } from '@inventari/shared'
+export type { CountrySummary, SummaryByCountry } from '@inventari/shared'
 
 export function formatDisplayDate(isoDate: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
@@ -15,11 +17,11 @@ export function fmtInt(n: number): string {
 }
 
 export function countryLabel(country: Country) {
-  return country === 'XK' ? 'Kosove' : 'Shqiperi'
+  return sharedCountryLabel(country)
 }
 
 export function countryHistoryLabel(country: Country) {
-  return country === 'XK' ? 'Kosove' : 'Shqiperi'
+  return sharedCountryLabel(country)
 }
 
 export function fmtEuro(n: number): string {
@@ -31,10 +33,7 @@ export function productCountLabel(count: number): string {
 }
 
 export function productLabel(emri: string, kodi: string): string {
-  const name = emri.trim()
-  const code = kodi.trim()
-  if (name && code) return `${name} (${code})`
-  return name || code
+  return sharedProductLabel(emri, kodi)
 }
 
 export function sortProductsByKodi<T extends { kodi: string }>(products: T[]): T[] {

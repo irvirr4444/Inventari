@@ -1,0 +1,42 @@
+/* ═══════════════════════════════════════════════════════════════
+   LINKS
+   ═══════════════════════════════════════════════════════════════ */
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CURSOR STATES
+   ═══════════════════════════════════════════════════════════════ */
+
+a[href],
+button,
+select,
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+input[type='checkbox'],
+input[type='radio'],
+[role='button'],
+[role='menuitem'],
+[tabindex]:not([tabindex='-1']) {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+input[type='date'] {
+  cursor: pointer;
+}

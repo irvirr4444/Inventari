@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm -w @inventari/shared run build && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@inventari/shared": "*",
     "@tanstack/react-query": "^5.100.14",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"

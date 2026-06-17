@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════════
+   SUMMARY CARDS (IN/OUT)
+   ═══════════════════════════════════════════════════════════════ */
+
+.summary-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px 20px;
+  border-left: 4px solid transparent;
+  transition: box-shadow var(--transition-fast);
+}
+
+.summary-card.compact {
+  padding: 14px 16px;
+  border-radius: 11px;
+  border-left-width: 3px;
+}
+
+.summary-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-card.success {
+  border-left-color: var(--success);
+  background: linear-gradient(to right, var(--success-bg), transparent 60%);
+}
+
+.summary-card.danger {
+  border-left-color: var(--danger);
+  background: linear-gradient(to right, var(--danger-bg), transparent 60%);
+}
+
+.summary-card .summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.summary-card.compact .summary-label {
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.summary-card .summary-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.summary-card.compact .summary-value {
+  font-size: 24px;
+}
+
+.summary-card .summary-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-card.compact .summary-sub {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.summary-country {
+  background: rgba(232, 241, 251, 0.62);
+  border: 1px solid rgba(201, 216, 234, 0.75);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.summary-country-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #143356;
+}
+
+.summary-country-title .flagIcon {
+  width: 24px;
+  height: 17px;
+}
+
+.summary-mini-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.summary-mini-grid > .summary-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FORM SECTIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.form-grid {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-md);
+}
+
+.form-row-equal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group .label {
+  margin-bottom: 6px;
+}
+
+.form-group .input,
+.form-group .select {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NUMBER DISPLAY (tabular for alignment)
+   ═══════════════════════════════════════════════════════════════ */
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.num-lg {
+  font-size: 18px;
+  font-weight: 600;
+}

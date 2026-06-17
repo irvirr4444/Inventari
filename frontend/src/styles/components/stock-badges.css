@@ -1,0 +1,16 @@
+/* ═══════════════════════════════════════════════════════════════
+   STOCK BADGES
+   ═══════════════════════════════════════════════════════════════ */
+
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e8f1fb;
+  color: #143356;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

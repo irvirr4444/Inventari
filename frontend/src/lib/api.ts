@@ -1,3 +1,4 @@
+import type { SummaryByCountry } from '@inventari/shared'
 import type { Country } from './country'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api'
@@ -148,23 +149,6 @@ export async function createActionBatch(input: {
   })
 }
 
-export async function listActions(opts: {
-  shteti?: Country
-  from?: string
-  to?: string
-  lloji?: 'Hyrje' | 'Dalje'
-  limit?: number
-}): Promise<Veprimi[]> {
-  const qs = new URLSearchParams()
-  if (opts.shteti) qs.set('shteti', opts.shteti)
-  if (opts.from) qs.set('from', opts.from)
-  if (opts.to) qs.set('to', opts.to)
-  if (opts.lloji) qs.set('lloji', opts.lloji)
-  if (opts.limit) qs.set('limit', String(opts.limit))
-  const res = await http<{ data: Veprimi[] }>(`/actions?${qs.toString()}`)
-  return res.data
-}
-
 export type ActionBatch = {
   id: string
   lloji: 'Hyrje' | 'Dalje' | 'Transfer'
@@ -250,32 +234,7 @@ export async function deleteActionBatch(id: string): Promise<void> {
   })
 }
 
-export async function analyticsStock(shteti: Country): Promise<Produkti[]> {
-  const qs = new URLSearchParams({ shteti })
-  const res = await http<{
-    data: Array<{ id: string; kodi: string; emri: string; gjendje: number }>
-  }>(`/analytics/stock?${qs.toString()}`)
-  // Map into Produkti-like objects with the requested country in `gjendje_*` for convenience
-  return res.data.map((p) => ({
-    id: p.id,
-    kodi: p.kodi,
-    emri: p.emri,
-    gjendje_kosove: shteti === 'XK' ? p.gjendje : 0,
-    gjendje_shqiperi: shteti === 'AL' ? p.gjendje : 0,
-  }))
-}
-
-export type CountrySummaryData = {
-  in_qty: number
-  in_value: number
-  out_qty: number
-  out_value: number
-}
-
-export type SummaryByCountry = {
-  XK: CountrySummaryData
-  AL: CountrySummaryData
-}
+export type { CountrySummary as CountrySummaryData, SummaryByCountry } from '@inventari/shared'
 
 export async function analyticsSummary(opts: {
   from: string

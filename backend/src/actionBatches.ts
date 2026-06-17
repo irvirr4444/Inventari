@@ -1,6 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FastifyInstance } from 'fastify'
+import {
+  BatchLlojiSchema,
+  CountrySchema,
+  ERR_BATCH_NOT_FOUND,
+  ERR_DUPLICATE_PRODUCT_IN_ACTION,
+  ERR_MIRROR_COUNTRY_CHANGE,
+  ERR_NO_UPDATE_FIELDS,
+  ERR_PRODUCT_LINE_NOT_FOUND,
+  ERR_TRANSFER_NEEDS_DESTINATION,
+  ERR_TRANSFER_SAME_COUNTRY,
+  type BatchLloji,
+  type Country,
+} from '@inventari/shared'
 import { z } from 'zod'
+import { findSiblingRows, isDisplayRow, isMirroredBatch } from './batchDomain.js'
 import {
   deleteLegacyBatch,
   fetchLegacyActionBatches,
@@ -10,12 +24,6 @@ import {
   updateLegacyBatch,
   updateLegacyBatchItem,
 } from './legacyBatches.js'
-
-const CountrySchema = z.enum(['XK', 'AL'])
-const BatchLlojiSchema = z.enum(['Hyrje', 'Dalje', 'Transfer'])
-
-type Country = z.infer<typeof CountrySchema>
-type BatchLloji = z.infer<typeof BatchLlojiSchema>
 
 type VeprimBatchRow = {
   id: string
@@ -40,31 +48,6 @@ type VeprimRow = {
   created_at: string
 }
 
-function isDisplayRow(batch: VeprimBatchRow, row: VeprimRow) {
-  if (batch.lloji === 'Transfer') {
-    return row.lloji === 'Dalje' && row.shteti === batch.shteti
-  }
-  return row.lloji === batch.lloji && row.shteti === batch.shteti
-}
-
-function isMirroredBatch(batch: VeprimBatchRow, rows: VeprimRow[]) {
-  if (batch.lloji !== 'Dalje' || batch.shteti !== 'XK') return false
-  const xkDalje = rows.filter((r) => r.lloji === 'Dalje' && r.shteti === 'XK')
-  const alHyrje = rows.filter((r) => r.lloji === 'Hyrje' && r.shteti === 'AL')
-  if (xkDalje.length === 0 || alHyrje.length !== xkDalje.length) return false
-  const alCodes = new Set(alHyrje.map((r) => r.kodi_produktit))
-  return xkDalje.every((r) => alCodes.has(r.kodi_produktit))
-}
-
-function findSiblingRows(batch: VeprimBatchRow, rows: VeprimRow[], primary: VeprimRow) {
-  if (batch.lloji === 'Transfer' || isMirroredBatch(batch, rows)) {
-    return rows.filter(
-      (r) => r.id !== primary.id && r.kodi_produktit === primary.kodi_produktit,
-    )
-  }
-  return []
-}
-
 async function loadBatchRows(supabase: SupabaseClient, batchId: string) {
   const { data: batch, error: batchError } = await supabase
     .from('veprim_batch')
@@ -72,7 +55,7 @@ async function loadBatchRows(supabase: SupabaseClient, batchId: string) {
     .eq('id', batchId)
     .single()
 
-  if (batchError || !batch) return { error: 'Veprimi nuk u gjet.' as const }
+  if (batchError || !batch) return { error: ERR_BATCH_NOT_FOUND }
 
   const { data: rows, error: rowsError } = await supabase
     .from('veprimi')
@@ -257,7 +240,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     if (mirrored && (body.shteti || body.destination_shteti)) {
       reply.code(400)
-      return { error: 'Nuk mund te ndryshohet shteti per Dalje te pasqyruar ne Shqiperi.' }
+      return { error: ERR_MIRROR_COUNTRY_CHANGE }
     }
 
     const nextShteti = body.shteti ?? batch.shteti
@@ -269,11 +252,11 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     if (batch.lloji === 'Transfer') {
       if (!nextDest) {
         reply.code(400)
-        return { error: 'Transfer kerkon destinacion.' }
+        return { error: ERR_TRANSFER_NEEDS_DESTINATION }
       }
       if (nextDest === nextShteti) {
         reply.code(400)
-        return { error: 'Destinacioni i transferit duhet te jete ndryshe nga burimi.' }
+        return { error: ERR_TRANSFER_SAME_COUNTRY }
       }
     }
 
@@ -334,7 +317,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     if (!body.kodi_produktit && body.cmimi_njesi === undefined && body.sasia === undefined) {
       reply.code(400)
-      return { error: 'Asnje fushe per perditesim.' }
+      return { error: ERR_NO_UPDATE_FIELDS }
     }
 
     if (isLegacyBatchId(params.id)) {
@@ -356,7 +339,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const primary = rows.find((r) => r.id === params.itemId)
     if (!primary || !isDisplayRow(batch, primary)) {
       reply.code(404)
-      return { error: 'Rreshti i produktit nuk u gjet.' }
+      return { error: ERR_PRODUCT_LINE_NOT_FOUND }
     }
 
     const nextKodi = body.kodi_produktit ?? primary.kodi_produktit
@@ -369,7 +352,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     )
     if (duplicate) {
       reply.code(400)
-      return { error: 'Produkti ekziston tashme ne kete veprim.' }
+      return { error: ERR_DUPLICATE_PRODUCT_IN_ACTION }
     }
 
     const targets = [primary, ...findSiblingRows(batch, rows, primary)]

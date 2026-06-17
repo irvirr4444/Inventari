@@ -1,0 +1,113 @@
+import * as React from 'react'
+import type { Produkti } from '../../lib/api'
+import { fmt, productLabel, sortProductsByKodi } from '../../lib/format'
+import type { ActionItemDraft } from '../../types/actionItem'
+
+export function ActionItemsTable(props: {
+  items: ActionItemDraft[]
+  products: Produkti[]
+  onUpdate: (key: string, field: keyof ActionItemDraft, value: string | number) => void
+  onRemove: (key: string) => void
+}) {
+  const productsByKodi = React.useMemo(
+    () => sortProductsByKodi(props.products),
+    [props.products],
+  )
+
+  return (
+    <div className="table-scroll action-table-wrap">
+      <table className="table table-fixed action-table">
+        <colgroup>
+          <col style={{ width: '35%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '15%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '12%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Produkti</th>
+            <th>Cmimi/Njesi</th>
+            <th>Sasia</th>
+            <th style={{ textAlign: 'right' }}>Totali</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {props.items.map((it) => {
+            const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
+            return (
+              <tr key={it.key}>
+                <td>
+                  <select
+                    className="select"
+                    value={it.kodi_produktit}
+                    onChange={(e) => props.onUpdate(it.key, 'kodi_produktit', e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Zgjedh produktin…</option>
+                    {productsByKodi.map((p) => (
+                      <option
+                        key={p.id}
+                        value={p.kodi}
+                        disabled={props.items.some(
+                          (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
+                        )}
+                      >
+                        {productLabel(p.emri, p.kodi)}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={it.cmimi_njesi}
+                    onChange={(e) =>
+                      props.onUpdate(
+                        it.key,
+                        'cmimi_njesi',
+                        e.target.value.startsWith('-') ? '' : e.target.value,
+                      )
+                    }
+                    placeholder="0.00"
+                    style={{ width: '100%' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={it.sasia}
+                    onChange={(e) => props.onUpdate(it.key, 'sasia', Number(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <span className="num">{fmt(lineTotal)}</span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => props.onRemove(it.key)}
+                    disabled={props.items.length <= 1}
+                    aria-label="Fshij produktin nga veprimi"
+                    title={props.items.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
+                    style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}

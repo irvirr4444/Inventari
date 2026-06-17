@@ -1,5 +1,8 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { DateInput } from '../components/DateInput'
+import { HistoryModal } from '../components/HistoryModal'
 import { CountrySelector, useCountry } from '../lib/country'
 import {
   analyticsSummary,
@@ -13,6 +16,7 @@ import {
   type Produkti,
 } from '../lib/api'
 import type { Country } from '../lib/country'
+import { countryLabel, fmt, fmtInt } from '../lib/format'
 
 type ActionItem = {
   key: string
@@ -42,24 +46,6 @@ function isoDateDaysAgo(days: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function formatDisplayDate(isoDate: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
-  if (!match) return isoDate
-  return `${match[3]}/${match[2]}/${match[1]}`
-}
-
-function fmt(n: number): string {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function fmtInt(n: number): string {
-  return n.toLocaleString('en-US')
-}
-
-function countryLabel(country: Country) {
-  return country === 'XK' ? 'Kosove' : 'Shqiperi'
-}
-
 export function DashboardPage() {
   const { country } = useCountry()
   const qc = useQueryClient()
@@ -77,6 +63,7 @@ export function DashboardPage() {
   ])
   const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmTransferOpen, setConfirmTransferOpen] = React.useState(false)
+  const [historyOpen, setHistoryOpen] = React.useState(false)
   const [actionDate, setActionDate] = React.useState(todayISODate())
   const [actionItems, setActionItems] = React.useState<ActionItem[]>([
     { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
@@ -478,20 +465,43 @@ export function DashboardPage() {
         </div>
 
         <form onSubmit={submitAction}>
-          <div className="toggle-group" style={{ marginBottom: 20 }}>
+          <div className="row action-type-row" style={{ marginBottom: 20 }}>
+            <div className="toggle-group">
+              <button
+                type="button"
+                className={`toggle-btn ${lloji === 'Hyrje' ? 'active success' : ''}`}
+                onClick={() => setLloji('Hyrje')}
+              >
+                Hyrje (IN)
+              </button>
+              <button
+                type="button"
+                className={`toggle-btn ${lloji === 'Dalje' ? 'active danger' : ''}`}
+                onClick={() => setLloji('Dalje')}
+              >
+                Dalje (OUT)
+              </button>
+            </div>
             <button
               type="button"
-              className={`toggle-btn ${lloji === 'Hyrje' ? 'active success' : ''}`}
-              onClick={() => setLloji('Hyrje')}
+              className="btn ghost sm history-btn"
+              onClick={() => setHistoryOpen(true)}
             >
-              Hyrje (IN)
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${lloji === 'Dalje' ? 'active danger' : ''}`}
-              onClick={() => setLloji('Dalje')}
-            >
-              Dalje (OUT)
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              Historiku
             </button>
           </div>
 
@@ -911,6 +921,10 @@ export function DashboardPage() {
         />
       )}
 
+      {historyOpen && (
+        <HistoryModal products={productsQuery.data ?? []} onClose={() => setHistoryOpen(false)} />
+      )}
+
       {deletingProduct && (
         <ConfirmModal
           title="Fshij produktin?"
@@ -957,43 +971,6 @@ export function DashboardPage() {
           {snackbar}
         </div>
       )}
-    </div>
-  )
-}
-
-function ConfirmModal(props: {
-  title: string
-  message: React.ReactNode
-  confirmLabel: string
-  tone: 'primary' | 'success' | 'danger'
-  loading: boolean
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div className="modal-overlay" onClick={() => !props.loading && props.onCancel()}>
-      <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
-        <div style={{ marginBottom: 18 }}>
-          <h3>{props.title}</h3>
-          <p className="muted confirm-message">
-            {props.message}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <button type="button" className="btn" onClick={props.onCancel} disabled={props.loading}>
-            Anulo
-          </button>
-          <button
-            type="button"
-            className={`btn ${props.tone}`}
-            onClick={props.onConfirm}
-            disabled={props.loading}
-          >
-            {props.confirmLabel}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -1265,54 +1242,6 @@ function SummaryMiniCard(props: {
       <div className="summary-label">{props.label}</div>
       <div className="summary-value">{fmtInt(props.quantity)}</div>
       <div className="summary-sub">{fmt(props.value)} €</div>
-    </div>
-  )
-}
-
-function DateInput(props: {
-  value: string
-  onChange: (value: string) => void
-  style?: React.CSSProperties
-}) {
-  const pickerRef = React.useRef<HTMLInputElement | null>(null)
-
-  const openPicker = React.useCallback(() => {
-    const picker = pickerRef.current
-    if (!picker) return
-    picker.focus()
-    ;(picker as unknown as { showPicker?: () => void }).showPicker?.()
-  }, [])
-
-  return (
-    <div
-      className="date-input"
-      style={props.style}
-      role="button"
-      tabIndex={0}
-      onClick={openPicker}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          openPicker()
-        }
-      }}
-    >
-      <input
-        className="input date-input-display"
-        type="text"
-        value={formatDisplayDate(props.value)}
-        readOnly
-        aria-label="Zgjedh daten"
-      />
-      <input
-        ref={pickerRef}
-        className="date-input-native"
-        type="date"
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        tabIndex={-1}
-        aria-hidden="true"
-      />
     </div>
   )
 }

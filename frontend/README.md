@@ -66,11 +66,16 @@ frontend/
     App.tsx              Login gate and authenticated shell
     main.tsx             App bootstrap + React Query provider
     index.css            Global styles and dashboard layout
+    components/
+      ConfirmModal.tsx   Shared confirmation dialog
+      DateInput.tsx      Date picker control
+      HistoryModal.tsx   Action history (Historiku)
     pages/
       DashboardPage.tsx  Main inventory UI (actions, products, summary)
     lib/
       api.ts             Backend API client
       country.tsx        Country context + selector (XK / AL)
+      format.ts          Date/number formatting helpers
   public/                Static assets (flags, icons)
   vite.config.ts         Dev server + API proxy
 ```
@@ -79,9 +84,16 @@ frontend/
 
 `DashboardPage.tsx` is the main screen. It is organized into three areas:
 
-1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize.
+1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize. **Historiku** opens the action history modal.
 2. **Products card** — sortable product table, add/edit/delete, Excel export.
 3. **Summary panel** — per-country totals for a date range and Excel export.
+
+**Historiku** (action history):
+
+- Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal`.
+- Filter by type, country, and date range; paginated table (**5 per page**).
+- Expand a row to view product line items in an inline sub-table.
+- Edits and deletes refresh products and summary queries automatically (when edit UI is enabled).
 
 **Transfer** is separate from the main action form:
 
@@ -90,11 +102,13 @@ frontend/
 - The country chosen in `Nga` is disabled in `Ne`.
 - Submit sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
 
-Shared pieces inside `DashboardPage.tsx`:
+Shared pieces:
 
-- `ActionItemsTable` — product / price / quantity rows used by both the main form and transfer modal.
+- `ActionItemsTable` (in `DashboardPage.tsx`) — product rows for main form and transfer modal.
 - `TransferModal` — full transfer workflow.
-- `ConfirmModal` — confirmation before saving actions or transfers.
+- `ConfirmModal`, `DateInput`, `HistoryModal` — in `src/components/`.
+
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. New actions get a `batch_id`; history lists grouped batches only.
 
 ### API client
 
@@ -107,6 +121,8 @@ Main endpoints used by the UI:
 | `login` / `logout` / `currentSession` | Authentication |
 | `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Product CRUD |
 | `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
+| `listActionBatches` / `getActionBatch` | Paginated history list and detail |
+| `updateActionBatch` / `updateActionBatchItem` / `deleteActionBatch` | Edit or delete past actions |
 | `analyticsSummary` | Summary panel numbers |
 | `exportProductsUrl` | Products `.xlsx` download |
 | `exportUrl` | Summary `.xlsx` download |
@@ -142,6 +158,7 @@ The goal is not to replace Excel as an output. The goal is to stop running the b
 - Tracks products by code and name.
 - Keeps separate stock quantities for Kosovo and Albania.
 - Records stock entries (`Hyrje`), exits (`Dalje`), and country-to-country transfers via the **Transfero** popup.
+- **Historiku** modal to view, filter, edit, and delete past actions.
 - Calculates totals automatically from quantity and unit price.
 - Shows live product stock in a sortable table.
 - Shows summary numbers for each country over a selected date range.

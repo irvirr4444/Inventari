@@ -97,86 +97,86 @@ Create `src/components/HistoryModal.tsx`.
 
 ### Layout
 
-The modal uses the existing `.modal-overlay` and `.modal-content` classes, with an additional `.history-modal` class for size overrides (make it wider — `max-width: 860px`).
+The modal uses `.modal-overlay` and `.modal-content.history-modal` (full-width, ~920px max). **Single-column layout** — filters stack vertically at the top, then the table below. No left sidebar.
 
-Structure inside the modal:
+On open, show **all actions** (most recent first) with no filters applied. Default state: date range cleared, `Te gjitha llojet`, `Te gjitha shtetet`.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Historiku i Veprimeve                             [✕]  │
-├────────────────────┬────────────────────────────────────┤
-│  FILTERS           │  ACTION LIST                       │
-│  [ Lloji ▾ ]       │  ┌──────────────────────────────┐  │
-│  [ Shteti ▾ ]      │  │ 17/06/2026 · Hyrje · Kosovo  │  │
-│  [ Nga data ]      │  │ 3 produkte · 12,400 ALL  [▶]  │  │
-│  [ Deri ]          │  ├──────────────────────────────┤  │
-│  [ Filtro ]        │  │ 16/06/2026 · Transfer         │  │
-│                    │  │ XK → AL · 5 produkte  [▶]     │  │
-│                    │  ├──────────────────────────────┤  │
-│                    │  │  ... more rows ...             │  │
-│                    │  └──────────────────────────────┘  │
-│                    │  [ ← Prev ]  Page 1 / 4  [ Next → ]│
-└────────────────────┴────────────────────────────────────┘
+│  🕐 Historiku i Veprimeve                        Mbyll  │
+│  [ Nga data          ]                                  │
+│           —                                             │
+│  [ Deri              ]                                  │
+│  [ Te gjitha llojet ▾ ]                                 │
+│  [ Te gjitha shtetet ▾ ]                                │
+├─────────────────────────────────────────────────────────┤
+│  │ Data │ Lloji │ Shteti │ Produktet │ Totali │         │
+│  [>] 17/06/2026  ↑ Hyrje  🇽🇰 Kosove  2 produkte 295 €  │
+│  [∨] ... expanded sub-table ...                          │
+├─────────────────────────────────────────────────────────┤
+│  Duke shfaqur 1–5 nga 12 veprime      ‹ 1 2 3 ›         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-On mobile (< 600px), the filter panel collapses above the list (stacked layout).
+### Filter Controls (above the table, full width)
 
-### Filter Controls
+- **Nga data** — full-width date input with calendar picker
+- **—** separator between date fields
+- **Deri** — full-width date input
+- **Te gjitha llojet** — dropdown: all types, Hyrje, Dalje, Transfer
+- **Te gjitha shtetet** — dropdown: all countries, Kosove, Shqiperi
+- Filters apply **immediately on change** (no Filtro button required)
+- Clearing a date input removes that filter
 
-Left panel with these filter fields:
+### Action Table
 
-- **Lloji**: dropdown — `Të gjitha`, `Hyrje`, `Dalje`, `Transfer`
-- **Shteti**: dropdown — `Të gjitha`, `Kosovo`, `Albania`
-- **Nga data**: date input (maps to `dateFrom`)
-- **Deri**: date input (maps to `dateTo`)
-- **Filtro** button: applies filters and resets to page 1
-- **Pastro** link/button: clears all filters
+Table columns (left to right):
 
-### Action List (right panel)
+| Col | Content |
+|-----|---------|
+| Expand | Small square button with `>` (collapsed) or `∨` (expanded) |
+| Data | `DD/MM/YYYY` |
+| Lloji | Pill badge: green `↑ Hyrje`, red `↑ Dalje`, purple `⇌ Transfer` |
+| Shteti | Flag icon + country name; transfers show `Kosove → Shqiperi` with arrow |
+| Produktet | `N produkte` or `1 produkt` |
+| Totali | Right-aligned `295.00 €` |
 
-Each row shows:
+**5 rows per page.** Only one row expanded at a time.
 
-- Date (formatted `DD/MM/YYYY`)
-- Action type badge — `Hyrje` (green tint), `Dalje` (red tint), `Transfer` (blue tint)
-- Country or route — e.g. `Kosovo` for Hyrje/Dalje, `XK → AL` for Transfer
-- Item count + total value
-- **Expand arrow [▶]** — clicking expands the row inline to show action detail
+### Expanded Row (inline sub-table)
 
-### Expanded Action Detail (inline below the row)
+When chevron is clicked, a sub-table appears directly below that row (full width):
 
-When the user clicks the expand arrow, show the detail inline beneath that row:
+- Headers: `Produkti`, `Cmimi/Njesi`, `Sasia`, `Totali`
+- One row per product (code + name)
+- Bottom right: **Totali i veprimit: 75.00 €** (bold)
+
+### Pagination
+
+- Left: `Duke shfaqur 1–5 nga 12 veprime`
+- Right: numbered page buttons + `‹` / `›` prev/next
+
+---
+
+### Expanded Action Detail — edit/delete (optional phase)
+
+When edit/delete is enabled, show controls below the read-only sub-table:
 
 ```
-  ┌───────────────────────────────────────────────────────┐
   │  📅 Data:   [ 2026-06-17 ]              [ Ruaj ]       │
   │  🌍 Shteti: [ Kosovo ▾ ]                              │
-  │  (for Transfers also show: Destinacioni [ Albania ▾ ]) │
-  ├───────────────────────────────────────────────────────┤
-  │  Produkti         Cmimi/Njesi   Sasia    Totali   [✎] │
-  │  ─────────────────────────────────────────────────── │
-  │  PROD-001 Mjaltë   500           10       5,000       │
-  │  PROD-002 Vaj       300          4        1,200   [✎] │
-  ├───────────────────────────────────────────────────────┤
-  │  Totali i Veprimit:                        6,200 ALL  │
-  │                           [ 🗑 Fshi Veprimin ]         │
-  └───────────────────────────────────────────────────────┘
+  │  Produkti ... [✎] edit rows ...                       │
+  │                           [ Fshi Veprimin ]            │
 ```
 
 **Editing action-level fields** (date, country):
-- Render as inline inputs — date input for `data`, `<select>` for `shteti` / `destination_shteti`.
-- A `Ruaj` button saves these fields via `updateAction`. Show a spinner while saving. Show a success checkmark (✓) or error message inline.
-- For Transfer: if the user changes `Nga` to match `Ne`, auto-switch `Ne` to the other country (same logic as `TransferModal`).
+- Inline inputs for `data`, `shteti` / `destination_shteti`
+- `Ruaj` calls `updateActionBatch`
+- Transfer: auto-switch destination when source matches (same as TransferModal)
 
-**Editing action items:**
-- Each item row has an edit icon `[✎]` on hover.
-- Clicking the edit icon turns that row into inline inputs: product dropdown, `cmimi_njesi` number input, `sasia` number input. Show `Ruaj` and `Anulo` at the end of the row.
-- Save via `updateActionItem`. Optimistically recalculate the row total and action total in the UI; revert on error.
-- Do not allow the same product to appear twice in the same action.
+**Editing action items:** inline edit via `updateActionBatchItem`. No duplicate products.
 
-**Deleting the action:**
-- `Fshi Veprimin` button at the bottom of the expanded detail.
-- Opens a small inline confirmation: `"A jeni i sigurt? Ky veprim është i pakthyeshëm."` with `Po, Fshi` and `Anulo`.
-- On confirm, call `deleteAction`, close the expanded row, remove it from the list, invalidate the products and summary queries so stock numbers refresh.
+**Deleting:** inline confirm → `deleteActionBatch` → refresh products + summary.
 
 ---
 

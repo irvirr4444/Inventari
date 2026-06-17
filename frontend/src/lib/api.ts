@@ -16,7 +16,14 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(text || `HTTP ${res.status}`)
+    let message = text || `HTTP ${res.status}`
+    try {
+      const parsed = JSON.parse(text) as { error?: string }
+      if (parsed.error) message = parsed.error
+    } catch {
+      /* plain text error body */
+    }
+    throw new Error(message)
   }
 
   const contentType = res.headers.get('content-type') ?? ''
@@ -156,6 +163,91 @@ export async function listActions(opts: {
   if (opts.limit) qs.set('limit', String(opts.limit))
   const res = await http<{ data: Veprimi[] }>(`/actions?${qs.toString()}`)
   return res.data
+}
+
+export type ActionBatch = {
+  id: string
+  lloji: 'Hyrje' | 'Dalje' | 'Transfer'
+  shteti: Country
+  destination_shteti?: Country
+  data: string
+  totali: number
+  created_at: string
+  item_count: number
+}
+
+export type HistoryActionItem = {
+  id: string
+  kodi_produktit: string
+  emri_produktit: string
+  cmimi_njesi: number
+  sasia: number
+  totali: number
+}
+
+export type ActionBatchDetail = ActionBatch & {
+  items: HistoryActionItem[]
+  mirrored_to_albania?: boolean
+}
+
+export async function listActionBatches(params: {
+  page?: number
+  limit?: number
+  lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
+  shteti?: Country
+  dateFrom?: string
+  dateTo?: string
+}): Promise<{ actions: ActionBatch[]; total: number }> {
+  const qs = new URLSearchParams()
+  if (params.page) qs.set('page', String(params.page))
+  if (params.limit) qs.set('limit', String(params.limit))
+  if (params.lloji) qs.set('lloji', params.lloji)
+  if (params.shteti) qs.set('shteti', params.shteti)
+  if (params.dateFrom) qs.set('dateFrom', params.dateFrom)
+  if (params.dateTo) qs.set('dateTo', params.dateTo)
+  return http<{ actions: ActionBatch[]; total: number }>(`/action-batches?${qs.toString()}`)
+}
+
+export async function getActionBatch(id: string): Promise<ActionBatchDetail> {
+  return http<ActionBatchDetail>(`/action-batches/${encodeURIComponent(id)}`)
+}
+
+export async function updateActionBatch(
+  id: string,
+  payload: {
+    data?: string
+    shteti?: Country
+    destination_shteti?: Country
+  },
+): Promise<void> {
+  await http<{ ok: true }>(`/action-batches/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateActionBatchItem(
+  batchId: string,
+  itemId: string,
+  payload: {
+    kodi_produktit?: string
+    cmimi_njesi?: number
+    sasia?: number
+  },
+): Promise<void> {
+  await http<{ ok: true }>(
+    `/action-batches/${encodeURIComponent(batchId)}/items/${itemId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+export async function deleteActionBatch(id: string): Promise<void> {
+  await http<{ ok: true }>(`/action-batches/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function analyticsStock(shteti: Country): Promise<Produkti[]> {

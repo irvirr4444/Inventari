@@ -2,12 +2,14 @@ import React from 'react'
 
 export type Country = 'XK' | 'AL'
 
-const STORAGE_KEY = 'inventari.country'
-
-const COUNTRY_META: Record<Country, { name: string; flagSrc: string }> = {
+export const COUNTRY_META: Record<Country, { name: string; flagSrc: string }> = {
   XK: { name: 'Kosovo', flagSrc: '/Flag_of_Kosovo.webp' },
   AL: { name: 'Albania', flagSrc: '/Flag_of_Albania.svg' },
 }
+
+const STORAGE_KEY = 'inventari.country'
+
+const COUNTRY_META_INTERNAL = COUNTRY_META
 
 function readStored(): Country {
   const v = localStorage.getItem(STORAGE_KEY)
@@ -56,7 +58,7 @@ export function CountrySelector() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
 
-  const active = COUNTRY_META[country]
+  const active = COUNTRY_META_INTERNAL[country]
 
   return (
     <div ref={rootRef} style={{ position: 'relative' }}>
@@ -86,8 +88,8 @@ export function CountrySelector() {
             zIndex: 20,
           }}
         >
-          {(Object.keys(COUNTRY_META) as Country[]).map((c) => {
-            const meta = COUNTRY_META[c]
+          {(Object.keys(COUNTRY_META_INTERNAL) as Country[]).map((c) => {
+            const meta = COUNTRY_META_INTERNAL[c]
             return (
               <button
                 key={c}

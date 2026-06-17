@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { createSupabaseAdmin } from './supabase.js'
 import { styleHeaderRow, autoSizeColumns, applyBordersToDataRows } from './excel.js'
+import { createActionBatchRecord, registerActionBatchRoutes } from './actionBatches.js'
 
 const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
@@ -41,6 +42,8 @@ export async function buildApp() {
 
   const app = Fastify({
     logger: true,
+    // Legacy batch ids are base64url JSON (~130+ chars); default max is 100.
+    maxParamLength: 512,
   })
 
   app.setErrorHandler((err, req, reply) => {
@@ -423,9 +426,29 @@ export async function buildApp() {
           }))
         : []
 
+    let batchId: string | null = null
+    try {
+      batchId = await createActionBatchRecord(supabase, {
+        lloji: body.lloji,
+        data: body.data,
+        shteti: body.shteti,
+        destination_shteti: body.destination_shteti,
+      })
+    } catch (batchErr) {
+      reply.code(400)
+      return {
+        error: batchErr instanceof Error ? batchErr.message : 'Nuk u krijua batch i veprimit.',
+      }
+    }
+
+    const insertRows = [...rows, ...mirrorRows].map((row) => ({
+      ...row,
+      batch_id: batchId,
+    }))
+
     const { data, error } = await supabase
       .from('veprimi')
-      .insert([...rows, ...mirrorRows])
+      .insert(insertRows)
       .select('*')
 
     if (error) {
@@ -436,6 +459,7 @@ export async function buildApp() {
     return {
       data,
       meta: {
+        batch_id: batchId,
         transfer: body.lloji === 'Transfer',
         transfer_count: body.lloji === 'Transfer' ? body.items.length : 0,
         transfer_from: body.lloji === 'Transfer' ? body.shteti : undefined,
@@ -475,6 +499,8 @@ export async function buildApp() {
     if (error) throw error
     return { data }
   })
+
+  registerActionBatchRoutes(app, supabase)
 
   // Analytics
   app.get('/api/analytics/stock', async (req) => {

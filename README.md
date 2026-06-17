@@ -59,6 +59,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 - Product stock for Kosovo and Albania
 - `Hyrje` and `Dalje` actions with automatic totals
 - Country-to-country transfers via a dedicated modal
-- **Historiku** — view, filter, edit, and delete past actions (requires `docs/sql/05_veprim_batch.sql`)
-- Sortable products table and date-range summary panel
-- Formatted Excel exports for products and summaries
+- **Historiku** — view, filter, edit, delete past actions; success snackbars; product labels `Emri (Kodi)` (requires `docs/sql/05_veprim_batch.sql`)
+- Product search by code or name; product pickers sorted by code
+- Sortable products table and date-range summary panel (transfers count as Hyrje/Dalje per country)
+- Formatted Excel exports: products list + Permbledhje template (**13 columns**, no Përshkrimi, auto-sized columns)

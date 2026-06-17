@@ -75,7 +75,7 @@ frontend/
     lib/
       api.ts             Backend API client
       country.tsx        Country context + selector (XK / AL)
-      format.ts          Date/number formatting helpers
+      format.ts          Date/number formatting, productLabel, sortProductsByKodi
   public/                Static assets (flags, icons)
   vite.config.ts         Dev server + API proxy
 ```
@@ -92,15 +92,37 @@ frontend/
 
 - Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal`.
 - Filter by type, country, and date range; paginated table (**5 per page**).
-- Expand a row to view product line items in an inline sub-table.
-- Edits and deletes refresh products and summary queries automatically (when edit UI is enabled).
+- Expand a row to view product line items; multiple rows can stay expanded at once.
+- **Ndrysho** opens an edit popup for batch metadata (date, country/route) and inline product line edits.
+- **Fshi** deletes the whole action after confirmation.
+- Successful edit or delete closes the edit popup (when applicable), refreshes list/detail data, and shows a **green success snackbar**.
+- Products display as **`Emri (Kodi)`** everywhere (history, pickers, errors).
 
 **Transfer** is separate from the main action form:
 
 - The **Transfero** button opens `TransferModal`.
-- The modal contains route selectors (`Nga` / `Ne`), action date, the same product row table as normal actions, total, and **Finalizo Transferin**.
+- The modal contains route selectors (`Nga` / `Ne`), action date, the same product row table as normal actions, total, and **Finalizo Transfertën**.
 - The country chosen in `Nga` is disabled in `Ne`.
-- Submit sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
+- Submit opens a **confirmation dialog** stacked above the transfer modal, then sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
+- On success: transfer modal closes, **green snackbar**, products and summary refresh.
+- Insufficient-stock errors show the full product label, e.g. `CONCEPTASE (X 10 ML,STD) (6)`.
+
+**Products card**:
+
+- Search field in the header filters the table by **kodi** or **emri** (live, case-insensitive).
+- Product dropdowns in action/transfer/history forms list products sorted by **kodi** (numeric-aware).
+- Add/edit/delete use modals with **×** close in the header; delete shows a confirm dialog (**Anulo** neutral, confirm button red for delete).
+
+**Summary panel (Permbledhje)**:
+
+- One API call returns totals for **both** Kosovo and Albania for the selected date range.
+- **Transfers** are included in the same buckets as normal movements: source country **Dalje**, destination country **Hyrje** (no separate transfer columns).
+- Totals filter by **action date** (`Data e Veprimit`), not created-at — ensure **Deri** includes the transfer date to see it in the summary.
+
+**Feedback (snackbars)**:
+
+- Green success snackbar for registered actions/transfers, successful history edits/deletes, and product deletion.
+- Dark default snackbar for validation messages (e.g. duplicate product in a row).
 
 Shared pieces:
 
@@ -123,7 +145,7 @@ Main endpoints used by the UI:
 | `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
 | `listActionBatches` / `getActionBatch` | Paginated history list and detail |
 | `updateActionBatch` / `updateActionBatchItem` / `deleteActionBatch` | Edit or delete past actions |
-| `analyticsSummary` | Summary panel numbers |
+| `analyticsSummary` | Summary panel numbers (both countries, one request) |
 | `exportProductsUrl` | Products `.xlsx` download |
 | `exportUrl` | Summary `.xlsx` download |
 
@@ -143,6 +165,8 @@ createActionBatch({
 
 - Dashboard layout is viewport-locked with internal scrolling in the products table.
 - Modal styles live under `.modal-overlay`, `.modal-content`, and `.transfer-modal`.
+- Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals.
+- Success snackbars use `.snackbar.success` (green); modals use `.modal-close-btn` (×) instead of text “Mbyll”.
 - Action buttons use shared `.btn`, `.toggle-btn`, and `.table` classes from `index.css`.
 
 ---
@@ -180,7 +204,9 @@ Transfer is represented using the same movement logic as the rest of the system:
 - `Dalje` from the source country.
 - `Hyrje` into the destination country.
 
-The existing Kosovo `Dalje` automation is still supported: a normal Kosovo `Dalje` can still be reflected as an Albania `Hyrje`. The explicit Transfer workflow is for cases where the user wants to choose the source and destination directly.
+The existing Kosovo `Dalje` automation is still supported: a normal Kosovo `Dalje` can still be reflected as an Albania `Hyrje` in the **Permbledhje Excel** export on the same row. The explicit Transfer workflow is for cases where the user wants to choose the source and destination directly.
+
+**Permbledhje summary vs Excel:** both treat transfers as **Dalje** in the source country and **Hyrje** in the destination. Excel additionally mirrors Kosovo `Dalje` into the Albania columns on one row when that automation applies.
 
 ## Why This Is Better Than Manual Excel Work
 
@@ -343,7 +369,7 @@ Input fields:
 - `Ne` - destination country.
 - `Data e Veprimit` - action date.
 - Action item rows (same structure as normal movements):
-  - `Produkti`
+  - `Produkti` (`Emri (Kodi)` in dropdown, sorted by code)
   - `Cmimi/Njesi`
   - `Sasia`
 
@@ -367,8 +393,8 @@ Workflow inside the popup:
 2. Set the action date.
 3. Add one or more product rows with price and quantity.
 4. Review the transfer total.
-5. Click **Finalizo Transferin**.
-6. Confirm in the confirmation dialog.
+5. Click **Finalizo Transfertën**.
+6. Confirm in the confirmation dialog (× or **Anulo** to cancel).
 
 Stored result:
 
@@ -398,7 +424,7 @@ Each action can contain one or more products. The same row structure is used on 
 
 Input fields per row:
 
-- `Produkti` - selected product.
+- `Produkti` - selected product (dropdown shows `Emri (Kodi)`, sorted by code).
 - `Cmimi/Njesi` - unit price.
 - `Sasia` - quantity.
 
@@ -418,6 +444,37 @@ Stored result:
 - One or more inventory action records.
 - Updated product stock for the selected country.
 - For transfers, updated stock for both the source and destination countries.
+
+### Historiku (Action History)
+
+Opened from the **Historiku** button on the action card.
+
+Input / filters:
+
+- Action type (`Hyrje`, `Dalje`, `Transfer`, or all).
+- Country (for non-transfer batches).
+- Date range (`Nga` / `Deri`).
+
+List behavior:
+
+- Paginated (**5** rows per page).
+- Expand a batch to see line items (product, unit price, quantity, line total).
+- Multiple batches can stay expanded at once.
+
+Edit (`Ndrysho`):
+
+- Popup to change batch date, country (or transfer route), and individual line items.
+- **Ruaj** / **Anulo** on inline product edits; money columns stay on one line.
+- On success: edit popup closes, row stays expanded, list refreshes, green snackbar.
+
+Delete (`Fshi`):
+
+- Confirm dialog (**Anulo** neutral, red confirm).
+- On success: green snackbar; products and summary refresh.
+
+Purpose:
+
+- Audit and correct past movements without editing the database manually.
 
 ### Summary Date Range
 
@@ -449,8 +506,8 @@ Displayed columns:
 
 Behavior:
 
-- Sorted by `Kodi` ascending by default.
-- User can sort by code, name, Kosovo stock, or Albania stock.
+- Sorted by `Kodi` ascending by default (user can sort by code, name, Kosovo stock, or Albania stock).
+- **Search** in the header filters rows by code or name without reloading the page.
 - The table shows a fixed number of visible rows and scrolls internally.
 
 Purpose:
@@ -479,10 +536,9 @@ The platform shows feedback after important actions.
 
 Examples:
 
-- Successful inventory action registration.
-- Successful transfer registration with source and destination countries.
-- Validation errors when required fields are missing.
-- Errors from product creation, editing, or deletion.
+- Green snackbar: successful inventory action, transfer, history edit/delete, product deletion.
+- Validation errors when required fields are missing (inline in forms or snackbar for duplicate product in a row).
+- Stock errors with full product name and code, e.g. insufficient stock on transfer or `Dalje`.
 
 Purpose:
 
@@ -494,15 +550,18 @@ The summary panel shows totals for each country over the selected date range.
 
 For each country, it displays:
 
-- `Hyrje` quantity.
-- `Hyrje` value.
-- `Dalje` quantity.
-- `Dalje` value.
+- `Hyrje` quantity and value (includes transfer **in** as normal `Hyrje` rows).
+- `Dalje` quantity and value (includes transfer **out** as normal `Dalje` rows).
 
 Countries shown:
 
 - Kosovo.
 - Albania.
+
+Important:
+
+- Filters use each action’s **business date**, not when it was entered in the system.
+- Extend **Deri** to include a transfer’s date if it does not appear in the totals yet.
 
 Purpose:
 
@@ -545,7 +604,7 @@ Purpose:
 
 ### Summary Excel Export
 
-The summary panel has an Excel export button.
+The summary panel has an Excel export button. It uses the template at `docs/excel/Inventari Excel Template.xlsx`.
 
 Output file:
 
@@ -555,11 +614,23 @@ Filename format:
 
 - `Permbledhje DD/MM/YYYY HH:mm.xlsx`
 
-Content:
+Template columns (**13 columns**, no Përshkrimi):
 
-- Inventory movement report for the selected date range.
-- Product movement values.
-- Stock-related values for Kosovo and Albania.
+| Cols | Content |
+| --- | --- |
+| 1 | Kodi |
+| 2 | Produkti (product name) |
+| 3–7 | Kosova: Data, Cmimi/Njesi, Sasi, Vlefta, Gjendje |
+| 8 | Spacer (empty) |
+| 9–13 | Shqiperi: Data, Cmimi/Njesi, Sasi, Vlefta, Gjendje |
+
+Behavior:
+
+- Fills movement rows for the selected export date range (`from` / `to` query params).
+- Kosovo `Dalje` that auto-mirrors to Albania fills **both** country columns on one row.
+- Explicit transfers write `Dalje` on the source side and `Hyrje` on the destination side (same row when exported from Kosovo with mirror logic).
+- Column widths auto-size to the longest cell in each column (max width 120 characters).
+- Data cells use `wrapText: false` so names stay on one line when the column is wide enough.
 
 Purpose:
 

@@ -16,7 +16,7 @@ import {
   type Produkti,
 } from '../lib/api'
 import type { Country } from '../lib/country'
-import { countryLabel, fmt, fmtInt } from '../lib/format'
+import { countryLabel, fmt, fmtInt, productLabel, sortProductsByKodi } from '../lib/format'
 
 type ActionItem = {
   key: string
@@ -70,7 +70,10 @@ export function DashboardPage() {
   ])
   const [actionError, setActionError] = React.useState<string | null>(null)
   const [confirmActionOpen, setConfirmActionOpen] = React.useState(false)
-  const [snackbar, setSnackbar] = React.useState<string | null>(null)
+  const [snackbar, setSnackbar] = React.useState<{
+    message: string
+    variant?: 'success' | 'default'
+  } | null>(null)
 
   // ─────────────────────────────────────────────────────────────
   // PRODUCTS STATE
@@ -87,6 +90,7 @@ export function DashboardPage() {
     key: 'kodi',
     direction: 'asc',
   })
+  const [productSearch, setProductSearch] = React.useState('')
 
   // ─────────────────────────────────────────────────────────────
   // ANALYTICS STATE
@@ -105,17 +109,9 @@ export function DashboardPage() {
     refetchOnWindowFocus: false,
   })
 
-  const summaryKosoveQuery = useQuery({
-    queryKey: ['analytics-summary', 'XK', from, to],
-    queryFn: () => analyticsSummary({ shteti: 'XK', from, to }),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-  })
-
-  const summaryShqiperiQuery = useQuery({
-    queryKey: ['analytics-summary', 'AL', from, to],
-    queryFn: () => analyticsSummary({ shteti: 'AL', from, to }),
+  const summaryQuery = useQuery({
+    queryKey: ['analytics-summary', from, to],
+    queryFn: () => analyticsSummary({ from, to }),
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -142,6 +138,24 @@ export function DashboardPage() {
     return products
   }, [productSort, productsQuery.data])
 
+  const filteredProducts = React.useMemo(() => {
+    const q = productSearch.trim().toLowerCase()
+    if (!q) return sortedProducts
+    return sortedProducts.filter(
+      (p) => p.kodi.toLowerCase().includes(q) || p.emri.toLowerCase().includes(q),
+    )
+  }, [sortedProducts, productSearch])
+
+  const duplicateProductMessage = React.useCallback(
+    (kodi: string) => {
+      const product = productsQuery.data?.find((p) => p.kodi === kodi)
+      return product
+        ? `Ky produkt eshte tashme ne liste: ${productLabel(product.emri, product.kodi)}`
+        : 'Ky produkt eshte tashme ne liste'
+    },
+    [productsQuery.data],
+  )
+
   // ─────────────────────────────────────────────────────────────
   // MUTATIONS
   // ─────────────────────────────────────────────────────────────
@@ -162,11 +176,12 @@ export function DashboardPage() {
     onSuccess: async (result) => {
       setActionError(null)
       setConfirmActionOpen(false)
-      setSnackbar(
-        result.meta?.mirrored_to_albania
+      setSnackbar({
+        message: result.meta?.mirrored_to_albania
           ? `U regjistrua Dalje ne Kosove dhe Hyrje ne Shqiperi per ${result.meta.mirrored_count ?? 0} produkte.`
           : 'Veprimi u regjistrua me sukses.',
-      )
+        variant: 'success',
+      })
       setActionItems([{ key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }])
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['products'] }),
@@ -199,11 +214,12 @@ export function DashboardPage() {
       setTransferError(null)
       setConfirmTransferOpen(false)
       setTransferDialogOpen(false)
-      setSnackbar(
-        result.meta?.transfer
+      setSnackbar({
+        message: result.meta?.transfer
           ? `Transfer nga ${countryLabel(result.meta.transfer_from ?? transferFrom)} ne ${countryLabel(result.meta.transfer_to ?? transferTo)} u regjistrua per ${result.meta.transfer_count ?? 0} produkte.`
           : `Transfer nga ${countryLabel(transferFrom)} ne ${countryLabel(transferTo)} u regjistrua me sukses.`,
-      )
+        variant: 'success',
+      })
       setTransferItems([{ key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }])
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['products'] }),
@@ -263,6 +279,7 @@ export function DashboardPage() {
     onSuccess: async () => {
       setProductError(null)
       setDeletingProduct(null)
+      setSnackbar({ message: 'Produkti u fshi me sukses.', variant: 'success' })
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['products'] }),
         qc.invalidateQueries({ queryKey: ['analytics-summary'] }),
@@ -358,7 +375,7 @@ export function DashboardPage() {
       value &&
       actionItems.some((x) => x.key !== key && x.kodi_produktit === value)
     ) {
-      setSnackbar('Ky produkt eshte tashme ne liste')
+      setSnackbar({ message: duplicateProductMessage(value) })
       return
     }
 
@@ -385,7 +402,7 @@ export function DashboardPage() {
       value &&
       transferItems.some((x) => x.key !== key && x.kodi_produktit === value)
     ) {
-      setSnackbar('Ky produkt eshte tashme ne liste')
+      setSnackbar({ message: duplicateProductMessage(value) })
       return
     }
 
@@ -415,10 +432,10 @@ export function DashboardPage() {
     0,
   )
   const emptySummary: SummaryData = { in_qty: 0, in_value: 0, out_qty: 0, out_value: 0 }
-  const summaryKosove = summaryKosoveQuery.data ?? emptySummary
-  const summaryShqiperi = summaryShqiperiQuery.data ?? emptySummary
-  const summaryIsFetching = summaryKosoveQuery.isFetching || summaryShqiperiQuery.isFetching
-  const summaryError = summaryKosoveQuery.error ?? summaryShqiperiQuery.error
+  const summaryKosove = summaryQuery.data?.XK ?? emptySummary
+  const summaryShqiperi = summaryQuery.data?.AL ?? emptySummary
+  const summaryIsFetching = summaryQuery.isFetching
+  const summaryError = summaryQuery.error
 
   return (
     <div className="dashboard-stack">
@@ -557,6 +574,33 @@ export function DashboardPage() {
         <div className="card products-card">
           <div className="row section-header products-header">
             <h3>Produkte</h3>
+            <div className="products-search-wrap">
+              <div className="products-search-field">
+                <svg
+                  className="products-search-icon"
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  className="products-search"
+                  type="search"
+                  value={productSearch}
+                  placeholder="Kerko sipas kodit ose emrit…"
+                  aria-label="Kerko produktet sipas kodit ose emrit"
+                  onChange={(e) => setProductSearch(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="spacer" />
             <button type="button" className="btn" onClick={() => setShowAddProduct(true)}>
               + Shto produkt
@@ -675,14 +719,16 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>
-                      Nuk ka produkte. Shto produktin e pare me butonin me lart.
+                      {productSearch.trim()
+                        ? 'Nuk u gjet asnje produkt per kete kerkim.'
+                        : 'Nuk ka produkte. Shto produktin e pare me butonin me lart.'}
                     </td>
                   </tr>
                 ) : (
-                  sortedProducts.map((p) => (
+                  filteredProducts.map((p) => (
                     <tr key={p.id}>
                       <td className="product-text-cell">
                         <code className="product-text" data-full={p.kodi} title={p.kodi}>
@@ -847,55 +893,6 @@ export function DashboardPage() {
       {/* ═══════════════════════════════════════════════════════════════
           CONFIRM / ADD / EDIT PRODUCT MODALS
       ═══════════════════════════════════════════════════════════════ */}
-      {confirmActionOpen && (
-        <ConfirmModal
-          title="Finalizo veprimin?"
-          message={
-            <span>
-              {lloji} ne {countryLabel(country)}{' '}
-              me total{' '}
-              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                {fmt(actionTotal)}
-              </strong>
-              .
-            </span>
-          }
-          confirmLabel={actionMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
-          tone="primary"
-          loading={actionMutation.isPending}
-          onCancel={() => setConfirmActionOpen(false)}
-          onConfirm={() => {
-            actionMutation.mutate(undefined, {
-              onSettled: () => setConfirmActionOpen(false),
-            })
-          }}
-        />
-      )}
-
-      {confirmTransferOpen && (
-        <ConfirmModal
-          title="Finalizo transferin?"
-          message={
-            <span>
-              Transfer nga {countryLabel(transferFrom)} ne {countryLabel(transferTo)} me total{' '}
-              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                {fmt(transferTotal)}
-              </strong>
-              .
-            </span>
-          }
-          confirmLabel={transferMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
-          tone="primary"
-          loading={transferMutation.isPending}
-          onCancel={() => setConfirmTransferOpen(false)}
-          onConfirm={() => {
-            transferMutation.mutate(undefined, {
-              onSettled: () => setConfirmTransferOpen(false),
-            })
-          }}
-        />
-      )}
-
       {transferDialogOpen && (
         <TransferModal
           from={transferFrom}
@@ -922,13 +919,17 @@ export function DashboardPage() {
       )}
 
       {historyOpen && (
-        <HistoryModal products={productsQuery.data ?? []} onClose={() => setHistoryOpen(false)} />
+        <HistoryModal
+          products={productsQuery.data ?? []}
+          onClose={() => setHistoryOpen(false)}
+          onNotify={(message, variant = 'success') => setSnackbar({ message, variant })}
+        />
       )}
 
       {deletingProduct && (
         <ConfirmModal
           title="Fshij produktin?"
-          message={`Produkti "${deletingProduct.emri}" do te fshihet bashke me historikun e veprimeve te tij.`}
+          message={`Produkti "${productLabel(deletingProduct.emri, deletingProduct.kodi)}" do te fshihet bashke me historikun e veprimeve te tij.`}
           confirmLabel={deleteProductMut.isPending ? 'Duke fshire...' : 'Fshij'}
           tone="danger"
           loading={deleteProductMut.isPending}
@@ -966,9 +967,62 @@ export function DashboardPage() {
         />
       )}
 
+      {confirmActionOpen && (
+        <ConfirmModal
+          title="Finalizo veprimin?"
+          message={
+            <span>
+              {lloji} ne {countryLabel(country)}{' '}
+              me total{' '}
+              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                {fmt(actionTotal)}
+              </strong>
+              .
+            </span>
+          }
+          confirmLabel={actionMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
+          tone="primary"
+          loading={actionMutation.isPending}
+          onCancel={() => setConfirmActionOpen(false)}
+          onConfirm={() => {
+            actionMutation.mutate(undefined, {
+              onSettled: () => setConfirmActionOpen(false),
+            })
+          }}
+        />
+      )}
+
+      {confirmTransferOpen && (
+        <ConfirmModal
+          title="Finalizo transfertën?"
+          message={
+            <span>
+              Transfer nga {countryLabel(transferFrom)} ne {countryLabel(transferTo)} me total{' '}
+              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                {fmt(transferTotal)}
+              </strong>
+              .
+            </span>
+          }
+          confirmLabel={transferMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
+          tone="primary"
+          loading={transferMutation.isPending}
+          onCancel={() => setConfirmTransferOpen(false)}
+          onConfirm={() => {
+            transferMutation.mutate(undefined, {
+              onSettled: () => setConfirmTransferOpen(false),
+            })
+          }}
+        />
+      )}
+
       {snackbar && (
-        <div className="snackbar" role="status" aria-live="polite">
-          {snackbar}
+        <div
+          className={`snackbar${snackbar.variant === 'success' ? ' success' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          {snackbar.message}
         </div>
       )}
     </div>
@@ -981,6 +1035,11 @@ function ActionItemsTable(props: {
   onUpdate: (key: string, field: keyof ActionItem, value: string | number) => void
   onRemove: (key: string) => void
 }) {
+  const productsByKodi = React.useMemo(
+    () => sortProductsByKodi(props.products),
+    [props.products],
+  )
+
   return (
     <div className="table-scroll action-table-wrap">
       <table className="table table-fixed action-table">
@@ -1013,7 +1072,7 @@ function ActionItemsTable(props: {
                     style={{ width: '100%' }}
                   >
                     <option value="">Zgjedh produktin…</option>
-                    {props.products.map((p) => (
+                    {productsByKodi.map((p) => (
                       <option
                         key={p.id}
                         value={p.kodi}
@@ -1021,7 +1080,7 @@ function ActionItemsTable(props: {
                           (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
                         )}
                       >
-                        {p.emri} ({p.kodi})
+                        {productLabel(p.emri, p.kodi)}
                       </option>
                     ))}
                   </select>
@@ -1108,8 +1167,13 @@ function TransferModal(props: {
         <div className="row" style={{ marginBottom: 18 }}>
           <h3>Transfero produktet</h3>
           <div className="spacer" />
-          <button type="button" className="btn ghost" onClick={props.onClose}>
-            Mbyll
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={props.onClose}
+            aria-label="Mbyll"
+          >
+            ×
           </button>
         </div>
 
@@ -1176,7 +1240,7 @@ function TransferModal(props: {
               disabled={props.saving}
               style={{ marginLeft: 16 }}
             >
-              {props.saving ? 'Duke finalizuar…' : 'Finalizo Transferin'}
+              {props.saving ? 'Duke finalizuar…' : 'Finalizo Transfertën'}
             </button>
           </div>
 
@@ -1266,8 +1330,13 @@ function AddProductModal(props: {
         <div className="row" style={{ marginBottom: 20 }}>
           <h3>Shto produkt te ri</h3>
           <div className="spacer" />
-          <button type="button" className="btn ghost" onClick={props.onClose}>
-            Mbyll
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={props.onClose}
+            aria-label="Mbyll"
+          >
+            ×
           </button>
         </div>
 
@@ -1387,8 +1456,13 @@ function EditModal(props: {
         <div className="row" style={{ marginBottom: 20 }}>
           <h3>Ndrysho produktin</h3>
           <div className="spacer" />
-          <button type="button" className="btn ghost" onClick={props.onClose}>
-            Mbyll
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={props.onClose}
+            aria-label="Mbyll"
+          >
+            ×
           </button>
         </div>
 

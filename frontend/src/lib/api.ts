@@ -265,15 +265,24 @@ export async function analyticsStock(shteti: Country): Promise<Produkti[]> {
   }))
 }
 
+export type CountrySummaryData = {
+  in_qty: number
+  in_value: number
+  out_qty: number
+  out_value: number
+}
+
+export type SummaryByCountry = {
+  XK: CountrySummaryData
+  AL: CountrySummaryData
+}
+
 export async function analyticsSummary(opts: {
-  shteti: Country
   from: string
   to: string
-}): Promise<{ in_qty: number; in_value: number; out_qty: number; out_value: number }> {
+}): Promise<SummaryByCountry> {
   const qs = new URLSearchParams(opts)
-  const res = await http<{
-    data: { in_qty: number; in_value: number; out_qty: number; out_value: number }
-  }>(`/analytics/summary?${qs.toString()}`)
+  const res = await http<{ data: SummaryByCountry }>(`/analytics/summary?${qs.toString()}`)
   return res.data
 }
 

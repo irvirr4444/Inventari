@@ -33,18 +33,52 @@ export function styleHeaderRow(worksheet: ExcelJS.Worksheet): void {
   })
 }
 
-export function autoSizeColumns(worksheet: ExcelJS.Worksheet, maxWidth = 80): void {
-  worksheet.columns.forEach((column) => {
+function cellDisplayLength(cell: ExcelJS.Cell): number {
+  const value = cell.value
+  if (value === null || value === undefined) return 0
+
+  if (typeof value === 'object' && value !== null && 'richText' in value) {
+    return value.richText.map((part) => part.text ?? '').join('').length
+  }
+
+  if (typeof value === 'number') {
+    const fmt = cell.numFmt
+    if (fmt?.includes('#,##0.00')) {
+      return value.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).length
+    }
+    if (fmt?.includes('#,##0')) {
+      return value.toLocaleString('en-US', { maximumFractionDigits: 0 }).length
+    }
+    return String(value).length
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleDateString('en-GB').length
+  }
+
+  return String(value).length
+}
+
+export function autoSizeColumns(
+  worksheet: ExcelJS.Worksheet,
+  maxWidth = 120,
+  columnCount?: number,
+): void {
+  const lastColumn = columnCount ?? worksheet.columnCount
+
+  for (let colNumber = 1; colNumber <= lastColumn; colNumber += 1) {
     let maxLen = 0
-    column.eachCell?.({ includeEmpty: false }, (cell) => {
-      const cellValue = cell.value
-      if (cellValue !== null && cellValue !== undefined) {
-        maxLen = Math.max(maxLen, String(cellValue).length)
-      }
+
+    worksheet.eachRow({ includeEmpty: false }, (row) => {
+      const cell = row.getCell(colNumber)
+      maxLen = Math.max(maxLen, cellDisplayLength(cell))
     })
-    const width = Math.min(maxLen + 2, maxWidth)
-    column.width = width > 0 ? width : 10
-  })
+
+    worksheet.getColumn(colNumber).width = Math.min(Math.max(maxLen + 2, 8), maxWidth)
+  }
 }
 
 export function applyBordersToDataRows(worksheet: ExcelJS.Worksheet, startRow: number): void {

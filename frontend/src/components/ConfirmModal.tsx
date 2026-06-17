@@ -10,15 +10,32 @@ export function ConfirmModal(props: {
   onConfirm: () => void
 }) {
   return (
-    <div className="modal-overlay" onClick={() => !props.loading && props.onCancel()}>
+    <div
+      className="modal-overlay modal-overlay-stacked"
+      onClick={() => !props.loading && props.onCancel()}
+    >
       <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
-        <div style={{ marginBottom: 18 }}>
+        <div className="confirm-modal-header">
           <h3>{props.title}</h3>
-          <p className="muted confirm-message">{props.message}</p>
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={props.onCancel}
+            disabled={props.loading}
+            aria-label="Mbyll"
+          >
+            ×
+          </button>
         </div>
+        <p className="muted confirm-message">{props.message}</p>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <button type="button" className="btn" onClick={props.onCancel} disabled={props.loading}>
+        <div className="confirm-modal-actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={props.onCancel}
+            disabled={props.loading}
+          >
             Anulo
           </button>
           <button

@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { createSupabaseAdmin } from './supabase.js'
 import { styleHeaderRow, autoSizeColumns, applyBordersToDataRows } from './excel.js'
+import { productLabel } from './format.js'
+import { buildSummaryByCountry } from './analyticsSummary.js'
 import { createActionBatchRecord, registerActionBatchRoutes } from './actionBatches.js'
 
 const EnvSchema = z.object({
@@ -185,7 +187,7 @@ export async function buildApp() {
       .select(
         'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,created_at,updated_at',
       )
-      .order('emri', { ascending: true })
+      .order('kodi', { ascending: true })
 
     if (query.search && query.search.trim()) {
       const s = query.search.trim()
@@ -368,7 +370,7 @@ export async function buildApp() {
       for (const it of body.items) {
         const { data: p, error: pErr } = await supabase
           .from('produkti')
-          .select('gjendje_kosove,gjendje_shqiperi')
+          .select('emri,gjendje_kosove,gjendje_shqiperi')
           .eq('kodi', it.kodi_produktit)
           .single()
 
@@ -380,7 +382,9 @@ export async function buildApp() {
           body.shteti === 'XK' ? Number(p?.gjendje_kosove ?? 0) : Number(p?.gjendje_shqiperi ?? 0)
         if (it.sasia > current) {
           reply.code(400)
-          return { error: `Nuk ka gjendje te mjaftueshme per ${it.kodi_produktit}.` }
+          return {
+            error: `Nuk ka gjendje te mjaftueshme per ${productLabel(p?.emri, it.kodi_produktit)}.`,
+          }
         }
       }
     }
@@ -530,7 +534,6 @@ export async function buildApp() {
   app.get('/api/analytics/summary', async (req) => {
     const query = z
       .object({
-        shteti: z.enum(['XK', 'AL']),
         from: z.string(),
         to: z.string(),
       })
@@ -538,33 +541,13 @@ export async function buildApp() {
 
     const { data, error } = await supabase
       .from('veprimi')
-      .select('lloji,sasia,totali')
-      .eq('shteti', query.shteti)
+      .select('lloji,shteti,sasia,totali')
       .gte('data', query.from)
       .lte('data', query.to)
 
     if (error) throw error
 
-    const summary = {
-      in_qty: 0,
-      in_value: 0,
-      out_qty: 0,
-      out_value: 0,
-    }
-
-    for (const row of data ?? []) {
-      const qty = Number(row.sasia ?? 0)
-      const total = Number(row.totali ?? 0)
-      if (row.lloji === 'Hyrje') {
-        summary.in_qty += qty
-        summary.in_value += total
-      } else if (row.lloji === 'Dalje') {
-        summary.out_qty += qty
-        summary.out_value += total
-      }
-    }
-
-    return { data: summary }
+    return { data: buildSummaryByCountry((data ?? []) as Parameters<typeof buildSummaryByCountry>[0]) }
   })
 
   function csvEscape(value: unknown) {
@@ -647,6 +630,8 @@ export async function buildApp() {
     return templatePath
   }
 
+  const INVENTARI_EXPORT_COLS = 13
+
   async function loadInventariTemplateWorkbook() {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.readFile(findExcelTemplatePath())
@@ -656,7 +641,7 @@ export async function buildApp() {
 
     for (let rowNumber = 3; rowNumber <= sheet.rowCount; rowNumber += 1) {
       const row = sheet.getRow(rowNumber)
-      for (let col = 1; col <= 14; col += 1) {
+      for (let col = 1; col <= INVENTARI_EXPORT_COLS; col += 1) {
         row.getCell(col).value = null
       }
     }
@@ -679,17 +664,18 @@ export async function buildApp() {
     } as const
 
     row.height = templateRow.height
-    for (let col = 1; col <= 14; col += 1) {
+    for (let col = 1; col <= INVENTARI_EXPORT_COLS; col += 1) {
       const cell = row.getCell(col)
       cell.style = { ...templateRow.getCell(col).style }
       cell.border = dataBorder
       cell.value = values[col - 1] ?? null
+      cell.alignment = { ...cell.alignment, wrapText: false, vertical: 'middle' }
     }
 
-    for (const col of [5, 7, 11, 13]) {
+    for (const col of [4, 6, 10, 12]) {
       row.getCell(col).numFmt = '#,##0.00'
     }
-    for (const col of [6, 8, 12, 14]) {
+    for (const col of [5, 7, 11, 13]) {
       row.getCell(col).numFmt = '#,##0'
     }
 
@@ -699,7 +685,7 @@ export async function buildApp() {
   function clearInventariRowsAfterData(sheet: ExcelJS.Worksheet, firstEmptyRow: number) {
     for (let rowNumber = firstEmptyRow; rowNumber <= sheet.rowCount; rowNumber += 1) {
       const row = sheet.getRow(rowNumber)
-      for (let col = 1; col <= 14; col += 1) {
+      for (let col = 1; col <= INVENTARI_EXPORT_COLS; col += 1) {
         const cell = row.getCell(col)
         cell.value = null
         cell.style = {}
@@ -796,7 +782,7 @@ export async function buildApp() {
 
     styleHeaderRow(sheet)
     applyBordersToDataRows(sheet, 2)
-    autoSizeColumns(sheet, 80)
+    autoSizeColumns(sheet, 120)
 
     const buf = await workbook.xlsx.writeBuffer()
     reply.header(
@@ -915,7 +901,6 @@ export async function buildApp() {
           rowValues = [
             product.kodi,
             product.emri,
-            '',
             action.data,
             unitPrice,
             qty,
@@ -931,17 +916,16 @@ export async function buildApp() {
 
           if (action.lloji === 'Dalje') {
             const alQty = Number(action.sasia ?? 0)
-            rowValues[9] = action.data
-            rowValues[10] = unitPrice
-            rowValues[11] = alQty
-            rowValues[12] = unitPrice * alQty
-            rowValues[13] = stock.AL + alQty
+            rowValues[8] = action.data
+            rowValues[9] = unitPrice
+            rowValues[10] = alQty
+            rowValues[11] = unitPrice * alQty
+            rowValues[12] = stock.AL + alQty
           }
         } else if (action.shteti === 'AL') {
           rowValues = [
             product.kodi,
             product.emri,
-            '',
             '',
             '',
             '',
@@ -978,12 +962,12 @@ export async function buildApp() {
         '',
         '',
         '',
-        '',
       ])
       nextDataRow += 1
     }
 
     clearInventariRowsAfterData(sheet, nextDataRow)
+    autoSizeColumns(sheet, 120, INVENTARI_EXPORT_COLS)
 
     const buf = await workbook.xlsx.writeBuffer()
     reply.header(

@@ -29,3 +29,16 @@ export function fmtEuro(n: number): string {
 export function productCountLabel(count: number): string {
   return count === 1 ? '1 produkt' : `${count} produkte`
 }
+
+export function productLabel(emri: string, kodi: string): string {
+  const name = emri.trim()
+  const code = kodi.trim()
+  if (name && code) return `${name} (${code})`
+  return name || code
+}
+
+export function sortProductsByKodi<T extends { kodi: string }>(products: T[]): T[] {
+  return [...products].sort((a, b) =>
+    a.kodi.localeCompare(b.kodi, undefined, { sensitivity: 'base', numeric: true }),
+  )
+}

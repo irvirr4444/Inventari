@@ -17,6 +17,8 @@ import {
   fmtEuro,
   formatDisplayDate,
   productCountLabel,
+  productLabel,
+  sortProductsByKodi,
 } from '../lib/format'
 import { ConfirmModal } from './ConfirmModal'
 import { DateInput } from './DateInput'
@@ -141,8 +143,7 @@ function ActionReadOnlyPanel(props: { detail: ActionBatchDetail }) {
             <tr key={item.id}>
               <td>
                 <span className="history-product-cell">
-                  <span className="history-product-code">{item.kodi_produktit}</span>{' '}
-                  {item.emri_produktit}
+                  {productLabel(item.emri_produktit, item.kodi_produktit)}
                 </span>
               </td>
               <td className="history-subtable-money">{fmtEuro(item.cmimi_njesi)}</td>
@@ -161,12 +162,13 @@ function ActionReadOnlyPanel(props: { detail: ActionBatchDetail }) {
   )
 }
 
+type EditSaveKind = 'action' | 'product'
+
 function ActionEditForm(props: {
   detail: ActionBatchDetail
   products: Produkti[]
   disabled: boolean
-  onClose: () => void
-  onSaved: () => void
+  onSaveComplete: (kind: EditSaveKind) => void
   onError: (message: string) => void
 }) {
   const qc = useQueryClient()
@@ -175,15 +177,17 @@ function ActionEditForm(props: {
   const [destination, setDestination] = React.useState<Country | ''>(
     props.detail.destination_shteti ?? '',
   )
-  const [batchSaved, setBatchSaved] = React.useState(false)
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null)
   const [editDraft, setEditDraft] = React.useState<{
     kodi_produktit: string
     cmimi_njesi: string
     sasia: string
   } | null>(null)
-  const [itemSavedId, setItemSavedId] = React.useState<string | null>(null)
   const localItems = props.detail.items
+  const productsByKodi = React.useMemo(
+    () => sortProductsByKodi(props.products),
+    [props.products],
+  )
 
   const invalidateAll = React.useCallback(async () => {
     await Promise.all([
@@ -210,10 +214,8 @@ function ActionEditForm(props: {
       return updateActionBatch(props.detail.id, payload)
     },
     onSuccess: async () => {
-      setBatchSaved(true)
-      window.setTimeout(() => setBatchSaved(false), 1500)
       await invalidateAll()
-      props.onSaved()
+      props.onSaveComplete('action')
     },
     onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
   })
@@ -227,13 +229,11 @@ function ActionEditForm(props: {
         sasia: Number(editDraft.sasia) || 0,
       })
     },
-    onSuccess: async (_data, itemId) => {
-      setItemSavedId(itemId)
-      window.setTimeout(() => setItemSavedId(null), 1500)
+    onSuccess: async () => {
       setEditingItemId(null)
       setEditDraft(null)
       await invalidateAll()
-      props.onSaved()
+      props.onSaveComplete('product')
     },
     onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
   })
@@ -257,11 +257,16 @@ function ActionEditForm(props: {
       props.onError('Sasia duhet te jete > 0.')
       return
     }
-    const duplicate = localItems.some(
+    const duplicateProduct = localItems.find(
       (it) => it.id !== itemId && it.kodi_produktit === editDraft.kodi_produktit,
     )
-    if (duplicate) {
-      props.onError('Ky produkt eshte tashme ne liste')
+    if (duplicateProduct) {
+      props.onError(
+        `Ky produkt eshte tashme ne liste: ${productLabel(
+          duplicateProduct.emri_produktit,
+          duplicateProduct.kodi_produktit,
+        )}`,
+      )
       return
     }
     updateItemMut.mutate(itemId)
@@ -359,7 +364,6 @@ function ActionEditForm(props: {
           >
             {updateBatchMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
           </button>
-          {batchSaved && <span className="history-save-ok history-meta-save-ok">✓</span>}
         </div>
       </div>
 
@@ -396,7 +400,7 @@ function ActionEditForm(props: {
                       }
                     >
                       <option value="">Zgjedh produktin…</option>
-                      {props.products.map((p) => (
+                      {productsByKodi.map((p) => (
                         <option
                           key={p.id}
                           value={p.kodi}
@@ -404,14 +408,13 @@ function ActionEditForm(props: {
                             (x) => x.id !== item.id && x.kodi_produktit === p.kodi,
                           )}
                         >
-                          {p.emri} ({p.kodi})
+                          {productLabel(p.emri, p.kodi)}
                         </option>
                       ))}
                     </select>
                   ) : (
                     <span className="history-product-cell">
-                      <span className="history-product-code">{item.kodi_produktit}</span>{' '}
-                      {item.emri_produktit}
+                      {productLabel(item.emri_produktit, item.kodi_produktit)}
                     </span>
                   )}
                 </td>
@@ -485,11 +488,6 @@ function ActionEditForm(props: {
                       >
                         <span aria-hidden="true">✎</span> Ndrysho Produktin
                       </button>
-                      {itemSavedId === item.id && (
-                        <span className="history-save-ok" style={{ marginLeft: 6 }}>
-                          ✓
-                        </span>
-                      )}
                     </>
                   )}
                 </td>
@@ -512,7 +510,7 @@ function ActionEditModal(props: {
   actionId: string
   products: Produkti[]
   onClose: () => void
-  onSaved: () => void
+  onSaveComplete: (kind: EditSaveKind) => void
   onError: (message: string) => void
 }) {
   const detailQuery = useQuery({
@@ -549,11 +547,7 @@ function ActionEditModal(props: {
             detail={detailQuery.data}
             products={props.products}
             disabled={detailQuery.isFetching}
-            onClose={props.onClose}
-            onSaved={() => {
-              props.onSaved()
-              detailQuery.refetch()
-            }}
+            onSaveComplete={props.onSaveComplete}
             onError={props.onError}
           />
         ) : null}
@@ -611,7 +605,11 @@ function HistorySkeletonTable() {
   )
 }
 
-export function HistoryModal(props: { products: Produkti[]; onClose: () => void }) {
+export function HistoryModal(props: {
+  products: Produkti[]
+  onClose: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default') => void
+}) {
   const qc = useQueryClient()
   const [filters, setFilters] = React.useState<FilterState>({})
   const [page, setPage] = React.useState(1)
@@ -670,6 +668,31 @@ export function HistoryModal(props: { products: Produkti[]; onClose: () => void 
     [qc],
   )
 
+  const handleEditSaveComplete = React.useCallback(
+    async (actionId: string, kind: EditSaveKind) => {
+      setEditActionId(null)
+      setExpandedIds((prev) => {
+        const next = new Set(prev)
+        next.add(actionId)
+        return next
+      })
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['action-batches'] }),
+        qc.invalidateQueries({ queryKey: ['action-batch', actionId] }),
+        qc.invalidateQueries({ queryKey: ['products'] }),
+        qc.invalidateQueries({ queryKey: ['analytics-summary'] }),
+      ])
+      await listQuery.refetch()
+      props.onNotify?.(
+        kind === 'product'
+          ? 'Produkti u perditesua me sukses.'
+          : 'Veprimi u perditesua me sukses.',
+        'success',
+      )
+    },
+    [qc, listQuery, props.onNotify],
+  )
+
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteActionBatch(id),
     onSuccess: async (_data, deletedId) => {
@@ -685,7 +708,8 @@ export function HistoryModal(props: { products: Produkti[]; onClose: () => void 
         qc.invalidateQueries({ queryKey: ['products'] }),
         qc.invalidateQueries({ queryKey: ['analytics-summary'] }),
       ])
-      listQuery.refetch()
+      await listQuery.refetch()
+      props.onNotify?.('Veprimi u fshi me sukses.', 'success')
     },
     onError: (e) => {
       setDeleteTarget(null)
@@ -952,7 +976,7 @@ export function HistoryModal(props: { products: Produkti[]; onClose: () => void 
           actionId={editActionId}
           products={props.products}
           onClose={() => setEditActionId(null)}
-          onSaved={() => listQuery.refetch()}
+          onSaveComplete={(kind) => void handleEditSaveComplete(editActionId, kind)}
           onError={setError}
         />
       )}

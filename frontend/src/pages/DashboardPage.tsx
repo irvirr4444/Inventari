@@ -28,7 +28,6 @@ type SummaryData = {
   out_value: number
 }
 
-type ActionType = 'Hyrje' | 'Dalje' | 'Transfer'
 type ProductSortKey = 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
 type SortDirection = 'asc' | 'desc'
 
@@ -68,7 +67,16 @@ export function DashboardPage() {
   // ─────────────────────────────────────────────────────────────
   // ACTION ENTRY STATE
   // ─────────────────────────────────────────────────────────────
-  const [lloji, setLloji] = React.useState<ActionType>('Hyrje')
+  const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
+  const [transferDialogOpen, setTransferDialogOpen] = React.useState(false)
+  const [transferFrom, setTransferFrom] = React.useState<Country>('XK')
+  const [transferTo, setTransferTo] = React.useState<Country>('AL')
+  const [transferDate, setTransferDate] = React.useState(todayISODate())
+  const [transferItems, setTransferItems] = React.useState<ActionItem[]>([
+    { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
+  ])
+  const [transferError, setTransferError] = React.useState<string | null>(null)
+  const [confirmTransferOpen, setConfirmTransferOpen] = React.useState(false)
   const [actionDate, setActionDate] = React.useState(todayISODate())
   const [actionItems, setActionItems] = React.useState<ActionItem[]>([
     { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
@@ -126,8 +134,6 @@ export function DashboardPage() {
     refetchOnWindowFocus: true,
   })
 
-  const transferDestination: Country = country === 'XK' ? 'AL' : 'XK'
-
   const sortedProducts = React.useMemo(() => {
     const products = [...(productsQuery.data ?? [])]
     const multiplier = productSort.direction === 'asc' ? 1 : -1
@@ -156,7 +162,6 @@ export function DashboardPage() {
     mutationFn: () =>
       createActionBatch({
         shteti: country,
-        destination_shteti: lloji === 'Transfer' ? transferDestination : undefined,
         lloji,
         data: actionDate,
         items: actionItems
@@ -169,10 +174,9 @@ export function DashboardPage() {
       }),
     onSuccess: async (result) => {
       setActionError(null)
+      setConfirmActionOpen(false)
       setSnackbar(
-        result.meta?.transfer
-          ? `Transfer nga ${countryLabel(result.meta.transfer_from ?? country)} ne ${countryLabel(result.meta.transfer_to ?? transferDestination)} u regjistrua per ${result.meta.transfer_count ?? 0} produkte.`
-          : result.meta?.mirrored_to_albania
+        result.meta?.mirrored_to_albania
           ? `U regjistrua Dalje ne Kosove dhe Hyrje ne Shqiperi per ${result.meta.mirrored_count ?? 0} produkte.`
           : 'Veprimi u regjistrua me sukses.',
       )
@@ -183,7 +187,47 @@ export function DashboardPage() {
         qc.refetchQueries({ queryKey: ['analytics-summary'], type: 'active' }),
       ])
     },
-    onError: (e) => setActionError(e instanceof Error ? e.message : 'Error'),
+    onError: (e) => {
+      setActionError(e instanceof Error ? e.message : 'Error')
+      setConfirmActionOpen(false)
+    },
+  })
+
+  const transferMutation = useMutation({
+    mutationFn: () =>
+      createActionBatch({
+        shteti: transferFrom,
+        destination_shteti: transferTo,
+        lloji: 'Transfer',
+        data: transferDate,
+        items: transferItems
+          .filter((i) => i.kodi_produktit.trim())
+          .map((i) => ({
+            kodi_produktit: i.kodi_produktit.trim(),
+            cmimi_njesi: Number(i.cmimi_njesi) || 0,
+            sasia: Number(i.sasia) || 0,
+          })),
+      }),
+    onSuccess: async (result) => {
+      setTransferError(null)
+      setConfirmTransferOpen(false)
+      setTransferDialogOpen(false)
+      setSnackbar(
+        result.meta?.transfer
+          ? `Transfer nga ${countryLabel(result.meta.transfer_from ?? transferFrom)} ne ${countryLabel(result.meta.transfer_to ?? transferTo)} u regjistrua per ${result.meta.transfer_count ?? 0} produkte.`
+          : `Transfer nga ${countryLabel(transferFrom)} ne ${countryLabel(transferTo)} u regjistrua me sukses.`,
+      )
+      setTransferItems([{ key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }])
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['products'] }),
+        qc.invalidateQueries({ queryKey: ['analytics-summary'] }),
+        qc.refetchQueries({ queryKey: ['analytics-summary'], type: 'active' }),
+      ])
+    },
+    onError: (e) => {
+      setTransferError(e instanceof Error ? e.message : 'Error')
+      setConfirmTransferOpen(false)
+    },
   })
 
   React.useEffect(() => {
@@ -264,6 +308,41 @@ export function DashboardPage() {
     setConfirmActionOpen(true)
   }
 
+  const openTransferDialog = () => {
+    setTransferFrom(country)
+    setTransferTo(country === 'XK' ? 'AL' : 'XK')
+    setTransferDate(todayISODate())
+    setTransferItems([{ key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }])
+    setTransferError(null)
+    setConfirmTransferOpen(false)
+    setTransferDialogOpen(true)
+  }
+
+  const submitTransfer = (e: React.FormEvent) => {
+    e.preventDefault()
+    setTransferError(null)
+    const clean = transferItems.filter((i) => i.kodi_produktit.trim())
+    if (clean.length === 0) {
+      setTransferError('Shto te pakten nje produkt.')
+      return
+    }
+    for (const it of clean) {
+      if (Number(it.sasia) <= 0) {
+        setTransferError('Sasia duhet te jete > 0.')
+        return
+      }
+      if (Number(it.cmimi_njesi) < 0) {
+        setTransferError('Cmimi/Njesi duhet te jete >= 0.')
+        return
+      }
+    }
+    if (transferFrom === transferTo) {
+      setTransferError('Transferi kerkon dy vende te ndryshme.')
+      return
+    }
+    setConfirmTransferOpen(true)
+  }
+
   const submitNewProduct = (e: React.FormEvent) => {
     e.preventDefault()
     setProductError(null)
@@ -301,6 +380,33 @@ export function DashboardPage() {
     )
   }
 
+  const addTransferItem = () => {
+    setTransferItems((prev) => [
+      ...prev,
+      { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 },
+    ])
+  }
+
+  const removeTransferItem = (key: string) => {
+    setTransferItems((prev) => prev.filter((x) => x.key !== key))
+  }
+
+  const updateTransferItem = (key: string, field: keyof ActionItem, value: string | number) => {
+    if (
+      field === 'kodi_produktit' &&
+      typeof value === 'string' &&
+      value &&
+      transferItems.some((x) => x.key !== key && x.kodi_produktit === value)
+    ) {
+      setSnackbar('Ky produkt eshte tashme ne liste')
+      return
+    }
+
+    setTransferItems((prev) =>
+      prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)),
+    )
+  }
+
   const changeProductSort = (key: ProductSortKey) => {
     setProductSort((prev) => ({
       key,
@@ -315,7 +421,11 @@ export function DashboardPage() {
 
   const actionTotal = actionItems.reduce(
     (sum, it) => sum + (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0),
-    0
+    0,
+  )
+  const transferTotal = transferItems.reduce(
+    (sum, it) => sum + (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0),
+    0,
   )
   const emptySummary: SummaryData = { in_qty: 0, in_value: 0, out_qty: 0, out_value: 0 }
   const summaryKosove = summaryKosoveQuery.data ?? emptySummary
@@ -331,6 +441,29 @@ export function DashboardPage() {
       <div className="card action-card">
         <div className="row action-header">
           <h2>Regjistro Veprim</h2>
+          <button
+            type="button"
+            className="btn sm transfer-mode-btn"
+            onClick={openTransferDialog}
+          >
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7 7h11l-3-3" />
+              <path d="M18 7l-3 3" />
+              <path d="M17 17H6l3 3" />
+              <path d="M6 17l3-3" />
+            </svg>
+            Transfero
+          </button>
           <div className="spacer" />
           <div className="row action-controls">
             <div className="row" style={{ gap: 8 }}>
@@ -345,7 +478,6 @@ export function DashboardPage() {
         </div>
 
         <form onSubmit={submitAction}>
-          {/* Toggle Buttons */}
           <div className="toggle-group" style={{ marginBottom: 20 }}>
             <button
               type="button"
@@ -361,116 +493,14 @@ export function DashboardPage() {
             >
               Dalje (OUT)
             </button>
-            <button
-              type="button"
-              className={`toggle-btn ${lloji === 'Transfer' ? 'active transfer' : ''}`}
-              onClick={() => setLloji('Transfer')}
-            >
-              Transfer
-            </button>
           </div>
 
-          {lloji === 'Transfer' && (
-            <div className="transfer-hint">
-              Transfer: {countryLabel(country)} → {countryLabel(transferDestination)}
-            </div>
-          )}
-
-          {/* Action Items Table */}
-          <div className="table-scroll action-table-wrap">
-            <table className="table table-fixed action-table">
-              <colgroup>
-                <col style={{ width: '35%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '15%' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '12%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Produkti</th>
-                  <th>Cmimi/Njesi</th>
-                  <th>Sasia</th>
-                  <th style={{ textAlign: 'right' }}>Totali</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {actionItems.map((it) => {
-                  const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
-                  return (
-                    <tr key={it.key}>
-                      <td>
-                        <select
-                          className="select"
-                          value={it.kodi_produktit}
-                          onChange={(e) => updateActionItem(it.key, 'kodi_produktit', e.target.value)}
-                          style={{ width: '100%' }}
-                        >
-                          <option value="">Zgjedh produktin…</option>
-                          {(productsQuery.data ?? []).map((p) => (
-                            <option
-                              key={p.id}
-                              value={p.kodi}
-                              disabled={actionItems.some(
-                                (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
-                              )}
-                            >
-                              {p.emri} ({p.kodi})
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          className="input"
-                          type="number"
-                          step="0.01"
-                          min={0}
-                          value={it.cmimi_njesi}
-                          onChange={(e) =>
-                            updateActionItem(
-                              it.key,
-                              'cmimi_njesi',
-                              e.target.value.startsWith('-') ? '' : e.target.value
-                            )
-                          }
-                          placeholder="0.00"
-                          style={{ width: '100%' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="input"
-                          type="number"
-                          min={1}
-                          value={it.sasia}
-                          onChange={(e) => updateActionItem(it.key, 'sasia', Number(e.target.value))}
-                          style={{ width: '100%' }}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="num">{fmt(lineTotal)}</span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn ghost sm"
-                          onClick={() => removeActionItem(it.key)}
-                          disabled={actionItems.length <= 1}
-                          aria-label="Fshij produktin nga veprimi"
-                          title={actionItems.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
-                          style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ActionItemsTable
+            items={actionItems}
+            products={productsQuery.data ?? []}
+            onUpdate={updateActionItem}
+            onRemove={removeActionItem}
+          />
 
           {/* Footer */}
           <div className="row action-footer">
@@ -812,9 +842,7 @@ export function DashboardPage() {
           title="Finalizo veprimin?"
           message={
             <span>
-              {lloji === 'Transfer'
-                ? `Transfer nga ${countryLabel(country)} ne ${countryLabel(transferDestination)}`
-                : `${lloji} ne ${countryLabel(country)}`}{' '}
+              {lloji} ne {countryLabel(country)}{' '}
               me total{' '}
               <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
                 {fmt(actionTotal)}
@@ -831,6 +859,55 @@ export function DashboardPage() {
               onSettled: () => setConfirmActionOpen(false),
             })
           }}
+        />
+      )}
+
+      {confirmTransferOpen && (
+        <ConfirmModal
+          title="Finalizo transferin?"
+          message={
+            <span>
+              Transfer nga {countryLabel(transferFrom)} ne {countryLabel(transferTo)} me total{' '}
+              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                {fmt(transferTotal)}
+              </strong>
+              .
+            </span>
+          }
+          confirmLabel={transferMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
+          tone="primary"
+          loading={transferMutation.isPending}
+          onCancel={() => setConfirmTransferOpen(false)}
+          onConfirm={() => {
+            transferMutation.mutate(undefined, {
+              onSettled: () => setConfirmTransferOpen(false),
+            })
+          }}
+        />
+      )}
+
+      {transferDialogOpen && (
+        <TransferModal
+          from={transferFrom}
+          to={transferTo}
+          date={transferDate}
+          items={transferItems}
+          products={productsQuery.data ?? []}
+          error={transferError}
+          total={transferTotal}
+          saving={transferMutation.isPending}
+          onFromChange={setTransferFrom}
+          onToChange={setTransferTo}
+          onDateChange={setTransferDate}
+          onAddItem={addTransferItem}
+          onRemoveItem={removeTransferItem}
+          onUpdateItem={updateTransferItem}
+          onClose={() => {
+            setTransferDialogOpen(false)
+            setTransferError(null)
+            setConfirmTransferOpen(false)
+          }}
+          onSubmit={submitTransfer}
         />
       )}
 
@@ -916,6 +993,231 @@ function ConfirmModal(props: {
             {props.confirmLabel}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function ActionItemsTable(props: {
+  items: ActionItem[]
+  products: Produkti[]
+  onUpdate: (key: string, field: keyof ActionItem, value: string | number) => void
+  onRemove: (key: string) => void
+}) {
+  return (
+    <div className="table-scroll action-table-wrap">
+      <table className="table table-fixed action-table">
+        <colgroup>
+          <col style={{ width: '35%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '15%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '12%' }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Produkti</th>
+            <th>Cmimi/Njesi</th>
+            <th>Sasia</th>
+            <th style={{ textAlign: 'right' }}>Totali</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {props.items.map((it) => {
+            const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
+            return (
+              <tr key={it.key}>
+                <td>
+                  <select
+                    className="select"
+                    value={it.kodi_produktit}
+                    onChange={(e) => props.onUpdate(it.key, 'kodi_produktit', e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Zgjedh produktin…</option>
+                    {props.products.map((p) => (
+                      <option
+                        key={p.id}
+                        value={p.kodi}
+                        disabled={props.items.some(
+                          (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
+                        )}
+                      >
+                        {p.emri} ({p.kodi})
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={it.cmimi_njesi}
+                    onChange={(e) =>
+                      props.onUpdate(
+                        it.key,
+                        'cmimi_njesi',
+                        e.target.value.startsWith('-') ? '' : e.target.value,
+                      )
+                    }
+                    placeholder="0.00"
+                    style={{ width: '100%' }}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={it.sasia}
+                    onChange={(e) => props.onUpdate(it.key, 'sasia', Number(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <span className="num">{fmt(lineTotal)}</span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => props.onRemove(it.key)}
+                    disabled={props.items.length <= 1}
+                    aria-label="Fshij produktin nga veprimi"
+                    title={props.items.length <= 1 ? 'Duhet te kesh te pakten 1 produkt' : 'Fshij'}
+                    style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function TransferModal(props: {
+  from: Country
+  to: Country
+  date: string
+  items: ActionItem[]
+  products: Produkti[]
+  error: string | null
+  total: number
+  saving: boolean
+  onFromChange: (country: Country) => void
+  onToChange: (country: Country) => void
+  onDateChange: (date: string) => void
+  onAddItem: () => void
+  onRemoveItem: (key: string) => void
+  onUpdateItem: (key: string, field: keyof ActionItem, value: string | number) => void
+  onClose: () => void
+  onSubmit: (e: React.FormEvent) => void
+}) {
+  const updateFrom = (next: Country) => {
+    props.onFromChange(next)
+    if (next === props.to) props.onToChange(next === 'XK' ? 'AL' : 'XK')
+  }
+
+  return (
+    <div className="modal-overlay" onClick={props.onClose}>
+      <div className="modal-content transfer-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="row" style={{ marginBottom: 18 }}>
+          <h3>Transfero produktet</h3>
+          <div className="spacer" />
+          <button type="button" className="btn ghost" onClick={props.onClose}>
+            Mbyll
+          </button>
+        </div>
+
+        <form onSubmit={props.onSubmit}>
+          <div className="transfer-route modal-transfer-route">
+            <div className="form-group">
+              <label className="label">Nga</label>
+              <select
+                className="select"
+                value={props.from}
+                onChange={(e) => updateFrom(e.target.value as Country)}
+              >
+                <option value="XK">Kosove</option>
+                <option value="AL">Shqiperi</option>
+              </select>
+            </div>
+            <div className="transfer-arrow" aria-hidden="true">
+              →
+            </div>
+            <div className="form-group">
+              <label className="label">Ne</label>
+              <select
+                className="select"
+                value={props.to}
+                onChange={(e) => props.onToChange(e.target.value as Country)}
+              >
+                <option value="XK" disabled={props.from === 'XK'}>
+                  Kosove
+                </option>
+                <option value="AL" disabled={props.from === 'AL'}>
+                  Shqiperi
+                </option>
+              </select>
+            </div>
+            <div className="transfer-hint">
+              Transfer: {countryLabel(props.from)} → {countryLabel(props.to)}
+            </div>
+          </div>
+
+          <div className="row transfer-date-row" style={{ gap: 8, margin: '16px 0 20px' }}>
+            <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
+            <DateInput value={props.date} onChange={props.onDateChange} style={{ width: 150 }} />
+          </div>
+
+          <ActionItemsTable
+            items={props.items}
+            products={props.products}
+            onUpdate={props.onUpdateItem}
+            onRemove={props.onRemoveItem}
+          />
+
+          <div className="row action-footer" style={{ marginTop: 16 }}>
+            <button type="button" className="btn" onClick={props.onAddItem}>
+              + Shto produkt
+            </button>
+            <div className="spacer" />
+            <div className="row action-total" style={{ gap: 8 }}>
+              <span className="muted">Total:</span>
+              <span className="num-lg">{fmt(props.total)}</span>
+            </div>
+            <button
+              type="submit"
+              className="btn primary action-submit"
+              disabled={props.saving}
+              style={{ marginLeft: 16 }}
+            >
+              {props.saving ? 'Duke finalizuar…' : 'Finalizo Transferin'}
+            </button>
+          </div>
+
+          {props.error && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: '12px 16px',
+                background: 'var(--danger-bg)',
+                borderRadius: 8,
+                color: 'var(--danger)',
+                fontSize: 14,
+              }}
+            >
+              {props.error}
+            </div>
+          )}
+        </form>
       </div>
     </div>
   )

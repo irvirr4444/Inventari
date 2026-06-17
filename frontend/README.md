@@ -1,4 +1,137 @@
-# Inventari
+# Inventari Frontend
+
+React client for the Inventari inventory platform. This README covers local development and the product behavior implemented in the UI.
+
+## Development
+
+### Stack
+
+- React 19 + TypeScript
+- Vite 8
+- TanStack Query for server state
+- Plain CSS in `src/index.css` (no component library)
+
+The browser talks only to the backend API. Supabase credentials stay on the server.
+
+### Prerequisites
+
+- Node.js 20+
+- Backend running on `http://localhost:3001` (see repo root `README.md`)
+
+### Setup
+
+From the repository root:
+
+```bash
+npm install
+cp frontend/.env.example frontend/.env
+npm run dev
+```
+
+Or run only the frontend workspace:
+
+```bash
+npm install
+npm -w frontend run dev
+```
+
+Vite serves the app on `http://localhost:5173` and proxies `/api` to the backend.
+
+### Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm -w frontend run dev` | Start Vite dev server |
+| `npm -w frontend run build` | Typecheck and build for production |
+| `npm -w frontend run lint` | Run ESLint |
+| `npm -w frontend run preview` | Preview the production build |
+
+From the repo root, `npm run dev` starts backend and frontend together.
+
+### Environment
+
+Copy `frontend/.env.example` to `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=/api
+```
+
+In development, Vite proxies `/api` to `http://localhost:3001`. In production, set `VITE_API_BASE_URL` to the public API base URL if it differs.
+
+### Project structure
+
+```text
+frontend/
+  src/
+    App.tsx              Login gate and authenticated shell
+    main.tsx             App bootstrap + React Query provider
+    index.css            Global styles and dashboard layout
+    pages/
+      DashboardPage.tsx  Main inventory UI (actions, products, summary)
+    lib/
+      api.ts             Backend API client
+      country.tsx        Country context + selector (XK / AL)
+  public/                Static assets (flags, icons)
+  vite.config.ts         Dev server + API proxy
+```
+
+### UI architecture
+
+`DashboardPage.tsx` is the main screen. It is organized into three areas:
+
+1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize.
+2. **Products card** — sortable product table, add/edit/delete, Excel export.
+3. **Summary panel** — per-country totals for a date range and Excel export.
+
+**Transfer** is separate from the main action form:
+
+- The **Transfero** button opens `TransferModal`.
+- The modal contains route selectors (`Nga` / `Ne`), action date, the same product row table as normal actions, total, and **Finalizo Transferin**.
+- The country chosen in `Nga` is disabled in `Ne`.
+- Submit sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
+
+Shared pieces inside `DashboardPage.tsx`:
+
+- `ActionItemsTable` — product / price / quantity rows used by both the main form and transfer modal.
+- `TransferModal` — full transfer workflow.
+- `ConfirmModal` — confirmation before saving actions or transfers.
+
+### API client
+
+`src/lib/api.ts` wraps all backend calls with cookie-based auth (`credentials: 'include'`).
+
+Main endpoints used by the UI:
+
+| Function | Purpose |
+| --- | --- |
+| `login` / `logout` / `currentSession` | Authentication |
+| `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Product CRUD |
+| `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
+| `analyticsSummary` | Summary panel numbers |
+| `exportProductsUrl` | Products `.xlsx` download |
+| `exportUrl` | Summary `.xlsx` download |
+
+Transfer payload shape:
+
+```ts
+createActionBatch({
+  lloji: 'Transfer',
+  shteti: 'XK',              // source country
+  destination_shteti: 'AL',  // destination country
+  data: '2026-06-17',
+  items: [{ kodi_produktit, cmimi_njesi, sasia }],
+})
+```
+
+### Styling notes
+
+- Dashboard layout is viewport-locked with internal scrolling in the products table.
+- Modal styles live under `.modal-overlay`, `.modal-content`, and `.transfer-modal`.
+- Action buttons use shared `.btn`, `.toggle-btn`, and `.table` classes from `index.css`.
+
+---
+
+## Product Overview
 
 Inventari is a simple inventory management platform for businesses that move products between Kosovo and Albania. Instead of keeping stock numbers in manual Excel sheets, the team records each movement once in the app and the system keeps the inventory, summaries, and Excel exports up to date.
 
@@ -8,7 +141,7 @@ The goal is not to replace Excel as an output. The goal is to stop running the b
 
 - Tracks products by code and name.
 - Keeps separate stock quantities for Kosovo and Albania.
-- Records stock entries (`Hyrje`) and exits (`Dalje`).
+- Records stock entries (`Hyrje`), exits (`Dalje`), and country-to-country transfers via the **Transfero** popup.
 - Calculates totals automatically from quantity and unit price.
 - Shows live product stock in a sortable table.
 - Shows summary numbers for each country over a selected date range.
@@ -23,7 +156,14 @@ Each product has one shared identity, but two stock balances:
 
 When the user records a movement, the app updates the correct country stock and stores the action history. This gives the business a clear record of what came in, what went out, when it happened, and how much it was worth.
 
-For transfers, the workflow is designed around the real business process: products leaving Kosovo can be reflected as incoming stock for Albania, so the numbers stay connected instead of being manually copied between separate sheets.
+For transfers, the user opens the **Transfero** popup from the action card. Inside that popup they choose where stock leaves from (`Nga`), where it arrives (`Ne`), the action date, and the same product rows used for normal movements (product, unit price, quantity). The main action form stays focused on `Hyrje` and `Dalje` only.
+
+Transfer is represented using the same movement logic as the rest of the system:
+
+- `Dalje` from the source country.
+- `Hyrje` into the destination country.
+
+The existing Kosovo `Dalje` automation is still supported: a normal Kosovo `Dalje` can still be reflected as an Albania `Hyrje`. The explicit Transfer workflow is for cases where the user wants to choose the source and destination directly.
 
 ## Why This Is Better Than Manual Excel Work
 
@@ -60,9 +200,10 @@ Inventari is useful for a small business that wants:
 1. Add products with their code, name, and starting stock.
 2. Register `Hyrje` when stock comes in.
 3. Register `Dalje` when stock goes out.
-4. Review the products table for current stock.
-5. Use the summary panel to check totals by date range.
-6. Download Excel reports when the business needs a formatted file.
+4. Click **Transfero** when products move from one country to the other (opens a dedicated transfer popup).
+5. Review the products table for current stock.
+6. Use the summary panel to check totals by date range.
+7. Download Excel reports when the business needs a formatted file.
 
 ## Value Proposition
 
@@ -146,9 +287,9 @@ Important behavior:
 
 - Deleting a product is treated as a serious action because product history may depend on it.
 
-### Country Selection
+### Country Selection (Hyrje / Dalje)
 
-The user selects which country the action applies to.
+On the main action card, the user selects which country the movement applies to.
 
 Input values:
 
@@ -157,11 +298,13 @@ Input values:
 
 Purpose:
 
-- Determines which stock balance is affected by the inventory action.
+- Determines which stock balance is affected by a `Hyrje` or `Dalje` action.
 
-### Action Type
+Note: Transfer uses its own country selectors inside the transfer popup, not the main card country selector.
 
-The user chooses the type of inventory movement.
+### Action Type (Hyrje / Dalje)
+
+On the main action card, the user chooses the type of inventory movement.
 
 Input values:
 
@@ -170,8 +313,54 @@ Input values:
 
 Purpose:
 
-- `Hyrje` increases stock.
-- `Dalje` decreases stock.
+- `Hyrje` increases stock in the selected country.
+- `Dalje` decreases stock in the selected country.
+
+### Transfer Popup
+
+Transfer is opened from the **Transfero** button on the action card. The entire transfer workflow happens inside this popup, separate from the main `Hyrje` / `Dalje` form.
+
+Input fields:
+
+- `Nga` - source country.
+- `Ne` - destination country.
+- `Data e Veprimit` - action date.
+- Action item rows (same structure as normal movements):
+  - `Produkti`
+  - `Cmimi/Njesi`
+  - `Sasia`
+
+Rules:
+
+- Source and destination must be different.
+- The country selected in `Nga` cannot be chosen again in `Ne` (that option is disabled).
+- If the user changes `Nga` to match the current `Ne` value, `Ne` switches automatically to the other country.
+- Transfer supports both directions:
+  - Kosovo to Albania.
+  - Albania to Kosovo.
+- The source country must have enough stock for the selected products and quantities.
+- At least one product row is required.
+- Quantity must be greater than zero.
+- Unit price must be zero or higher.
+- The same product cannot be selected twice in the same transfer.
+
+Workflow inside the popup:
+
+1. Choose `Nga` and `Ne`.
+2. Set the action date.
+3. Add one or more product rows with price and quantity.
+4. Review the transfer total.
+5. Click **Finalizo Transferin**.
+6. Confirm in the confirmation dialog.
+
+Stored result:
+
+- A `Dalje` movement row for the source country.
+- A `Hyrje` movement row for the destination country.
+
+Purpose:
+
+- Keeps transfers explicit and auditable while using the same product-entry experience as normal movements.
 
 ### Action Date
 
@@ -186,9 +375,9 @@ Purpose:
 - Stores when the movement happened.
 - Allows summaries and exports to be filtered by date range.
 
-### Action Items
+### Action Items (Hyrje / Dalje / Transfer)
 
-Each action can contain one or more products.
+Each action can contain one or more products. The same row structure is used on the main action card and inside the transfer popup.
 
 Input fields per row:
 
@@ -211,6 +400,7 @@ Stored result:
 
 - One or more inventory action records.
 - Updated product stock for the selected country.
+- For transfers, updated stock for both the source and destination countries.
 
 ### Summary Date Range
 
@@ -273,6 +463,7 @@ The platform shows feedback after important actions.
 Examples:
 
 - Successful inventory action registration.
+- Successful transfer registration with source and destination countries.
 - Validation errors when required fields are missing.
 - Errors from product creation, editing, or deletion.
 
@@ -321,7 +512,7 @@ Columns:
 
 Sorting:
 
-- Sorted by `Kodi` ascending.
+- Matches the current sort column and direction in the products table on screen.
 
 Formatting:
 

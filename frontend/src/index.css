@@ -190,6 +190,10 @@ input[type='date'] {
   margin-bottom: 20px;
 }
 
+.transfer-mode-btn {
+  margin-left: 4px;
+}
+
 .action-controls {
   gap: 16px;
 }
@@ -908,7 +912,6 @@ h3 {
 .transfer-hint {
   display: inline-flex;
   align-items: center;
-  margin: -8px 0 16px;
   border: 1px solid rgba(47, 125, 246, 0.18);
   border-radius: 999px;
   background: rgba(47, 125, 246, 0.08);
@@ -916,6 +919,44 @@ h3 {
   font-size: 13px;
   font-weight: 600;
   padding: 6px 12px;
+}
+
+.transfer-route {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) auto minmax(140px, 180px) 1fr;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.transfer-arrow {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 18px;
+  font-weight: 700;
+  padding-top: 22px;
+}
+
+.action-transfer-summary {
+  margin-bottom: 20px;
+}
+
+.transfer-modal {
+  max-width: min(920px, calc(100vw - 32px));
+}
+
+.transfer-modal-copy {
+  margin: -6px 0 16px;
+}
+
+.modal-transfer-route {
+  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
+  align-items: end;
+  margin-bottom: 0;
+}
+
+.modal-transfer-route .transfer-hint {
+  grid-column: 1 / -1;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1083,11 +1124,19 @@ h3 {
   .toggle-group {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .toggle-btn {
     width: 100%;
+  }
+
+  .transfer-route {
+    grid-template-columns: 1fr;
+  }
+
+  .transfer-arrow {
+    display: none;
   }
 
   .table-scroll .action-table {

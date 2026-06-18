@@ -129,7 +129,14 @@ export function DashboardPage() {
           mode="edit"
           product={d.editing}
           onClose={() => d.setEditing(null)}
-          onSave={(p) => d.updateProductMut.mutate(p)}
+          onSave={(p) =>
+            d.updateProductMut.mutate(p, {
+              onSuccess: () => {
+                d.setEditing(null)
+                d.notify('Produkti u perditesua me sukses.', 'success')
+              },
+            })
+          }
           saving={d.updateProductMut.isPending}
         />
       )}

@@ -223,7 +223,8 @@
   }
 
   .summary-date-grid,
-  .form-row-equal {
+  .form-row-equal,
+  .stock-fields-grid {
     grid-template-columns: 1fr;
   }
 

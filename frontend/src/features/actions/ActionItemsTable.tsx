@@ -1,6 +1,7 @@
 import type { Produkti } from '../../lib/api'
 import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
+import { NumericInput } from '../../components/NumericInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
 export function ActionItemsTable(props: {
@@ -45,36 +46,22 @@ export function ActionItemsTable(props: {
                   />
                 </td>
                 <td>
-                  <input
+                  <NumericInput
                     className="input"
-                    type="number"
                     step="0.01"
                     min={0}
                     value={it.cmimi_njesi}
-                    onChange={(e) =>
-                      props.onUpdate(
-                        it.key,
-                        'cmimi_njesi',
-                        e.target.value.startsWith('-') ? '' : e.target.value,
-                      )
-                    }
+                    onChange={(v) => props.onUpdate(it.key, 'cmimi_njesi', v)}
                     placeholder="0.00"
                     style={{ width: '100%' }}
                   />
                 </td>
                 <td>
-                  <input
+                  <NumericInput
                     className="input"
-                    type="number"
                     min={1}
                     value={it.sasia}
-                    onChange={(e) =>
-                      props.onUpdate(
-                        it.key,
-                        'sasia',
-                        e.target.value.startsWith('-') ? '' : e.target.value,
-                      )
-                    }
+                    onChange={(v) => props.onUpdate(it.key, 'sasia', v)}
                     placeholder="1"
                     style={{ width: '100%' }}
                   />

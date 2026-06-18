@@ -86,6 +86,7 @@ export function useDashboardPage() {
           setNewGjendjeKosove(0)
           setNewGjendjeShqiperi(0)
           setShowAddProduct(false)
+          notify('Produkti u shtua me sukses.', 'success')
         },
       },
     )

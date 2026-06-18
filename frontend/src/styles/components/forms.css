@@ -124,6 +124,54 @@
   gap: var(--space-md);
 }
 
+.stock-fields .label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.stock-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.stock-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--card-soft);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+}
+
+.stock-field-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.stock-field-input {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-field-input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.stock-field-input[type='number']::-webkit-outer-spin-button,
+.stock-field-input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

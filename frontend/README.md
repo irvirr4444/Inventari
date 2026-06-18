@@ -1,6 +1,6 @@
 # Inventari Frontend
 
-React client for the Inventari inventory platform. This README covers local development and the product behavior implemented in the UI.
+React client for the Inventari inventory platform. This README covers local development and **desktop** product behavior (dashboard at `/` on wide screens). Mobile behavior is summarized in the [Mobile web app](#mobile-web-app) section.
 
 ## Development
 
@@ -67,7 +67,8 @@ frontend/
     main.tsx                   App bootstrap + React Query provider
     index.css                  Imports styles/index.css hub
     styles/                    Design tokens, components, features, responsive
-    components/                Modal, ConfirmModal, DateInput, Snackbar, icons, …
+    components/                Modal, ConfirmModal, DateInput, Snackbar, NumericInput,
+                               ProductSearchSelect, icons, …
     hooks/                     useSnackbar, useActionItems, feature hooks (products, actions, history, summary)
     mobile/                    Purpose-built mobile UI at /mobile (see Mobile section below)
       MobileApp.tsx            Shell, tab state, header with Dil
@@ -87,6 +88,7 @@ frontend/
       api.ts                   Backend API client
       country.tsx              Country context + selector (XK / AL)
       format.ts                Re-exports shared formatters + UI helpers
+      numericInput.ts          Helpers for zero-as-placeholder numeric fields
       queryKeys.ts             React Query key factories
       invalidateAppData.ts     Cache invalidation helper
       dates.ts                 Date helpers
@@ -97,55 +99,75 @@ frontend/
 packages/shared/               Zod schemas, productLabel, buildSummaryByCountry (workspace)
 ```
 
-### UI architecture
+### Desktop UI architecture
 
-`DashboardPage.tsx` composes feature modules under `src/features/`. The screen has three areas:
+On viewports **wider than the mobile breakpoint** (`useMobileClient`), `App.tsx` renders `DashboardPage` — a single-screen dashboard composed from feature modules under `src/features/`.
+
+The screen has three areas:
 
 1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize. **Historiku** opens the action history modal.
 2. **Products card** — sortable product table, add/edit/delete, Excel export.
 3. **Summary panel** — per-country totals for a date range and Excel export.
 
-**Historiku** (action history):
+#### Product entry rows (actions + transfer + history edit)
+
+Desktop product lines use the same controls everywhere:
+
+- **`ProductSearchSelect`** — searchable combobox (`Kerko sipas kodit ose emrit…`) with portal dropdown; shows `Emri (Kodi)`, sorted by code. Used in the action table, transfer modal, and history edit popup (not a native `<select>`).
+- **`NumericInput`** — shared number field: when the value is `0`, the input stays empty and shows a muted placeholder (`0`, `0.00`, or `1` depending on field). Focus does not fight a prefilled zero; negative input is blocked.
+
+`ActionItemsTable` column layout: **35% / 20% / 15% / 18% / 12%** with horizontal scroll (`min-width: 760px`) so long product names and large quantities stay readable.
+
+#### Historiku (action history)
 
 - Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal`.
 - Filter by type, country, and date range; paginated table (**5 per page**).
 - Expand a row to view product line items; multiple rows can stay expanded at once.
-- **Ndrysho** opens an edit popup for batch metadata (date, country/route) and inline product line edits.
+- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) for batch metadata (date, country/route) and inline product line edits.
+- Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njesi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
+- Edit row uses `ProductSearchSelect` + `NumericInput`, matching the main action form.
 - **Fshi** deletes the whole action after confirmation.
 - Successful edit or delete closes the edit popup (when applicable), refreshes list/detail data, and shows a **green success snackbar**.
 - Products display as **`Emri (Kodi)`** everywhere (history, pickers, errors).
 
-**Transfer** is separate from the main action form:
+#### Transfer
+
+Transfer is separate from the main action form:
 
 - The **Transfero** button opens `TransferModal`.
-- The modal contains route selectors (`Nga` / `Ne`), action date, the same product row table as normal actions, total, and **Finalizo Transfertën**.
+- The modal contains route selectors (`Nga` / `Ne`), action date, the same `ActionItemsTable` as normal actions, total, and **Finalizo Transfertën**.
 - The country chosen in `Nga` is disabled in `Ne`.
 - Submit opens a **confirmation dialog** stacked above the transfer modal, then sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
 - On success: transfer modal closes, **green snackbar**, products and summary refresh.
 - Insufficient-stock errors show the full product label, e.g. `CONCEPTASE (X 10 ML,STD) (6)`.
 
-**Products card**:
+#### Products card
 
 - Search field in the header filters the table by **kodi** or **emri** (live, case-insensitive).
-- Product dropdowns in action/transfer/history forms list products sorted by **kodi** (numeric-aware).
-- Add/edit/delete use modals with **×** close in the header; delete shows a confirm dialog (**Anulo** neutral, confirm button red for delete).
+- Product pickers list products sorted by **kodi** (numeric-aware).
+- **Add** / **edit** open `ProductFormModal` with:
+  - Kod + Emri in a two-column row.
+  - **Gjendje** as two side-by-side cards (Kosova / Shqiperia): flag + country label on top, full-width `NumericInput` below (placeholder `0` when stock is zero).
+  - **×** close in the modal header; **Anulo** / **Ruaj** in the footer.
+- On successful **create** or **edit**: modal closes and a **green snackbar** confirms (`Produkti u shtua…` / `Produkti u perditesua…`).
+- **Delete** uses `ConfirmModal` (**Anulo** neutral, confirm button red).
 
-**Summary panel (Permbledhje)**:
+#### Summary panel (Permbledhje)
 
 - One API call returns totals for **both** Kosovo and Albania for the selected date range.
 - **Transfers** are included in the same buckets as normal movements: source country **Dalje**, destination country **Hyrje** (no separate transfer columns).
 - Totals filter by **action date** (`Data e Veprimit`), not created-at — ensure **Deri** includes the transfer date to see it in the summary.
 
-**Feedback (snackbars)**:
+#### Feedback (snackbars)
 
-- Green success snackbar for registered actions/transfers, successful history edits/deletes, and product deletion.
+- Green success snackbar for: registered actions/transfers, successful history edits/deletes, product create/edit/delete.
 - Dark default snackbar for validation messages (e.g. duplicate product in a row).
 
-**Shared UI and hooks**:
+#### Shared desktop UI and hooks
 
 - `features/actions/ActionItemsTable` — product rows for action form and transfer modal.
-- `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`.
-- `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
+- `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
+- `components/ProductSearchSelect`, `components/NumericInput`, `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
 - `hooks/useActionItems` — line-item add/remove/validate (used twice: action + transfer).
 - `hooks/useSnackbar` — toast state + auto-dismiss (dashboard + login).
 - `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
@@ -232,17 +254,20 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `tokens.css` | CSS variables (`:root`) |
 | `base.css` | Links, cursor states |
 | `components/date-input.css` | Date picker |
-| `components/forms.css` | Form layout |
+| `components/forms.css` | Form layout, stock field cards (`stock-fields-grid`) |
 | `components/modals.css` | Modals, snackbar, stacked overlay |
+| `components/product-search-select.css` | Searchable product combobox + portal list |
 | `components/stock-badges.css` | Stock badges |
-| `features/dashboard.css` | Layout, cards, tables, toggles |
+| `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll |
 | `features/summary.css` | Permbledhje panel |
-| `features/history.css` | Historiku modal |
-| `responsive.css` | Breakpoints |
+| `features/history.css` | Historiku modal, edit subtable, inline edit row highlight |
+| `responsive.css` | Breakpoints (stock cards stack on narrow desktop widths) |
 
 - Dashboard layout is viewport-locked with internal scrolling in the products table.
+- Action and history-edit product tables scroll horizontally when columns need more space.
 - Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals.
 - Success snackbars use `.snackbar.success` (green); modals use `.modal-close-btn` (×).
+- Editing a history line item highlights the row (`.item-row-editing`, amber background).
 
 ---
 
@@ -357,8 +382,8 @@ Input fields:
 
 - `Kodi` - unique product code.
 - `Emri` - product name.
-- `Gjendje Kosove` - starting stock quantity in Kosovo.
-- `Gjendje Shqiperi` - starting stock quantity in Albania.
+- `Gjendje Kosove` - starting stock quantity in Kosovo (`NumericInput`, placeholder `0` when zero).
+- `Gjendje Shqiperi` - starting stock quantity in Albania (same control).
 
 Rules:
 
@@ -370,6 +395,7 @@ Rules:
 Stored result:
 
 - A product row with one identity and two separate stock balances.
+- Modal closes; green snackbar: `Produkti u shtua me sukses.`
 
 ### Product Editing
 
@@ -387,6 +413,8 @@ Purpose:
 - Correct product names or codes.
 - Adjust stock quantities when needed.
 - Keep the product table aligned with the real warehouse situation.
+
+On success: modal closes; green snackbar: `Produkti u perditesua me sukses.`
 
 ### Product Deletion
 
@@ -444,9 +472,9 @@ Input fields:
 - `Ne` - destination country.
 - `Data e Veprimit` - action date.
 - Action item rows (same structure as normal movements):
-  - `Produkti` (`Emri (Kodi)` in dropdown, sorted by code)
-  - `Cmimi/Njesi`
-  - `Sasia`
+  - `Produkti` — `ProductSearchSelect` (`Emri (Kodi)`, sorted by code)
+  - `Cmimi/Njesi` — `NumericInput` (placeholder `0.00` when zero)
+  - `Sasia` — `NumericInput` (placeholder `1` when zero)
 
 Rules:
 
@@ -499,9 +527,9 @@ Each action can contain one or more products. The same row structure is used on 
 
 Input fields per row:
 
-- `Produkti` - selected product (dropdown shows `Emri (Kodi)`, sorted by code).
-- `Cmimi/Njesi` - unit price.
-- `Sasia` - quantity.
+- `Produkti` — `ProductSearchSelect` (search by code or name; `Emri (Kodi)`, sorted by code).
+- `Cmimi/Njesi` — unit price (`NumericInput`, placeholder `0.00` when zero).
+- `Sasia` — quantity (`NumericInput`, placeholder `1` when zero).
 
 Rules:
 
@@ -538,8 +566,9 @@ List behavior:
 
 Edit (`Ndrysho`):
 
-- Popup to change batch date, country (or transfer route), and individual line items.
-- **Ruaj** / **Anulo** on inline product edits; money columns stay on one line.
+- `ActionEditModal` to change batch date, country (or transfer route), and individual line items.
+- Click **Ndrysho Produktin** on a line; the row switches to `ProductSearchSelect` + `NumericInput` fields aligned under the table headers.
+- **Ruaj** / **Anulo** in the actions column; money columns stay right-aligned.
 - On success: edit popup closes, row stays expanded, list refreshes, green snackbar.
 
 Delete (`Fshi`):
@@ -611,7 +640,7 @@ The platform shows feedback after important actions.
 
 Examples:
 
-- Green snackbar: successful inventory action, transfer, history edit/delete, product deletion.
+- Green snackbar: successful inventory action, transfer, history edit/delete, product create/edit/delete.
 - Validation errors when required fields are missing (inline in forms or snackbar for duplicate product in a row).
 - Stock errors with full product name and code, e.g. insufficient stock on transfer or `Dalje`.
 

@@ -12,6 +12,7 @@ import {
 } from '../../lib/api'
 import { countryLabel, fmtEuro, formatDisplayDate, productLabel, sortProductsByKodi } from '../../lib/format'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { NumericInput } from '../../components/NumericInput'
 import { queryKeys } from '../../lib/queryKeys'
 import { BottomSheet } from '../components/BottomSheet'
 import {
@@ -352,25 +353,25 @@ function MobileBatchEditForm(props: {
                   <div className="mobile-field-row" style={{ marginTop: 8 }}>
                     <div>
                       <label className="mobile-label">Cmimi/Njesi</label>
-                      <input
+                      <NumericInput
                         className="mobile-input"
-                        type="number"
                         step="0.01"
                         min={0}
                         value={editDraft.cmimi_njesi}
                         disabled={busy}
-                        onChange={(e) => setEditDraft((d) => d && { ...d, cmimi_njesi: e.target.value })}
+                        onChange={(v) => setEditDraft((d) => d && { ...d, cmimi_njesi: v })}
+                        placeholder="0.00"
                       />
                     </div>
                     <div>
                       <label className="mobile-label">Sasia</label>
-                      <input
+                      <NumericInput
                         className="mobile-input"
-                        type="number"
                         min={1}
                         value={editDraft.sasia}
                         disabled={busy}
-                        onChange={(e) => setEditDraft((d) => d && { ...d, sasia: e.target.value })}
+                        onChange={(v) => setEditDraft((d) => d && { ...d, sasia: v })}
+                        placeholder="1"
                       />
                     </div>
                   </div>

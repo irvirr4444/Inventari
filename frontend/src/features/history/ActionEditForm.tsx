@@ -8,9 +8,11 @@ import {
   type HistoryActionItem,
   type Produkti,
 } from '../../lib/api'
-import { fmtEuro, productLabel, sortProductsByKodi } from '../../lib/format'
+import { fmtEuro, productLabel } from '../../lib/format'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { DateInput } from '../../components/DateInput'
+import { NumericInput } from '../../components/NumericInput'
+import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
 export type EditSaveKind = 'action' | 'product'
 
@@ -34,10 +36,6 @@ export function ActionEditForm(props: {
     sasia: string
   } | null>(null)
   const localItems = props.detail.items
-  const productsByKodi = React.useMemo(
-    () => sortProductsByKodi(props.products),
-    [props.products],
-  )
 
   const invalidateAll = React.useCallback(async () => {
     await invalidateAfterMutation(qc, 'all', { actionBatchId: props.detail.id })
@@ -212,14 +210,15 @@ export function ActionEditForm(props: {
         </div>
       </div>
 
-      <table className="table table-fixed history-subtable">
-        <colgroup>
-          <col style={{ width: '28%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '20%' }} />
-          <col style={{ width: '24%' }} />
-        </colgroup>
+      <div className="table-scroll history-subtable-wrap">
+        <table className="table table-fixed history-subtable action-table">
+          <colgroup>
+            <col style={{ width: '35%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '17%' }} />
+          </colgroup>
         <thead>
           <tr>
             <th>Produkti</th>
@@ -232,75 +231,52 @@ export function ActionEditForm(props: {
         <tbody>
           {displayItems.map((item) => {
             const isEditing = editingItemId === item.id
-            return (
-              <tr key={item.id} className={isEditing ? 'item-row-editing' : undefined}>
-                <td>
-                  {isEditing && editDraft ? (
-                    <select
-                      className="select history-subtable-input"
+            if (isEditing && editDraft) {
+              return (
+                <tr key={item.id} className="item-row-editing">
+                  <td>
+                    <ProductSearchSelect
+                      products={props.products}
                       value={editDraft.kodi_produktit}
                       disabled={busy}
-                      onChange={(e) =>
-                        setEditDraft((d) => d && { ...d, kodi_produktit: e.target.value })
+                      onChange={(kodi) =>
+                        setEditDraft((d) => d && { ...d, kodi_produktit: kodi })
                       }
-                    >
-                      <option value="">Zgjedh produktin…</option>
-                      {productsByKodi.map((p) => (
-                        <option
-                          key={p.id}
-                          value={p.kodi}
-                          disabled={localItems.some(
-                            (x) => x.id !== item.id && x.kodi_produktit === p.kodi,
-                          )}
-                        >
-                          {productLabel(p.emri, p.kodi)}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="history-product-cell">
-                      {productLabel(item.emri_produktit, item.kodi_produktit)}
-                    </span>
-                  )}
-                </td>
-                <td className="history-subtable-money">
-                  {isEditing && editDraft ? (
-                    <input
-                      className="input history-subtable-input"
-                      type="number"
+                      disabledKodis={localItems
+                        .filter((x) => x.id !== item.id && x.kodi_produktit)
+                        .map((x) => x.kodi_produktit)}
+                      placeholder="Kerko sipas kodit ose emrit…"
+                    />
+                  </td>
+                  <td>
+                    <NumericInput
+                      className="input"
                       step="0.01"
                       min={0}
                       disabled={busy}
                       value={editDraft.cmimi_njesi}
-                      onChange={(e) =>
-                        setEditDraft((d) => d && { ...d, cmimi_njesi: e.target.value })
+                      onChange={(v) =>
+                        setEditDraft((d) => d && { ...d, cmimi_njesi: v })
                       }
+                      placeholder="0.00"
+                      style={{ width: '100%' }}
                     />
-                  ) : (
-                    <span className="num">{fmtEuro(item.cmimi_njesi)}</span>
-                  )}
-                </td>
-                <td className="history-subtable-qty">
-                  {isEditing && editDraft ? (
-                    <input
-                      className="input history-subtable-input"
-                      type="number"
+                  </td>
+                  <td>
+                    <NumericInput
+                      className="input"
                       min={1}
                       disabled={busy}
                       value={editDraft.sasia}
-                      onChange={(e) =>
-                        setEditDraft((d) => d && { ...d, sasia: e.target.value })
-                      }
+                      onChange={(v) => setEditDraft((d) => d && { ...d, sasia: v })}
+                      placeholder="1"
+                      style={{ width: '100%' }}
                     />
-                  ) : (
-                    item.sasia
-                  )}
-                </td>
-                <td className="history-subtable-money">
-                  <span className="num">{fmtEuro(item.totali)}</span>
-                </td>
-                <td className="history-subtable-actions">
-                  {isEditing ? (
+                  </td>
+                  <td className="history-subtable-money">
+                    <span className="num">{fmtEuro(item.totali)}</span>
+                  </td>
+                  <td className="history-subtable-actions">
                     <div className="history-subtable-action-group">
                       <button
                         type="button"
@@ -322,25 +298,42 @@ export function ActionEditForm(props: {
                         Anulo
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="btn sm ghost history-edit-product-btn"
-                        disabled={busy}
-                        aria-label="Ndrysho produktin"
-                        onClick={() => startEditItem(item)}
-                      >
-                        <span aria-hidden="true">✎</span> Ndrysho Produktin
-                      </button>
-                    </>
-                  )}
+                  </td>
+                </tr>
+              )
+            }
+
+            return (
+              <tr key={item.id}>
+                <td>
+                  <span className="history-product-cell">
+                    {productLabel(item.emri_produktit, item.kodi_produktit)}
+                  </span>
+                </td>
+                <td className="history-subtable-money">
+                  <span className="num">{fmtEuro(item.cmimi_njesi)}</span>
+                </td>
+                <td className="history-subtable-qty">{item.sasia}</td>
+                <td className="history-subtable-money">
+                  <span className="num">{fmtEuro(item.totali)}</span>
+                </td>
+                <td className="history-subtable-actions">
+                  <button
+                    type="button"
+                    className="btn sm ghost history-edit-product-btn"
+                    disabled={busy}
+                    aria-label="Ndrysho produktin"
+                    onClick={() => startEditItem(item)}
+                  >
+                    <span aria-hidden="true">✎</span> Ndrysho Produktin
+                  </button>
                 </td>
               </tr>
             )
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       <div className="history-edit-modal-footer">
         <div className="history-expanded-total">

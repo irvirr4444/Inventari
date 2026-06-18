@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { ErrorAlert } from '../../components/ErrorAlert'
 import { Modal } from '../../components/Modal'
+import { NumericInput } from '../../components/NumericInput'
 import type { Produkti } from '../../lib/api'
 
 type StockFieldsProps = {
@@ -13,49 +14,31 @@ type StockFieldsProps = {
 
 function StockFields(props: StockFieldsProps) {
   return (
-    <div>
+    <div className="stock-fields">
       <label className="label">{props.label}</label>
-      <div className="form-row-equal" style={{ marginTop: 6 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'var(--card-soft)',
-            padding: '10px 14px',
-            borderRadius: 8,
-          }}
-        >
-          <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Kosova</span>
-          <input
-            className="input"
-            type="number"
+      <div className="stock-fields-grid">
+        <div className="stock-field">
+          <div className="stock-field-head">
+            <img className="flagIcon" src="/Flag_of_Kosovo.webp" alt="" />
+            <span>Kosova</span>
+          </div>
+          <NumericInput
+            className="input stock-field-input"
             min={0}
             value={props.gjendjeKosove}
-            onChange={(e) => props.onGjendjeKosoveChange(Number(e.target.value))}
-            style={{ width: 80, marginLeft: 'auto', textAlign: 'right' }}
+            onChange={(v) => props.onGjendjeKosoveChange(v === '' ? 0 : Number(v))}
           />
         </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'var(--card-soft)',
-            padding: '10px 14px',
-            borderRadius: 8,
-          }}
-        >
-          <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Shqiperia</span>
-          <input
-            className="input"
-            type="number"
+        <div className="stock-field">
+          <div className="stock-field-head">
+            <img className="flagIcon" src="/Flag_of_Albania.svg" alt="" />
+            <span>Shqiperia</span>
+          </div>
+          <NumericInput
+            className="input stock-field-input"
             min={0}
             value={props.gjendjeShqiperi}
-            onChange={(e) => props.onGjendjeShqiperiChange(Number(e.target.value))}
-            style={{ width: 80, marginLeft: 'auto', textAlign: 'right' }}
+            onChange={(v) => props.onGjendjeShqiperiChange(v === '' ? 0 : Number(v))}
           />
         </div>
       </div>

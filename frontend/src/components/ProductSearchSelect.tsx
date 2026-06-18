@@ -36,6 +36,7 @@ export function ProductSearchSelect(props: {
   disabledKodis?: string[]
   placeholder?: string
   id?: string
+  disabled?: boolean
   'aria-label'?: string
 }) {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
@@ -84,6 +85,7 @@ export function ProductSearchSelect(props: {
   }, [])
 
   const openMenu = React.useCallback(() => {
+    if (props.disabled) return
     const trigger = inputRef.current
     if (trigger) {
       setListPos(computeListPosition(trigger))
@@ -94,6 +96,7 @@ export function ProductSearchSelect(props: {
   }, [])
 
   const toggleMenu = React.useCallback(() => {
+    if (props.disabled) return
     if (open) {
       closeMenu()
       return
@@ -269,9 +272,13 @@ export function ProductSearchSelect(props: {
         aria-autocomplete="list"
         aria-label={props['aria-label'] ?? 'Zgjedh produktin'}
         placeholder={props.placeholder ?? 'Kerko sipas kodit ose emrit…'}
+        disabled={props.disabled}
         value={inputValue}
-        onFocus={openMenu}
+        onFocus={() => {
+          if (!props.disabled) openMenu()
+        }}
         onChange={(e) => {
+          if (props.disabled) return
           setQuery(e.target.value)
           if (!open) {
             const trigger = inputRef.current
@@ -285,6 +292,7 @@ export function ProductSearchSelect(props: {
         className="product-search-toggle"
         aria-label={open ? 'Mbyll listen e produkteve' : 'Shfaq te gjitha produktet'}
         aria-expanded={open}
+        disabled={props.disabled}
         onMouseDown={(e) => e.preventDefault()}
         onClick={toggleMenu}
       >

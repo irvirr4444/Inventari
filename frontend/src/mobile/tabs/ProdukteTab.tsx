@@ -3,6 +3,7 @@ import { useProductCrud } from '../../hooks/useProductCrud'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import type { Produkti } from '../../lib/api'
 import { productLabel, sortProductsByKodi } from '../../lib/format'
+import { NumericInput } from '../../components/NumericInput'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter, SheetEditButton, SheetFooterRow, SheetConfirmButton } from '../components/SheetActions'
 import { SkeletonRow } from '../components/SkeletonRow'
@@ -40,22 +41,20 @@ function ProductFormFields(props: {
       <div className="mobile-field-row">
         <div>
           <label className="mobile-label">Gjendje Kosove</label>
-          <input
+          <NumericInput
             className="mobile-input"
-            type="number"
             min={0}
             value={props.gjendjeKosove}
-            onChange={(e) => props.onGjendjeKosoveChange(Number(e.target.value) || 0)}
+            onChange={(v) => props.onGjendjeKosoveChange(v === '' ? 0 : Number(v))}
           />
         </div>
         <div>
           <label className="mobile-label">Gjendje Shqiperi</label>
-          <input
+          <NumericInput
             className="mobile-input"
-            type="number"
             min={0}
             value={props.gjendjeShqiperi}
-            onChange={(e) => props.onGjendjeShqiperiChange(Number(e.target.value) || 0)}
+            onChange={(v) => props.onGjendjeShqiperiChange(v === '' ? 0 : Number(v))}
           />
         </div>
       </div>

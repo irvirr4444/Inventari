@@ -3,6 +3,7 @@ import { CheckIcon } from '../../components/icons'
 import { productLabel, sortProductsByKodi } from '../../lib/format'
 import type { Produkti } from '../../lib/api'
 import type { ActionItemDraft } from '../../types/actionItem'
+import { NumericInput } from '../../components/NumericInput'
 import { BottomSheet } from './BottomSheet'
 import { SheetActionFooter } from './SheetActions'
 
@@ -131,25 +132,22 @@ function ProductPickerForm(props: {
         <div className="mobile-field-row">
           <div>
             <label className="mobile-label">Cmimi/Njesi</label>
-            <input
+            <NumericInput
               className="mobile-input"
-              type="number"
               step="0.01"
               min={0}
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={setPrice}
+              placeholder="0.00"
             />
           </div>
           <div>
             <label className="mobile-label">Sasia</label>
-            <input
+            <NumericInput
               className="mobile-input"
-              type="number"
               min={1}
               value={qty}
-              onChange={(e) =>
-                setQty(e.target.value.startsWith('-') ? '' : e.target.value)
-              }
+              onChange={setQty}
               placeholder="1"
             />
           </div>

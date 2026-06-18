@@ -3,8 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/shelf-png-blue-color-shelf-graphic-design-vector.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Inventari Im</title>
+    <script>
+      (function () {
+        var p = new URLSearchParams(location.search)
+        if (p.get('desktop') === '1') return
+        var ua = navigator.userAgent || ''
+        var mobile =
+          p.get('mobile') === '1' ||
+          /Android|iPhone|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+        if (!mobile) return
+        document.documentElement.classList.add('mobile-client')
+      })()
+    </script>
+    <style>
+      html.mobile-client,
+      html.mobile-client body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+
+      html.mobile-client .mobile-app,
+      html.mobile-client .mobile-bottom-nav,
+      html.mobile-client .mobile-sticky-cta-wrap,
+      html.mobile-client .mobile-auth-loading,
+      html.mobile-client .mobile-sheet {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        left: 0;
+        right: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,199 @@
+import * as React from 'react'
+import { CheckIcon } from '../../components/icons'
+import { productLabel, sortProductsByKodi } from '../../lib/format'
+import type { Produkti } from '../../lib/api'
+import type { ActionItemDraft } from '../../types/actionItem'
+import { BottomSheet } from './BottomSheet'
+import { SheetActionFooter } from './SheetActions'
+
+const FORM_ID = 'mobile-product-picker-form'
+
+function ProductPickerForm(props: {
+  products: Produkti[]
+  existingKodis: string[]
+  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
+  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: number }) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = React.useState('')
+  const [kodi, setKodi] = React.useState(props.initial?.kodi_produktit ?? '')
+  const [price, setPrice] = React.useState(props.initial?.cmimi_njesi ?? '')
+  const [qty, setQty] = React.useState(props.initial?.sasia ?? 1)
+  const [error, setError] = React.useState<string | null>(null)
+  const itemRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
+
+  const sorted = React.useMemo(() => sortProductsByKodi(props.products), [props.products])
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return sorted
+    return sorted.filter(
+      (p) => p.kodi.toLowerCase().includes(q) || p.emri.toLowerCase().includes(q),
+    )
+  }, [sorted, search])
+
+  const selectedProduct = React.useMemo(
+    () => sorted.find((p) => p.kodi === kodi) ?? null,
+    [sorted, kodi],
+  )
+
+  const selectProduct = (product: Produkti) => {
+    setKodi(product.kodi)
+    setError(null)
+    requestAnimationFrame(() => {
+      itemRefs.current.get(product.kodi)?.scrollIntoView({ block: 'nearest' })
+    })
+  }
+
+  const save = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!kodi) {
+      setError('Zgjidh produktin.')
+      return
+    }
+    if (Number(qty) <= 0) {
+      setError('Sasia duhet te jete > 0.')
+      return
+    }
+    if (Number(price) < 0) {
+      setError('Cmimi/Njesi duhet te jete >= 0.')
+      return
+    }
+    const duplicate = props.existingKodis.some(
+      (k) => k === kodi && k !== props.initial?.kodi_produktit,
+    )
+    if (duplicate) {
+      setError('Ky produkt eshte tashme ne liste.')
+      return
+    }
+    props.onSave({ kodi_produktit: kodi, cmimi_njesi: price, sasia: qty })
+    props.onClose()
+  }
+
+  return (
+    <form id={FORM_ID} className="mobile-picker-form" onSubmit={save}>
+      <input
+        className="mobile-search-input"
+        placeholder="Kërko produkt..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {selectedProduct ? (
+        <div className="mobile-picker-selected">
+          <div className="mobile-picker-selected-icon" aria-hidden="true">
+            <CheckIcon />
+          </div>
+          <div className="mobile-picker-selected-body">
+            <div className="mobile-picker-selected-label">Produkti i zgjedhur</div>
+            <div className="mobile-picker-selected-name">
+              {productLabel(selectedProduct.emri, selectedProduct.kodi)}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mobile-picker-empty">Zgjidh nje produkt nga lista</div>
+      )}
+
+      <div className="mobile-picker-list">
+        {filtered.length === 0 ? (
+          <div className="mobile-picker-empty">Nuk u gjet produkt.</div>
+        ) : (
+          filtered.map((p) => {
+            const disabled = props.existingKodis.some(
+              (k) => k === p.kodi && k !== props.initial?.kodi_produktit,
+            )
+            const selected = kodi === p.kodi
+            return (
+              <button
+                key={p.id}
+                ref={(el) => {
+                  if (el) itemRefs.current.set(p.kodi, el)
+                  else itemRefs.current.delete(p.kodi)
+                }}
+                type="button"
+                className={`mobile-picker-item${selected ? ' selected' : ''}`}
+                disabled={disabled}
+                onClick={() => selectProduct(p)}
+              >
+                <span className="mobile-picker-item-label">{productLabel(p.emri, p.kodi)}</span>
+                {selected ? (
+                  <span className="mobile-picker-item-check" aria-hidden="true">
+                    <CheckIcon />
+                  </span>
+                ) : null}
+              </button>
+            )
+          })
+        )}
+      </div>
+
+      <div className="mobile-picker-fields">
+        <div className="mobile-field-row">
+          <div>
+            <label className="mobile-label">Cmimi/Njesi</label>
+            <input
+              className="mobile-input"
+              type="number"
+              step="0.01"
+              min={0}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mobile-label">Sasia</label>
+            <input
+              className="mobile-input"
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(Number(e.target.value) || 0)}
+            />
+          </div>
+        </div>
+        {error ? <div className="mobile-inline-error">{error}</div> : null}
+      </div>
+    </form>
+  )
+}
+
+export function ProductPickerSheet(props: {
+  open: boolean
+  title: string
+  products: Produkti[]
+  existingKodis: string[]
+  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
+  onClose: () => void
+  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: number }) => void
+}) {
+  const formKey = `${props.initial?.kodi_produktit ?? 'new'}-${props.open}`
+  const isEdit = !!props.initial?.kodi_produktit
+
+  return (
+    <BottomSheet
+      open={props.open}
+      title={props.title}
+      onClose={props.onClose}
+      footer={
+        <SheetActionFooter
+          onCancel={props.onClose}
+          confirmLabel={isEdit ? 'Ruaj' : 'Shto'}
+          confirmIcon={isEdit ? 'check' : 'plus'}
+          confirmType="submit"
+          form={FORM_ID}
+        />
+      }
+    >
+      {props.open ? (
+        <ProductPickerForm
+          key={formKey}
+          products={props.products}
+          existingKodis={props.existingKodis}
+          initial={props.initial}
+          onSave={props.onSave}
+          onClose={props.onClose}
+        />
+      ) : null}
+    </BottomSheet>
+  )
+}

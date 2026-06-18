@@ -1,3 +1,5 @@
+import { randomId } from '../lib/randomId'
+
 export type ActionItemDraft = {
   key: string
   kodi_produktit: string
@@ -6,5 +8,5 @@ export type ActionItemDraft = {
 }
 
 export function createEmptyActionItem(): ActionItemDraft {
-  return { key: crypto.randomUUID(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }
+  return { key: randomId(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }
 }

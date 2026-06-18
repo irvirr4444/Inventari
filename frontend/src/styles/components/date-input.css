@@ -42,6 +42,10 @@
   box-shadow: var(--shadow-lg);
 }
 
+.date-picker-calendar {
+  width: 100%;
+}
+
 .date-picker-popover-portal {
   position: fixed;
   z-index: 100;
@@ -144,7 +148,7 @@
 .date-picker-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
@@ -164,8 +168,4 @@
 
 .date-picker-footer-btn:hover {
   background: rgba(47, 125, 246, 0.08);
-}
-
-.date-picker-footer-btn.primary {
-  margin-left: auto;
 }

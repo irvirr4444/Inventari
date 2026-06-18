@@ -68,7 +68,12 @@ frontend/
     index.css                  Imports styles/index.css hub
     styles/                    Design tokens, components, features, responsive
     components/                Modal, ConfirmModal, DateInput, Snackbar, icons, …
-    hooks/                     useSnackbar, useActionItems
+    hooks/                     useSnackbar, useActionItems, feature hooks (products, actions, history, summary)
+    mobile/                    Purpose-built mobile UI at /mobile (see Mobile section below)
+      MobileApp.tsx            Shell, tab state, header with Dil
+      components/              BottomSheet, BottomNav, cards, pickers, …
+      tabs/                    Veprime, Transfer, Produkte, Histori, Permbledhje
+      styles/                  Mobile-only CSS (imports tokens.css only)
     features/
       actions/                 ActionEntryPanel, ActionItemsTable, TransferModal
       products/                ProductsPanel, ProductFormModal
@@ -147,6 +152,47 @@ packages/shared/               Zod schemas, productLabel, buildSummaryByCountry 
 - `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
 
 Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. New actions get a `batch_id`; history lists grouped batches only.
+
+### Mobile web app
+
+On **phones and small touch devices**, the app opens the mobile UI automatically at **`/`** (no `/mobile` path needed). Detection uses screen width, touch capability, and user agent.
+
+| Route | Desktop | Phone |
+| --- | --- | --- |
+| `/` | Dashboard | Mobile app (bottom tabs) |
+| `/mobile` | Redirects to `/` | Redirects to `/` |
+
+For manual testing on desktop, resize the browser below 768px or use DevTools device mode.
+
+Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
+
+**Navigation:** fixed bottom tab bar — Veprime | Transfer | Produkte | Histori | Permbledhje.
+
+**Interaction model:**
+
+- Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete).
+- Card lists instead of tables; touch targets ≥48px.
+- Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
+- Histori detail is an in-tab stack (back button), not a URL route in v1.
+- Same API payloads, Albanian strings, and business rules as desktop.
+
+**Structure:**
+
+```text
+src/mobile/
+  MobileApp.tsx           Shell + tab routing (useState, instant switch)
+  types.ts                TabId union
+  components/             BottomSheet, BottomNav, ProductRowCard, …
+  tabs/                   One file per tab (+ HistoriBatchDetail)
+  styles/                 mobile.css hub (tokens + layout + components)
+```
+
+**Shared hooks** (used by desktop and mobile):
+
+- `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches`
+- Desktop `useDashboardPage.ts` composes these; mobile tabs call them directly.
+
+Design reference: [MOBILE_DESIGN_PROMPT.md](../MOBILE_DESIGN_PROMPT.md) at repo root.
 
 ### API client
 

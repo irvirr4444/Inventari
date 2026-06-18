@@ -1,0 +1,12 @@
+@import '../../styles/tokens.css';
+
+:root {
+  --mobile-space-xs: 4px;
+  --mobile-space-sm: 8px;
+  --mobile-space-md: 16px;
+  --mobile-space-lg: 24px;
+  --mobile-space-xl: 32px;
+  --mobile-tab-height: 60px;
+  --mobile-cta-height: 52px;
+  --mobile-sheet-radius: 16px;
+}

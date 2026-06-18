@@ -1,65 +1,9 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { formatDisplayDate } from '../lib/format'
-
-const MONTHS_SQ = [
-  'Janar',
-  'Shkurt',
-  'Mars',
-  'Prill',
-  'Maj',
-  'Qershor',
-  'Korrik',
-  'Gusht',
-  'Shtator',
-  'Tetor',
-  'Nentor',
-  'Dhjetor',
-] as const
-
-const WEEKDAYS_SQ = ['H', 'M', 'M', 'E', 'P', 'Sh', 'D'] as const
+import { DatePickerCalendar } from './DatePickerCalendar'
 
 const POPOVER_ESTIMATED_HEIGHT = 360
-
-function isoToDate(iso: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
-  if (!match) return null
-  const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  return Number.isNaN(d.getTime()) ? null : d
-}
-
-function toIsoDate(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function sameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
-
-function buildMonthGrid(viewMonth: Date) {
-  const year = viewMonth.getFullYear()
-  const month = viewMonth.getMonth()
-  const first = new Date(year, month, 1)
-  const startOffset = (first.getDay() + 6) % 7
-  const start = new Date(year, month, 1 - startOffset)
-
-  return Array.from({ length: 42 }, (_, i) => {
-    const d = new Date(start)
-    d.setDate(start.getDate() + i)
-    return {
-      date: d,
-      iso: toIsoDate(d),
-      inMonth: d.getMonth() === month,
-    }
-  })
-}
 
 type PopoverPosition = {
   top: number
@@ -100,14 +44,7 @@ export function DateInput(props: {
   const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const popoverRef = React.useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = React.useState(false)
-  const [viewMonth, setViewMonth] = React.useState(
-    () => isoToDate(props.value) ?? new Date(),
-  )
   const [popoverPos, setPopoverPos] = React.useState<PopoverPosition | null>(null)
-
-  const selected = isoToDate(props.value)
-  const today = React.useMemo(() => new Date(), [])
-  const grid = React.useMemo(() => buildMonthGrid(viewMonth), [viewMonth])
 
   const repositionPopover = React.useCallback(() => {
     const trigger = triggerRef.current
@@ -118,16 +55,19 @@ export function DateInput(props: {
 
   const openPicker = React.useCallback(() => {
     if (props.disabled) return
-    setViewMonth(isoToDate(props.value) ?? new Date())
     setOpen(true)
-  }, [props.disabled, props.value])
+  }, [props.disabled])
+
+  const closePicker = React.useCallback(() => {
+    setOpen(false)
+  }, [])
 
   React.useLayoutEffect(() => {
     if (!open) return
     repositionPopover()
     const raf = requestAnimationFrame(repositionPopover)
     return () => cancelAnimationFrame(raf)
-  }, [open, viewMonth, repositionPopover])
+  }, [open, props.value, repositionPopover])
 
   React.useEffect(() => {
     if (!open) return
@@ -156,11 +96,6 @@ export function DateInput(props: {
     }
   }, [open, repositionPopover])
 
-  const pickDate = (iso: string) => {
-    props.onChange(iso)
-    setOpen(false)
-  }
-
   const popover = open ? (
     <div
       ref={popoverRef}
@@ -177,79 +112,13 @@ export function DateInput(props: {
           : undefined
       }
     >
-      <div className="date-picker-header">
-        <button
-          type="button"
-          className="date-picker-nav"
-          aria-label="Muaji i meparshem"
-          onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-        >
-          ‹
-        </button>
-        <span className="date-picker-title">
-          {MONTHS_SQ[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-        </span>
-        <button
-          type="button"
-          className="date-picker-nav"
-          aria-label="Muaji tjeter"
-          onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-        >
-          ›
-        </button>
-      </div>
-
-      <div className="date-picker-weekdays">
-        {WEEKDAYS_SQ.map((day, i) => (
-          <span key={`${day}-${i}`} className="date-picker-weekday">
-            {day}
-          </span>
-        ))}
-      </div>
-
-      <div className="date-picker-grid">
-        {grid.map((cell) => {
-          const isSelected = selected ? sameDay(cell.date, selected) : false
-          const isToday = sameDay(cell.date, today)
-          return (
-            <button
-              key={cell.iso}
-              type="button"
-              className={[
-                'date-picker-day',
-                !cell.inMonth && 'muted',
-                isSelected && 'selected',
-                isToday && 'today',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => pickDate(cell.iso)}
-            >
-              {cell.date.getDate()}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="date-picker-footer">
-        <button
-          type="button"
-          className="date-picker-footer-btn"
-          onClick={() => {
-            props.onChange('')
-            setOpen(false)
-          }}
-        >
-          Pastro
-        </button>
-        <button
-          type="button"
-          className="date-picker-footer-btn primary"
-          onClick={() => pickDate(toIsoDate(today))}
-        >
-          Sot
-        </button>
-      </div>
+      <DatePickerCalendar
+        value={props.value}
+        onChange={(iso) => {
+          props.onChange(iso)
+          closePicker()
+        }}
+      />
     </div>
   ) : null
 

@@ -1,0 +1,90 @@
+@import '../../styles/components/date-input.css';
+@import './mobile-tokens.css';
+@import './mobile-typography.css';
+@import './mobile-layout.css';
+@import './mobile-components.css';
+@import './mobile-snackbar.css';
+
+html.mobile-client {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.mobile-client,
+html.mobile-client body,
+html.mobile-client #root {
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+html.mobile-client body {
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+html.mobile-client #root {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+html.mobile-client .mobile-app,
+html.mobile-client .mobile-bottom-nav,
+html.mobile-client .mobile-sticky-cta-wrap,
+html.mobile-client .mobile-auth-loading,
+html.mobile-client .mobile-sheet {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  left: 0;
+  right: 0;
+}
+
+.mobile-app {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+  z-index: 1;
+  touch-action: manipulation;
+}
+
+.mobile-auth-loading {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mobile-space-md);
+  padding-left: max(var(--mobile-space-md), env(safe-area-inset-left));
+  padding-right: max(var(--mobile-space-md), env(safe-area-inset-right));
+  z-index: 1;
+}
+
+.mobile-auth-loading .auth-card {
+  width: 100%;
+}
+
+.mobile-date-field .date-input-placeholder {
+  color: var(--text-muted);
+}
+
+.mobile-date-picker-calendar .date-picker-day {
+  min-height: 44px;
+}
+
+.mobile-date-picker-calendar .date-picker-nav {
+  min-width: 44px;
+  min-height: 44px;
+}

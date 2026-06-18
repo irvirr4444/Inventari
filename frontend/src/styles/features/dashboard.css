@@ -2,6 +2,11 @@
    LAYOUT
    ═══════════════════════════════════════════════════════════════ */
 
+:root {
+  --action-row-height: 62px;
+  --action-visible-rows: 2;
+}
+
 .container {
   height: 100dvh;
   max-width: 1480px;
@@ -43,7 +48,7 @@
 .dashboard-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -86,6 +91,25 @@
 
 .action-card {
   flex: 0 0 auto;
+  padding: 16px 20px;
+}
+
+.action-card .action-header {
+  margin-bottom: 14px;
+}
+
+.action-card .action-type-row {
+  margin-bottom: 14px;
+}
+
+.action-card .action-footer {
+  margin-top: 12px;
+}
+
+.action-card .action-table th,
+.action-card .action-table td {
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .products-card {
@@ -103,7 +127,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .summary-panel > .summary-countries > .summary-country {
@@ -129,12 +153,58 @@
   min-width: 760px;
 }
 
+.action-table-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.action-table-inner {
+  min-width: 760px;
+}
+
+.action-table-hscroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.action-rows-scroll {
+  height: calc(var(--action-row-height) * var(--action-visible-rows));
+  min-height: calc(var(--action-row-height) * var(--action-visible-rows));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.action-rows-scroll-hint {
+  margin: 4px 0 0;
+  min-height: 14px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.action-rows-scroll-hint.is-hidden {
+  visibility: hidden;
+}
+
+.action-table-head {
+  margin-bottom: 0;
+}
+
+.action-table-body tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .table-scroll .products-table {
   min-width: 0;
 }
 
 .products-table-wrap {
-  max-height: calc(43px + (49px * 9));
+  flex: 1;
+  min-height: 0;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior-y: none;
@@ -156,7 +226,7 @@
 }
 
 .summary-period {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .summary-date-grid {

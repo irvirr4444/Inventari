@@ -10,13 +10,12 @@ import type { Produkti } from '../lib/api'
 
 export function useActionEntry(options: {
   products: Produkti[]
-  notify: (message: string, variant?: 'success' | 'default') => void
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { country } = useCountry()
   const qc = useQueryClient()
   const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
   const [actionDate, setActionDate] = React.useState(todayISODate())
-  const [actionError, setActionError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const duplicateProductMessage = React.useCallback(
@@ -46,7 +45,6 @@ export function useActionEntry(options: {
           })),
       }),
     onSuccess: async (result) => {
-      setActionError(null)
       setConfirmOpen(false)
       options.notify(
         result.meta?.mirrored_to_albania
@@ -58,16 +56,15 @@ export function useActionEntry(options: {
       await invalidateAfterMutation(qc, 'all', { refetchSummary: true })
     },
     onError: (e) => {
-      setActionError(e instanceof Error ? e.message : 'Error')
+      options.notify(e instanceof Error ? e.message : 'Error', 'error')
       setConfirmOpen(false)
     },
   })
 
   const requestFinalize = () => {
-    setActionError(null)
     const result = validateActionItems(itemsState.items)
     if (!result.ok) {
-      setActionError(result.error)
+      options.notify(result.error, 'error')
       return
     }
     setConfirmOpen(true)
@@ -81,7 +78,6 @@ export function useActionEntry(options: {
     setLloji,
     actionDate,
     setActionDate,
-    actionError,
     confirmOpen,
     setConfirmOpen,
     itemsState,

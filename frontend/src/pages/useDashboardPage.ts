@@ -107,7 +107,6 @@ export function useDashboardPage() {
     setLloji: actionEntry.setLloji,
     actionDate: actionEntry.actionDate,
     setActionDate: actionEntry.setActionDate,
-    actionError: actionEntry.actionError,
     confirmActionOpen: actionEntry.confirmOpen,
     setConfirmActionOpen: actionEntry.setConfirmOpen,
     transferDialogOpen,

@@ -25,7 +25,6 @@ export function DashboardPage() {
         onRemoveItem={d.actionItemsState.removeItem}
         onAddItem={d.actionItemsState.addItem}
         total={d.actionItemsState.total}
-        error={d.actionError}
         saving={d.actionMutation.isPending}
         onSubmit={d.submitAction}
         onOpenTransfer={d.openTransferDialog}

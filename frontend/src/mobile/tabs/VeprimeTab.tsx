@@ -13,7 +13,9 @@ import { ProductRowCard } from '../components/ProductRowCard'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { StickyCta } from '../components/StickyCta'
 
-export function VeprimeTab(props: { notify: (message: string, variant?: 'success' | 'default') => void }) {
+export function VeprimeTab(props: {
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
+}) {
   const { country, setCountry } = useCountry()
   const productsQuery = useProductsQuery()
   const products = productsQuery.data ?? []
@@ -109,8 +111,6 @@ export function VeprimeTab(props: { notify: (message: string, variant?: 'success
             ))}
           </div>
         ) : null}
-
-        {entry.actionError ? <div className="mobile-inline-error">{entry.actionError}</div> : null}
 
         <div className="mobile-total-row">
           <span>Totali:</span>

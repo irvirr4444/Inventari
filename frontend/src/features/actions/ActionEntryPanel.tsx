@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { DateInput } from '../../components/DateInput'
-import { ErrorAlert } from '../../components/ErrorAlert'
 import { CountrySelector } from '../../lib/country'
 import type { Produkti } from '../../lib/api'
 import { fmt } from '../../lib/format'
@@ -18,7 +17,6 @@ export function ActionEntryPanel(props: {
   onRemoveItem: (key: string) => void
   onAddItem: () => void
   total: number
-  error: string | null
   saving: boolean
   onSubmit: (e: React.FormEvent) => void
   onOpenTransfer: () => void
@@ -69,7 +67,7 @@ export function ActionEntryPanel(props: {
       </div>
 
       <form onSubmit={props.onSubmit}>
-        <div className="row action-type-row" style={{ marginBottom: 20 }}>
+        <div className="row action-type-row">
           <div className="toggle-group">
             <button
               type="button"
@@ -134,8 +132,6 @@ export function ActionEntryPanel(props: {
             {props.saving ? 'Duke finalizuar…' : 'Finalizo Veprimin'}
           </button>
         </div>
-
-        {props.error && <ErrorAlert message={props.error} style={{ marginTop: 16 }} />}
       </form>
     </div>
   )

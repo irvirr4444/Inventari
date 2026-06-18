@@ -11,7 +11,7 @@
 }
 
 .summary-card.compact {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-radius: 11px;
   border-left-width: 3px;
 }
@@ -72,14 +72,14 @@
   background: rgba(232, 241, 251, 0.62);
   border: 1px solid rgba(201, 216, 234, 0.75);
   border-radius: 14px;
-  padding: 16px;
+  padding: 10px 14px;
 }
 
 .summary-country-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   font-size: 14px;
   font-weight: 600;
   color: #143356;
@@ -94,7 +94,7 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .summary-mini-grid > .summary-card {

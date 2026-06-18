@@ -2,14 +2,14 @@ import * as React from 'react'
 
 export type SnackbarState = {
   message: string
-  variant?: 'success' | 'default'
+  variant?: 'success' | 'default' | 'error'
 } | null
 
 export function useSnackbar(durationMs = 4500) {
   const [snackbar, setSnackbar] = React.useState<SnackbarState>(null)
 
   const notify = React.useCallback(
-    (message: string, variant: 'success' | 'default' = 'default') => {
+    (message: string, variant: 'success' | 'default' | 'error' = 'default') => {
       setSnackbar({ message, variant })
     },
     [],

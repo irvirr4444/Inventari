@@ -84,6 +84,12 @@
   color: #ecfdf5;
 }
 
+.snackbar.error {
+  background: rgba(153, 27, 27, 0.96);
+  border-color: rgba(254, 202, 202, 0.35);
+  color: #fef2f2;
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;

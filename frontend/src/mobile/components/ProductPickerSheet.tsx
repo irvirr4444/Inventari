@@ -12,13 +12,13 @@ function ProductPickerForm(props: {
   products: Produkti[]
   existingKodis: string[]
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
-  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: number }) => void
+  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
   onClose: () => void
 }) {
   const [search, setSearch] = React.useState('')
   const [kodi, setKodi] = React.useState(props.initial?.kodi_produktit ?? '')
   const [price, setPrice] = React.useState(props.initial?.cmimi_njesi ?? '')
-  const [qty, setQty] = React.useState(props.initial?.sasia ?? 1)
+  const [qty, setQty] = React.useState(props.initial?.sasia ?? '')
   const [error, setError] = React.useState<string | null>(null)
   const itemRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
 
@@ -147,7 +147,10 @@ function ProductPickerForm(props: {
               type="number"
               min={1}
               value={qty}
-              onChange={(e) => setQty(Number(e.target.value) || 0)}
+              onChange={(e) =>
+                setQty(e.target.value.startsWith('-') ? '' : e.target.value)
+              }
+              placeholder="1"
             />
           </div>
         </div>
@@ -164,7 +167,7 @@ export function ProductPickerSheet(props: {
   existingKodis: string[]
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
   onClose: () => void
-  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: number }) => void
+  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
 }) {
   const formKey = `${props.initial?.kodi_produktit ?? 'new'}-${props.open}`
   const isEdit = !!props.initial?.kodi_produktit

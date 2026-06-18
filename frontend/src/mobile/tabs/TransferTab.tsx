@@ -90,7 +90,7 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
     setPickerOpen(true)
   }
 
-  const handleSave = (data: { kodi_produktit: string; cmimi_njesi: string; sasia: number }) => {
+  const handleSave = (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => {
     if (editingKey) {
       entry.itemsState.updateItem(editingKey, 'kodi_produktit', data.kodi_produktit)
       entry.itemsState.updateItem(editingKey, 'cmimi_njesi', data.cmimi_njesi)

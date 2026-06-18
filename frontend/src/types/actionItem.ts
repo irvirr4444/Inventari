@@ -4,9 +4,9 @@ export type ActionItemDraft = {
   key: string
   kodi_produktit: string
   cmimi_njesi: string
-  sasia: number
+  sasia: string
 }
 
 export function createEmptyActionItem(): ActionItemDraft {
-  return { key: randomId(), kodi_produktit: '', cmimi_njesi: '', sasia: 1 }
+  return { key: randomId(), kodi_produktit: '', cmimi_njesi: '', sasia: '' }
 }

@@ -1,0 +1,126 @@
+.product-search-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.product-search-input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.product-search-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 0 8px 8px 0;
+}
+
+.product-search-toggle:hover {
+  color: var(--text);
+  background: rgba(47, 125, 246, 0.06);
+}
+
+.product-search-select.open .product-search-toggle svg {
+  transform: rotate(180deg);
+}
+
+.product-search-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.product-search-list-portal {
+  position: fixed;
+  z-index: 120;
+}
+
+.product-search-list-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  background: rgba(247, 251, 255, 0.98);
+}
+
+.product-search-list-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.product-search-show-all {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.product-search-show-all:hover {
+  background: rgba(47, 125, 246, 0.08);
+}
+
+.product-search-options {
+  overflow-y: auto;
+  max-height: 280px;
+  padding: 6px;
+}
+
+.product-search-option {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.product-search-option:hover,
+.product-search-option.active {
+  background: rgba(47, 125, 246, 0.1);
+}
+
+.product-search-option.selected {
+  background: rgba(47, 125, 246, 0.14);
+  font-weight: 600;
+}
+
+.product-search-option.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.product-search-empty {
+  padding: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+}

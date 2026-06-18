@@ -1,7 +1,7 @@
-import * as React from 'react'
 import type { Produkti } from '../../lib/api'
-import { fmt, productLabel, sortProductsByKodi } from '../../lib/format'
+import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
+import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
 export function ActionItemsTable(props: {
   items: ActionItemDraft[]
@@ -9,11 +9,6 @@ export function ActionItemsTable(props: {
   onUpdate: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onRemove: (key: string) => void
 }) {
-  const productsByKodi = React.useMemo(
-    () => sortProductsByKodi(props.products),
-    [props.products],
-  )
-
   return (
     <div className="table-scroll action-table-wrap">
       <table className="table table-fixed action-table">
@@ -39,25 +34,15 @@ export function ActionItemsTable(props: {
             return (
               <tr key={it.key}>
                 <td>
-                  <select
-                    className="select"
+                  <ProductSearchSelect
+                    products={props.products}
                     value={it.kodi_produktit}
-                    onChange={(e) => props.onUpdate(it.key, 'kodi_produktit', e.target.value)}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="">Zgjedh produktin…</option>
-                    {productsByKodi.map((p) => (
-                      <option
-                        key={p.id}
-                        value={p.kodi}
-                        disabled={props.items.some(
-                          (x) => x.key !== it.key && x.kodi_produktit === p.kodi,
-                        )}
-                      >
-                        {productLabel(p.emri, p.kodi)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(kodi) => props.onUpdate(it.key, 'kodi_produktit', kodi)}
+                    disabledKodis={props.items
+                      .filter((x) => x.key !== it.key && x.kodi_produktit)
+                      .map((x) => x.kodi_produktit)}
+                    placeholder="Kerko sipas kodit ose emrit…"
+                  />
                 </td>
                 <td>
                   <input
@@ -83,7 +68,14 @@ export function ActionItemsTable(props: {
                     type="number"
                     min={1}
                     value={it.sasia}
-                    onChange={(e) => props.onUpdate(it.key, 'sasia', Number(e.target.value))}
+                    onChange={(e) =>
+                      props.onUpdate(
+                        it.key,
+                        'sasia',
+                        e.target.value.startsWith('-') ? '' : e.target.value,
+                      )
+                    }
+                    placeholder="1"
                     style={{ width: '100%' }}
                   />
                 </td>

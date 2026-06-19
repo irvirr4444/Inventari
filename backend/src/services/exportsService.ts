@@ -3,12 +3,21 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
 import { z } from 'zod'
 import { AppError } from '../errors.js'
+import type { SessionUser } from '../domain/user.js'
 import { autoSizeColumns, applyBordersToDataRows, styleHeaderRow } from '../excel.js'
 import {
   type ActionExportRow,
   buildInventariExcelBuffer,
   formatExportTimestamp,
 } from './inventariExcel.js'
+import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
+import { listProduktet, listGjendjeForProducts } from '../repositories/produktiRepository.js'
+import {
+  fetchDynamicExportActions,
+  fetchExportLegacyActions,
+  fetchExportLegacyProducts,
+  fetchExportVeprimet,
+} from '../repositories/batchRepository.js'
 
 function csvEscape(value: unknown) {
   const s = String(value ?? '')
@@ -16,33 +25,9 @@ function csvEscape(value: unknown) {
   return s
 }
 
-export async function queryActionsForExport(
-  supabase: SupabaseClient,
-  query: {
-    shteti?: 'XK' | 'AL'
-    from?: string
-    to?: string
-    lloji?: 'Hyrje' | 'Dalje'
-  },
-) {
-  let q = supabase
-    .from('veprimi')
-    .select('*')
-    .order('data', { ascending: true })
-    .order('created_at', { ascending: true })
-
-  if (query.shteti) q = q.eq('shteti', query.shteti)
-  if (query.lloji) q = q.eq('lloji', query.lloji)
-  if (query.from) q = q.gte('data', query.from)
-  if (query.to) q = q.lte('data', query.to)
-
-  const { data, error } = await q
-  if (error) throw new AppError(500, error.message)
-  return data ?? []
-}
-
 export async function exportActionsCsv(
   supabase: SupabaseClient,
+  user: SessionUser,
   query: {
     shteti?: 'XK' | 'AL'
     from?: string
@@ -50,7 +35,7 @@ export async function exportActionsCsv(
     lloji?: 'Hyrje' | 'Dalje'
   },
 ) {
-  const rows = await queryActionsForExport(supabase, query)
+  const rows = await fetchExportVeprimet(supabase, user.id, query)
 
   const header = [
     'id',
@@ -88,77 +73,134 @@ export async function exportActionsCsv(
 
 export async function exportProductsXlsx(
   supabase: SupabaseClient,
+  user: SessionUser,
   query: {
     sortKey: 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
     sortDirection: 'asc' | 'desc'
   },
 ) {
-  const { data, error } = await supabase
-    .from('produkti')
-    .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
+  const productRows = await listProduktet(supabase, user.id, {})
 
-  if (error) throw new AppError(500, error.message)
+  if (user.isLegacy) {
+    const sorted = [...productRows].sort((a, b) => {
+      const multiplier = query.sortDirection === 'asc' ? 1 : -1
+      const aValue = a[query.sortKey]
+      const bValue = b[query.sortKey]
 
-  const productRows = [...(data ?? [])].sort((a, b) => {
-    const multiplier = query.sortDirection === 'asc' ? 1 : -1
-    const aValue = a[query.sortKey]
-    const bValue = b[query.sortKey]
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return (aValue - bValue) * multiplier
+      }
 
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return (aValue - bValue) * multiplier
+      return (
+        String(aValue).localeCompare(String(bValue), undefined, {
+          sensitivity: 'base',
+          numeric: true,
+        }) * multiplier
+      )
+    })
+
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Produkte')
+    sheet.addRow(['Kodi', 'Emri', 'Gjendje Kosove', 'Gjendje Shqiperi'])
+    for (const p of sorted) {
+      sheet.addRow([p.kodi, p.emri, p.gjendje_kosove, p.gjendje_shqiperi])
     }
+    styleHeaderRow(sheet)
+    applyBordersToDataRows(sheet, 2)
+    autoSizeColumns(sheet, 120)
+    return {
+      buffer: await workbook.xlsx.writeBuffer(),
+      filename: `Produkte ${formatExportTimestamp()}.xlsx`,
+    }
+  }
 
-    return (
-      String(aValue).localeCompare(String(bValue), undefined, {
-        sensitivity: 'base',
-        numeric: true,
-      }) * multiplier
-    )
-  })
+  const lokacionet = await listLokacionetByOwner(supabase, user.id)
+  const stockRows = await listGjendjeForProducts(
+    supabase,
+    user.id,
+    productRows.map((p) => p.id),
+  )
+  const stockByProduct = new Map<string, Map<string, number>>()
+  for (const row of stockRows) {
+    const byLoc = stockByProduct.get(row.produkti_id) ?? new Map()
+    byLoc.set(row.lokacioni_id, Number(row.sasia))
+    stockByProduct.set(row.produkti_id, byLoc)
+  }
 
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Produkte')
-
-  sheet.addRow(['Kodi', 'Emri', 'Gjendje Kosove', 'Gjendje Shqiperi'])
+  sheet.addRow(['Kodi', 'Emri', ...lokacionet.map((l) => l.emri)])
 
   for (const p of productRows) {
-    sheet.addRow([p.kodi, p.emri, p.gjendje_kosove, p.gjendje_shqiperi])
+    const stocks = stockByProduct.get(p.id)
+    sheet.addRow([
+      p.kodi,
+      p.emri,
+      ...lokacionet.map((l) => stocks?.get(l.id) ?? 0),
+    ])
   }
 
   styleHeaderRow(sheet)
   applyBordersToDataRows(sheet, 2)
   autoSizeColumns(sheet, 120)
-
   return {
     buffer: await workbook.xlsx.writeBuffer(),
     filename: `Produkte ${formatExportTimestamp()}.xlsx`,
   }
 }
 
-export async function exportInventariXlsx(
+async function exportDynamicInventariXlsx(
   supabase: SupabaseClient,
+  user: SessionUser,
   query: { from?: string; to?: string },
 ) {
-  const [{ data: products, error: productsError }, { data: allActions, error: actionsError }] =
-    await Promise.all([
-      supabase
-        .from('produkti')
-        .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
-        .order('emri', { ascending: true }),
-      supabase
-        .from('veprimi')
-        .select('id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,created_at')
-        .order('data', { ascending: true })
-        .order('created_at', { ascending: true })
-        .order('id', { ascending: true }),
-    ])
+  const lokacionet = await listLokacionetByOwner(supabase, user.id)
+  const lokacioniById = new Map(lokacionet.map((l) => [l.id, l.emri]))
+  const actions = await fetchDynamicExportActions(supabase, user.id, query)
 
-  if (productsError) throw new AppError(500, productsError.message)
-  if (actionsError) throw new AppError(500, actionsError.message)
+  const workbook = new ExcelJS.Workbook()
+  const movements = workbook.addWorksheet('Veprime')
+  movements.addRow(['Data', 'Lloji', 'Lokacioni', 'Kodi', 'Cmimi', 'Sasia', 'Totali'])
+
+  for (const row of actions) {
+    movements.addRow([
+      row.data,
+      row.lloji,
+      lokacioniById.get(row.lokacioni_id ?? '') ?? '',
+      row.kodi_produktit,
+      row.cmimi_njesi,
+      row.sasia,
+      row.totali,
+    ])
+  }
+
+  styleHeaderRow(movements)
+  applyBordersToDataRows(movements, 2)
+  autoSizeColumns(movements, 120)
+
+  return {
+    buffer: await workbook.xlsx.writeBuffer(),
+    filename: `Permbledhje ${formatExportTimestamp()}.xlsx`,
+  }
+}
+
+export async function exportInventariXlsx(
+  supabase: SupabaseClient,
+  user: SessionUser,
+  query: { from?: string; to?: string },
+) {
+  if (!user.isLegacy) {
+    return exportDynamicInventariXlsx(supabase, user, query)
+  }
+
+  const [products, allActions] = await Promise.all([
+    fetchExportLegacyProducts(supabase, user.id),
+    fetchExportLegacyActions(supabase, user.id),
+  ])
 
   const buffer = await buildInventariExcelBuffer(
-    products ?? [],
-    (allActions ?? []) as ActionExportRow[],
+    products,
+    allActions as ActionExportRow[],
     query,
   )
 

@@ -16,7 +16,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
         ActionsExportQuerySchema,
         (req.query ?? {}) as Record<string, unknown>,
       )
-      const csv = await exportActionsCsv(supabase, query)
+      const csv = await exportActionsCsv(supabase, req.user, query)
       reply.header('Content-Type', 'text/csv; charset=utf-8')
       reply.header('Content-Disposition', 'attachment; filename="veprime.csv"')
       return csv
@@ -35,7 +35,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
         ProductsExportQuerySchema,
         (req.query ?? {}) as Record<string, unknown>,
       )
-      const { buffer, filename } = await exportProductsXlsx(supabase, query)
+      const { buffer, filename } = await exportProductsXlsx(supabase, req.user, query)
       reply.header(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -57,7 +57,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
         ActionsExportQuerySchema,
         (req.query ?? {}) as Record<string, unknown>,
       )
-      const { buffer, filename } = await exportInventariXlsx(supabase, query)
+      const { buffer, filename } = await exportInventariXlsx(supabase, req.user, query)
       reply.header(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

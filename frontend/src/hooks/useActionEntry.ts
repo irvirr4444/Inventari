@@ -6,6 +6,7 @@ import { createActionBatch } from '../lib/api'
 import { useCountry } from '../lib/country'
 import { todayISODate } from '../lib/dates'
 import { invalidateAfterMutation } from '../lib/invalidateAppData'
+import { useAuth } from '../lib/auth/AuthProvider'
 import { productLabel } from '../lib/format'
 import type { Produkti } from '../lib/api'
 
@@ -14,6 +15,7 @@ export function useActionEntry(options: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { country } = useCountry()
+  const { user } = useAuth()
   const qc = useQueryClient()
   const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
   const [actionDate, setActionDate] = React.useState(todayISODate())
@@ -60,7 +62,7 @@ export function useActionEntry(options: {
       itemsState.reset()
       setActionOra('')
       setActionPershkrimi('')
-      await invalidateAfterMutation(qc, 'all', { refetchSummary: true })
+      await invalidateAfterMutation(qc, 'all', { refetchSummary: true, userId: user?.id })
     },
     onError: (e) => {
       options.notify(e instanceof Error ? e.message : 'Error', 'error')

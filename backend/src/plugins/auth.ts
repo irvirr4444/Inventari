@@ -1,24 +1,37 @@
 import type { FastifyInstance } from 'fastify'
-import { SESSION_COOKIE, verifySessionToken } from '../auth/session.js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { decodeSessionToken, SESSION_COOKIE } from '../auth/session.js'
+import { resolveSessionUser } from '../services/authService.js'
 
 export type AuthPluginDeps = {
   sessionSecret: string
+  supabase: SupabaseClient
 }
+
+const PUBLIC_API_PREFIXES = [
+  '/api/login',
+  '/api/logout',
+  '/api/session',
+  '/api/health',
+  '/api/auth/signup',
+  '/api/auth/google',
+]
 
 export function registerAuthPlugin(app: FastifyInstance, deps: AuthPluginDeps) {
   app.addHook('preHandler', async (req, reply) => {
     if (!req.url.startsWith('/api/')) return
-    if (
-      req.url.startsWith('/api/login') ||
-      req.url.startsWith('/api/logout') ||
-      req.url.startsWith('/api/session') ||
-      req.url.startsWith('/api/health')
-    ) {
-      return
-    }
+    if (PUBLIC_API_PREFIXES.some((prefix) => req.url.startsWith(prefix))) return
 
-    if (!verifySessionToken(deps.sessionSecret, req.cookies[SESSION_COOKIE])) {
+    const payload = decodeSessionToken(deps.sessionSecret, req.cookies[SESSION_COOKIE])
+    if (!payload) {
       return reply.code(401).send({ error: 'Unauthorized' })
     }
+
+    const user = await resolveSessionUser(deps.supabase, payload.sub)
+    if (!user) {
+      return reply.code(401).send({ error: 'Unauthorized' })
+    }
+
+    req.user = user
   })
 }

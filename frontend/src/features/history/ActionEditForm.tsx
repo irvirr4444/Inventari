@@ -11,6 +11,7 @@ import {
 import { fmtEuro, productLabel } from '../../lib/format'
 import { formatDisplayTime } from '../../lib/actionMeta'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
@@ -68,6 +69,7 @@ export function ActionEditForm(props: {
   onError: (message: string) => void
 }) {
   const qc = useQueryClient()
+  const { user } = useAuth()
   const [data, setData] = React.useState(props.detail.data)
   const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
   const [pershkrimi, setPershkrimi] = React.useState(props.detail.pershkrimi ?? '')
@@ -91,8 +93,8 @@ export function ActionEditForm(props: {
   }, [props.detail])
 
   const invalidateAll = React.useCallback(async () => {
-    await invalidateAfterMutation(qc, 'all', { actionBatchId: props.detail.id })
-  }, [qc, props.detail.id])
+    await invalidateAfterMutation(qc, 'all', { actionBatchId: props.detail.id, userId: user?.id })
+  }, [qc, props.detail.id, user?.id])
 
   const saveAllMut = useMutation({
     mutationFn: async () => {

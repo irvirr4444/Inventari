@@ -4,6 +4,15 @@ import {
   ERR_TRANSFER_SAME_COUNTRY,
 } from '@inventari/shared'
 import { validateTransfer, buildVeprimRows } from '../services/actionsService.js'
+import {
+  LEGACY_LOKACIONI_AL_ID,
+  LEGACY_LOKACIONI_XK_ID,
+} from '../domain/lokacioni.js'
+
+const legacyLokacionet = [
+  { id: LEGACY_LOKACIONI_XK_ID, kodi: 'XK' },
+  { id: LEGACY_LOKACIONI_AL_ID, kodi: 'AL' },
+]
 
 describe('validateTransfer', () => {
   it('requires destination', () => {
@@ -30,13 +39,16 @@ describe('validateTransfer', () => {
 
 describe('buildVeprimRows', () => {
   it('creates Dalje and Hyrje rows for transfer', () => {
-    const { rows, mirrorRows } = buildVeprimRows({
-      lloji: 'Transfer',
-      shteti: 'XK',
-      destination_shteti: 'AL',
-      data: '2026-06-17',
-      items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
-    })
+    const { rows, mirrorRows } = buildVeprimRows(
+      {
+        lloji: 'Transfer',
+        shteti: 'XK',
+        destination_shteti: 'AL',
+        data: '2026-06-17',
+        items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
+      },
+      { mirrorToAlbania: false, lokacionet: legacyLokacionet },
+    )
 
     expect(rows).toHaveLength(2)
     expect(rows[0]).toMatchObject({ lloji: 'Dalje', shteti: 'XK', sasia: 5 })
@@ -44,14 +56,30 @@ describe('buildVeprimRows', () => {
     expect(mirrorRows).toHaveLength(0)
   })
 
-  it('mirrors Kosovo Dalje to Albania Hyrje', () => {
-    const { mirrorRows } = buildVeprimRows({
-      lloji: 'Dalje',
-      shteti: 'XK',
-      items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
-    })
+  it('mirrors Kosovo Dalje to Albania Hyrje for legacy users', () => {
+    const { mirrorRows } = buildVeprimRows(
+      {
+        lloji: 'Dalje',
+        shteti: 'XK',
+        items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
+      },
+      { mirrorToAlbania: true, lokacionet: legacyLokacionet },
+    )
 
     expect(mirrorRows).toHaveLength(1)
     expect(mirrorRows[0]).toMatchObject({ lloji: 'Hyrje', shteti: 'AL', sasia: 5 })
+  })
+
+  it('does not mirror for dynamic users', () => {
+    const { mirrorRows } = buildVeprimRows(
+      {
+        lloji: 'Dalje',
+        shteti: 'XK',
+        items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
+      },
+      { mirrorToAlbania: false, lokacionet: legacyLokacionet },
+    )
+
+    expect(mirrorRows).toHaveLength(0)
   })
 })

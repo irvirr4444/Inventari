@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getActionBatch, type Produkti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { ActionEditForm } from './ActionEditForm'
 
 export function ActionEditModal(props: {
@@ -10,8 +11,9 @@ export function ActionEditModal(props: {
   onSaveComplete: (migratedBatchId?: string) => void
   onError: (message: string) => void
 }) {
+  const { user } = useAuth()
   const detailQuery = useQuery({
-    queryKey: queryKeys.actionBatch(props.actionId),
+    queryKey: queryKeys.actionBatch(user?.id, props.actionId),
     queryFn: () => getActionBatch(props.actionId),
   })
 

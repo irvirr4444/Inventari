@@ -9,13 +9,28 @@ import {
   ERR_TRANSFER_SAME_COUNTRY,
   errInsufficientStock,
   normalizeActionBody,
+  normalizeDynamicActionBody,
   productLabel,
 } from '@inventari/shared'
 import { AppError } from '../errors.js'
-import { createActionBatchRecord } from '../actionBatches.js'
+import type { SessionUser } from '../domain/user.js'
+import { findProduktetByKodi } from '../repositories/produktiRepository.js'
+import { insertVeprimet } from '../repositories/veprimiRepository.js'
+import { insertVeprimBatch } from '../repositories/veprimBatchRepository.js'
+import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
+import { resolveLokacioniIdForCountry } from './legacyDtoService.js'
 
 export function validateTransfer(body: NormalizedActionBody) {
   if (body.lloji !== 'Transfer') return
+  if (body.lokacioni_id) {
+    if (!body.destination_lokacioni_id) {
+      throw new AppError(400, ERR_TRANSFER_NEEDS_DESTINATION)
+    }
+    if (body.destination_lokacioni_id === body.lokacioni_id) {
+      throw new AppError(400, ERR_TRANSFER_SAME_COUNTRY)
+    }
+    return
+  }
   if (!body.destination_shteti) {
     throw new AppError(400, ERR_TRANSFER_NEEDS_DESTINATION)
   }
@@ -26,19 +41,39 @@ export function validateTransfer(body: NormalizedActionBody) {
 
 export async function validateStock(
   supabase: SupabaseClient,
+  tenantId: string,
   items: ActionItemInput[],
-  shteti: Country,
+  opts: { shteti?: Country; lokacioni_id?: string },
 ) {
   const codes = [...new Set(items.map((it) => it.kodi_produktit))]
-  const { data: products, error } = await supabase
-    .from('produkti')
-    .select('kodi,emri,gjendje_kosove,gjendje_shqiperi')
-    .in('kodi', codes)
+  const products = await findProduktetByKodi(supabase, tenantId, codes)
+  const byCode = new Map(products.map((p) => [p.kodi, p]))
 
-  if (error) throw new AppError(400, error.message)
+  if (opts.lokacioni_id) {
+    const { listGjendjeForProducts } = await import('../repositories/produktiRepository.js')
+    const stockRows = await listGjendjeForProducts(
+      supabase,
+      tenantId,
+      products.map((p) => p.id),
+    )
+    const stockByProduct = new Map<string, number>()
+    for (const row of stockRows) {
+      if (row.lokacioni_id === opts.lokacioni_id) {
+        stockByProduct.set(row.produkti_id, Number(row.sasia))
+      }
+    }
+    for (const it of items) {
+      const p = byCode.get(it.kodi_produktit)
+      if (!p) throw new AppError(400, `Produkti ${it.kodi_produktit} nuk u gjet.`)
+      const current = stockByProduct.get(p.id) ?? 0
+      if (it.sasia > current) {
+        throw new AppError(400, errInsufficientStock(productLabel(p.emri, it.kodi_produktit)))
+      }
+    }
+    return
+  }
 
-  const byCode = new Map((products ?? []).map((p) => [p.kodi, p]))
-
+  const shteti = opts.shteti!
   for (const it of items) {
     const p = byCode.get(it.kodi_produktit)
     if (!p) {
@@ -56,22 +91,83 @@ type VeprimInsertRow = {
   lloji: 'Hyrje' | 'Dalje'
   data?: string
   shteti: Country
+  lokacioni_id?: string | null
   kodi_produktit: string
   cmimi_njesi: number
   sasia: number
 }
 
-export function buildVeprimRows(body: NormalizedActionBody): {
+export function buildVeprimRows(
+  body: NormalizedActionBody,
+  opts: { mirrorToAlbania: boolean; lokacionet: Array<{ id: string; kodi: string }> },
+): {
   rows: VeprimInsertRow[]
   mirrorRows: VeprimInsertRow[]
 } {
+  if (body.lokacioni_id) {
+    const locById = new Map(opts.lokacionet.map((l) => [l.id, l.kodi]))
+    const toCountry = (id: string | undefined): Country => {
+      const kodi = id ? locById.get(id) : undefined
+      return kodi === 'AL' ? 'AL' : 'XK'
+    }
+
+    const rows: VeprimInsertRow[] =
+      body.lloji === 'Transfer' && body.destination_lokacioni_id
+        ? body.items.flatMap((it) => [
+            {
+              lloji: 'Dalje' as const,
+              data: body.data ?? undefined,
+              shteti: toCountry(body.lokacioni_id),
+              lokacioni_id: body.lokacioni_id,
+              kodi_produktit: it.kodi_produktit,
+              cmimi_njesi: it.cmimi_njesi,
+              sasia: it.sasia,
+            },
+            {
+              lloji: 'Hyrje' as const,
+              data: body.data ?? undefined,
+              shteti: toCountry(body.destination_lokacioni_id),
+              lokacioni_id: body.destination_lokacioni_id,
+              kodi_produktit: it.kodi_produktit,
+              cmimi_njesi: it.cmimi_njesi,
+              sasia: it.sasia,
+            },
+          ])
+        : body.items.map((it) => ({
+            lloji: body.lloji as 'Hyrje' | 'Dalje',
+            data: body.data ?? undefined,
+            shteti: toCountry(body.lokacioni_id),
+            lokacioni_id: body.lokacioni_id,
+            kodi_produktit: it.kodi_produktit,
+            cmimi_njesi: it.cmimi_njesi,
+            sasia: it.sasia,
+          }))
+    return { rows, mirrorRows: [] }
+  }
+
+  const resolveLoc = (country: Country) =>
+    resolveLokacioniIdForCountry(
+      opts.lokacionet.map((l) => ({
+        id: l.id,
+        pronari_id: '',
+        emri: '',
+        kodi: l.kodi,
+        flag_emoji: null,
+        rradhitja: 0,
+        show_in_summary: true,
+        aktiv: true,
+      })),
+      country,
+    )
+
   const rows: VeprimInsertRow[] =
     body.lloji === 'Transfer' && body.destination_shteti
       ? body.items.flatMap((it) => [
           {
             lloji: 'Dalje' as const,
             data: body.data ?? undefined,
-            shteti: body.shteti,
+            shteti: body.shteti!,
+            lokacioni_id: resolveLoc(body.shteti!),
             kodi_produktit: it.kodi_produktit,
             cmimi_njesi: it.cmimi_njesi,
             sasia: it.sasia,
@@ -80,6 +176,7 @@ export function buildVeprimRows(body: NormalizedActionBody): {
             lloji: 'Hyrje' as const,
             data: body.data ?? undefined,
             shteti: body.destination_shteti!,
+            lokacioni_id: resolveLoc(body.destination_shteti!),
             kodi_produktit: it.kodi_produktit,
             cmimi_njesi: it.cmimi_njesi,
             sasia: it.sasia,
@@ -88,18 +185,20 @@ export function buildVeprimRows(body: NormalizedActionBody): {
       : body.items.map((it) => ({
           lloji: body.lloji as 'Hyrje' | 'Dalje',
           data: body.data ?? undefined,
-          shteti: body.shteti,
+          shteti: body.shteti!,
+          lokacioni_id: resolveLoc(body.shteti!),
           kodi_produktit: it.kodi_produktit,
           cmimi_njesi: it.cmimi_njesi,
           sasia: it.sasia,
         }))
 
   const mirrorRows: VeprimInsertRow[] =
-    body.shteti === 'XK' && body.lloji === 'Dalje'
+    opts.mirrorToAlbania && body.shteti === 'XK' && body.lloji === 'Dalje'
       ? body.items.map((it) => ({
           lloji: 'Hyrje' as const,
           data: body.data ?? undefined,
           shteti: 'AL' as const,
+          lokacioni_id: resolveLoc('AL'),
           kodi_produktit: it.kodi_produktit,
           cmimi_njesi: it.cmimi_njesi,
           sasia: it.sasia,
@@ -111,27 +210,47 @@ export function buildVeprimRows(body: NormalizedActionBody): {
 
 export async function createAction(
   supabase: SupabaseClient,
-  parsedBody: Parameters<typeof normalizeActionBody>[0],
+  user: SessionUser,
+  parsedBody: Parameters<typeof normalizeActionBody>[0] | Parameters<typeof normalizeDynamicActionBody>[0],
+  opts?: { dynamic?: boolean },
 ) {
-  const body = normalizeActionBody(parsedBody)
+  const body = opts?.dynamic
+    ? normalizeDynamicActionBody(parsedBody as Parameters<typeof normalizeDynamicActionBody>[0])
+    : normalizeActionBody(parsedBody as Parameters<typeof normalizeActionBody>[0])
 
   validateTransfer(body)
 
   if (body.lloji === 'Dalje' || body.lloji === 'Transfer') {
-    await validateStock(supabase, body.items, body.shteti)
+    await validateStock(supabase, user.id, body.items, {
+      shteti: body.shteti,
+      lokacioni_id: body.lokacioni_id,
+    })
   }
 
-  const { rows, mirrorRows } = buildVeprimRows(body)
+  const lokacionet = await listLokacionetByOwner(supabase, user.id)
+  const { rows, mirrorRows } = buildVeprimRows(body, {
+    mirrorToAlbania: user.isLegacy,
+    lokacionet,
+  })
+
+  const sourceLoc = body.lokacioni_id ?? resolveLokacioniIdForCountry(lokacionet, body.shteti!)
+  const destLoc =
+    body.destination_lokacioni_id ??
+    (body.destination_shteti != null
+      ? resolveLokacioniIdForCountry(lokacionet, body.destination_shteti)
+      : null)
 
   let batchId: string | null = null
   try {
-    batchId = await createActionBatchRecord(supabase, {
+    batchId = await insertVeprimBatch(supabase, user.id, {
       lloji: body.lloji,
       data: body.data,
-      shteti: body.shteti,
+      shteti: body.shteti ?? 'XK',
       destination_shteti: body.destination_shteti,
-      ora: body.ora,
-      pershkrimi: body.pershkrimi,
+      lokacioni_id: sourceLoc,
+      destination_lokacioni_id: destLoc,
+      ora: body.ora ?? null,
+      pershkrimi: body.pershkrimi ?? null,
     })
   } catch (batchErr) {
     throw new AppError(
@@ -145,9 +264,7 @@ export async function createAction(
     batch_id: batchId,
   }))
 
-  const { data, error } = await supabase.from('veprimi').insert(insertRows).select('*')
-
-  if (error) throw new AppError(400, error.message)
+  const data = await insertVeprimet(supabase, user.id, insertRows)
 
   return {
     data,
@@ -165,6 +282,7 @@ export async function createAction(
 
 export async function listActions(
   supabase: SupabaseClient,
+  user: SessionUser,
   query: {
     shteti?: Country
     from?: string
@@ -174,22 +292,39 @@ export async function listActions(
     limit?: number
   },
 ) {
-  let q = supabase
-    .from('veprimi')
-    .select('*')
-    .order('data', { ascending: false })
-    .order('created_at', { ascending: false })
-
-  if (query.shteti) q = q.eq('shteti', query.shteti)
-  if (query.lloji) q = q.eq('lloji', query.lloji)
-  if (query.kodi) q = q.eq('kodi_produktit', query.kodi)
-  if (query.from) q = q.gte('data', query.from)
-  if (query.to) q = q.lte('data', query.to)
-  if (query.limit) q = q.limit(query.limit)
-
-  const { data, error } = await q
-  if (error) throw new AppError(500, error.message)
-  return data ?? []
+  const { listVeprimet } = await import('../repositories/veprimiRepository.js')
+  return listVeprimet(supabase, user.id, query)
 }
 
 export type { NormalizedActionBody, BatchLloji }
+
+export async function createActionBatchRecord(
+  supabase: SupabaseClient,
+  tenantId: string,
+  input: {
+    lloji: BatchLloji
+    data?: string
+    shteti: Country
+    destination_shteti?: Country
+    ora?: string
+    pershkrimi?: string
+  },
+) {
+  const lokacionet = await listLokacionetByOwner(supabase, tenantId)
+  const sourceLoc = resolveLokacioniIdForCountry(lokacionet, input.shteti)
+  const destLoc =
+    input.destination_shteti != null
+      ? resolveLokacioniIdForCountry(lokacionet, input.destination_shteti)
+      : null
+
+  return insertVeprimBatch(supabase, tenantId, {
+    lloji: input.lloji,
+    data: input.data,
+    shteti: input.shteti,
+    destination_shteti: input.destination_shteti,
+    lokacioni_id: sourceLoc,
+    destination_lokacioni_id: destLoc,
+    ora: input.ora ?? null,
+    pershkrimi: input.pershkrimi ?? null,
+  })
+}

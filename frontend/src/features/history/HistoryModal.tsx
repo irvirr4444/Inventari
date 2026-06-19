@@ -21,6 +21,7 @@ import {
 } from '../../lib/historyClientFilters'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { ActionEditModal } from './ActionEditModal'
 import { ExpandedActionDetail } from './ExpandedActionDetail'
@@ -38,6 +39,7 @@ export function HistoryModal(props: {
 }) {
   const { products, onClose, onNotify } = props
   const qc = useQueryClient()
+  const { user } = useAuth()
   const [filters, setFilters] = React.useState<HistoryServerFilters>({})
   const [clientFilters, setClientFilters] =
     React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
@@ -90,7 +92,7 @@ export function HistoryModal(props: {
   const clearExpanded = () => setExpandedIds(new Set())
 
   const listQuery = useQuery({
-    queryKey: [...queryKeys.actionBatches(filters), page],
+    queryKey: [...queryKeys.actionBatches(user?.id, filters), page],
     queryFn: () =>
       listActionBatches({
         ...filters,
@@ -102,12 +104,12 @@ export function HistoryModal(props: {
   const prefetchDetail = React.useCallback(
     (actionId: string) => {
       void qc.prefetchQuery({
-        queryKey: queryKeys.actionBatch(actionId),
+        queryKey: queryKeys.actionBatch(user?.id, actionId),
         queryFn: () => getActionBatch(actionId),
         staleTime: 30_000,
       })
     },
-    [qc],
+    [qc, user?.id],
   )
 
   const handleEditSaveComplete = React.useCallback(
@@ -120,7 +122,7 @@ export function HistoryModal(props: {
         next.add(resolvedId)
         return next
       })
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: resolvedId })
+      await invalidateAfterMutation(qc, 'all', { actionBatchId: resolvedId, userId: user?.id })
       await listQuery.refetch()
       onNotify?.('Ndryshimet u ruajtuan me sukses.', 'success')
     },
@@ -137,7 +139,7 @@ export function HistoryModal(props: {
         return next
       })
       setEditActionId((id) => (id === deletedId ? null : id))
-      await invalidateAfterMutation(qc, 'all')
+      await invalidateAfterMutation(qc, 'all', { userId: user?.id })
       await listQuery.refetch()
       onNotify?.('Veprimi u fshi me sukses.', 'success')
     },

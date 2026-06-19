@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSummaryByCountry } from './analytics.js'
+import { buildSummaryByCountry, buildSummaryByLocation } from './analytics.js'
 import { productLabel } from './format.js'
 
 describe('productLabel', () => {
@@ -25,5 +25,21 @@ describe('buildSummaryByCountry', () => {
     expect(summary.XK.out_qty).toBe(3)
     expect(summary.AL.in_qty).toBe(3)
     expect(summary.AL.out_qty).toBe(1)
+  })
+})
+
+describe('buildSummaryByLocation', () => {
+  it('aggregates by lokacioni_id keys', () => {
+    const locA = '00000000-0000-4000-8000-000000000101'
+    const locB = '00000000-0000-4000-8000-000000000102'
+    const summary = buildSummaryByLocation(
+      [
+        { lloji: 'Hyrje', lokacioni_id: locA, sasia: 5, totali: 50 },
+        { lloji: 'Dalje', lokacioni_id: locB, sasia: 2, totali: 20 },
+      ],
+      [locA, locB],
+    )
+    expect(summary[locA].in_qty).toBe(5)
+    expect(summary[locB].out_qty).toBe(2)
   })
 })

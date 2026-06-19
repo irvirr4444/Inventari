@@ -1,8 +1,15 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { buildSummaryByCountry, CountrySchema } from '@inventari/shared'
+import {
+  buildSummaryByCountry,
+  buildSummaryByLocation,
+  CountrySchema,
+} from '@inventari/shared'
 import { z } from 'zod'
 import { AppError, parseOrThrow } from '../errors.js'
+import { listProduktet } from '../repositories/produktiRepository.js'
+import { listVeprimetForAnalytics } from '../repositories/veprimiRepository.js'
+import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 
 export function registerAnalyticsRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/analytics/stock', async (req) => {
@@ -11,23 +18,16 @@ export function registerAnalyticsRoutes(app: FastifyInstance, supabase: Supabase
       (req.query ?? {}) as Record<string, unknown>,
     )
 
-    const { data, error } = await supabase
-      .from('produkti')
-      .select('id,kodi,emri,gjendje_kosove,gjendje_shqiperi,updated_at')
-      .order('emri', { ascending: true })
-
-    if (error) throw new AppError(500, error.message)
-
-    const mapped =
-      (data ?? []).map((p) => ({
-        id: p.id,
-        kodi: p.kodi,
-        emri: p.emri,
-        gjendje:
-          query.shteti === 'XK'
-            ? Number(p.gjendje_kosove ?? 0)
-            : Number(p.gjendje_shqiperi ?? 0),
-      })) ?? []
+    const rows = await listProduktet(supabase, req.user.id, {})
+    const mapped = rows.map((p) => ({
+      id: p.id,
+      kodi: p.kodi,
+      emri: p.emri,
+      gjendje:
+        query.shteti === 'XK'
+          ? Number(p.gjendje_kosove ?? 0)
+          : Number(p.gjendje_shqiperi ?? 0),
+    }))
     return { data: mapped }
   })
 
@@ -40,16 +40,33 @@ export function registerAnalyticsRoutes(app: FastifyInstance, supabase: Supabase
       (req.query ?? {}) as Record<string, unknown>,
     )
 
-    const { data, error } = await supabase
-      .from('veprimi')
-      .select('lloji,shteti,sasia,totali')
-      .gte('data', query.from)
-      .lte('data', query.to)
+    const rows = await listVeprimetForAnalytics(supabase, req.user.id, query)
 
-    if (error) throw new AppError(500, error.message)
+    if (req.user.isLegacy) {
+      return {
+        data: buildSummaryByCountry(
+          rows.map((r) => ({
+            lloji: r.lloji as 'Hyrje' | 'Dalje',
+            shteti: r.shteti,
+            sasia: r.sasia,
+            totali: r.totali,
+          })),
+        ),
+      }
+    }
 
+    const lokacionet = await listLokacionetByOwner(supabase, req.user.id)
+    const summaryLokacionet = lokacionet.filter((l) => l.show_in_summary)
     return {
-      data: buildSummaryByCountry((data ?? []) as Parameters<typeof buildSummaryByCountry>[0]),
+      data: buildSummaryByLocation(
+        rows.map((r) => ({
+          lloji: r.lloji as 'Hyrje' | 'Dalje',
+          lokacioni_id: r.lokacioni_id ?? '',
+          sasia: r.sasia,
+          totali: r.totali,
+        })),
+        summaryLokacionet.map((l) => l.id),
+      ),
     }
   })
 }

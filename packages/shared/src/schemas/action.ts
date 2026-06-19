@@ -94,11 +94,73 @@ export const ActionBatchPatchSchema = z.object({
 export type NormalizedActionBody = {
   lloji: BatchLloji
   data?: string
+  shteti?: z.infer<typeof CountrySchema>
+  destination_shteti?: z.infer<typeof CountrySchema>
+  lokacioni_id?: string
+  destination_lokacioni_id?: string
+  ora?: string
+  pershkrimi?: string
+  items: ActionItemInput[]
+}
+
+export const ActionBatchDynamicSchema = z
+  .object({
+    lloji: ActionInputTypeSchema,
+    data: z.string().optional(),
+    lokacioni_id: z.string().uuid(),
+    destination_lokacioni_id: z.string().uuid().optional(),
+    items: z.array(ActionItemSchema).min(1),
+  })
+  .merge(ActionMetaFieldsSchema)
+
+export const ActionSingleDynamicSchema = z
+  .object({
+    lloji: ActionInputTypeSchema,
+    data: z.string().optional(),
+    lokacioni_id: z.string().uuid(),
+    destination_lokacioni_id: z.string().uuid().optional(),
+    kodi_produktit: z.string().min(1),
+    cmimi_njesi: z.number().nonnegative(),
+    sasia: z.number().int().positive(),
+  })
+  .merge(ActionMetaFieldsSchema)
+
+export const ActionCreateDynamicBodySchema = z.union([
+  ActionBatchDynamicSchema,
+  ActionSingleDynamicSchema,
+])
+
+export type NormalizedActionBodyLegacy = {
+  lloji: BatchLloji
+  data?: string
   shteti: z.infer<typeof CountrySchema>
   destination_shteti?: z.infer<typeof CountrySchema>
   ora?: string
   pershkrimi?: string
   items: ActionItemInput[]
+}
+
+export function normalizeDynamicActionBody(
+  parsed: z.infer<typeof ActionCreateDynamicBodySchema>,
+): NormalizedActionBody {
+  if ('items' in parsed) {
+    return parsed
+  }
+  return {
+    lloji: parsed.lloji,
+    data: parsed.data,
+    lokacioni_id: parsed.lokacioni_id,
+    destination_lokacioni_id: parsed.destination_lokacioni_id,
+    ora: parsed.ora,
+    pershkrimi: parsed.pershkrimi,
+    items: [
+      {
+        kodi_produktit: parsed.kodi_produktit,
+        cmimi_njesi: parsed.cmimi_njesi,
+        sasia: parsed.sasia,
+      },
+    ],
+  }
 }
 
 export function normalizeActionBody(

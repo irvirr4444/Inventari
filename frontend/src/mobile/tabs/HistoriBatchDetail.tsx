@@ -24,6 +24,7 @@ import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { DeleteIcon } from '../../components/icons'
 import { NumericInput } from '../../components/NumericInput'
 import { queryKeys } from '../../lib/queryKeys'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { BottomSheet } from '../components/BottomSheet'
 import { ProductPickerSheet } from '../components/ProductPickerSheet'
 import {
@@ -328,8 +329,9 @@ export function HistoriBatchDetail(props: {
   onBatchIdChange: (batchId: string) => void
 }) {
   const qc = useQueryClient()
+  const { user } = useAuth()
   const detailQuery = useQuery({
-    queryKey: queryKeys.actionBatch(props.batchId),
+    queryKey: queryKeys.actionBatch(user?.id, props.batchId),
     queryFn: () => getActionBatch(props.batchId),
   })
 
@@ -419,10 +421,10 @@ export function HistoriBatchDetail(props: {
         props.onBatchIdChange(result.batch_id)
       }
       cancelEditing()
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: nextBatchId })
+      await invalidateAfterMutation(qc, 'all', { actionBatchId: nextBatchId, userId: user?.id })
       if (result.batch_id) {
         await qc.fetchQuery({
-          queryKey: queryKeys.actionBatch(nextBatchId),
+          queryKey: queryKeys.actionBatch(user?.id, nextBatchId),
           queryFn: () => getActionBatch(nextBatchId),
         })
       } else {

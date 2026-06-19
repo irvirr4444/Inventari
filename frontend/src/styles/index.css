@@ -8,5 +8,6 @@
 @import './components/forms.css';
 @import './components/modals.css';
 @import './features/history.css';
+@import './features/locations.css';
 @import './components/stock-badges.css';
 @import './responsive.css';

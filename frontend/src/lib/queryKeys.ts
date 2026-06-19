@@ -1,6 +1,9 @@
 export const queryKeys = {
-  products: ['products'] as const,
-  analyticsSummary: (from: string, to: string) => ['analytics-summary', from, to] as const,
-  actionBatches: (filters: Record<string, unknown>) => ['action-batches', filters] as const,
-  actionBatch: (id: string) => ['action-batch', id] as const,
+  products: (userId?: string) => ['products', userId] as const,
+  lokacionet: (userId?: string) => ['lokacionet', userId] as const,
+  analyticsSummary: (userId: string | undefined, from: string, to: string) =>
+    ['analytics-summary', userId, from, to] as const,
+  actionBatches: (userId: string | undefined, filters: Record<string, unknown>) =>
+    ['action-batches', userId, filters] as const,
+  actionBatch: (userId: string | undefined, id: string) => ['action-batch', userId, id] as const,
 }

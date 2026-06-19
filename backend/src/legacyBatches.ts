@@ -1,4 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  deleteVeprimiByIds,
+  fetchLegacyVeprimet,
+  fetchLegacyVeprimetByDate,
+  fetchProduktiNamesByKodi,
+  insertLegacyVeprimBatch,
+  insertVeprimiRows,
+  linkVeprimetToBatch,
+  patchVeprimi,
+} from './repositories/batchRepository.js'
 
 type Country = 'XK' | 'AL'
 type BatchLloji = 'Hyrje' | 'Dalje' | 'Transfer'
@@ -196,25 +206,15 @@ function matchesFilters(
 
 export async function fetchLegacyActionBatches(
   supabase: SupabaseClient,
+  tenantId: string,
   filters: ListFilters,
 ) {
-  let q = supabase
-    .from('veprimi')
-    .select('*')
-    .is('batch_id', null)
-    .order('data', { ascending: false })
-    .order('created_at', { ascending: false })
-
-  if (filters.dateFrom) q = q.gte('data', filters.dateFrom)
-  if (filters.dateTo) q = q.lte('data', filters.dateTo)
-  if (filters.shteti) q = q.eq('shteti', filters.shteti)
-  if (filters.lloji && filters.lloji !== 'Transfer') q = q.eq('lloji', filters.lloji)
-
-  const { data, error } = await q
-  if (error) {
-    if (error.message.includes('batch_id') || error.code === '42703') return []
-    throw error
-  }
+  const data = await fetchLegacyVeprimet(supabase, tenantId, {
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    shteti: filters.shteti,
+    lloji: filters.lloji,
+  })
 
   let grouped = groupLegacyVeprimRows((data ?? []) as VeprimRow[])
   if (filters.lloji === 'Transfer') {
@@ -224,17 +224,15 @@ export async function fetchLegacyActionBatches(
   return grouped.map(legacyBatchMeta).filter((b) => matchesFilters(b, filters))
 }
 
-export async function loadLegacyBatchDetail(supabase: SupabaseClient, id: string) {
+export async function loadLegacyBatchDetail(
+  supabase: SupabaseClient,
+  tenantId: string,
+  id: string,
+) {
   const key = decodeLegacyBatchId(id)
   if (!key) return { error: 'Veprimi nuk u gjet.' as const }
 
-  const { data, error } = await supabase
-    .from('veprimi')
-    .select('*')
-    .is('batch_id', null)
-    .eq('data', key.data)
-
-  if (error) return { error: error.message }
+  const data = await fetchLegacyVeprimetByDate(supabase, tenantId, key.data)
 
   const rows = ((data ?? []) as VeprimRow[]).filter((row) => matchesLegacyKey(row, key))
   if (rows.length === 0) return { error: 'Veprimi nuk u gjet.' as const }
@@ -247,12 +245,7 @@ export async function loadLegacyBatchDetail(supabase: SupabaseClient, id: string
       : rows.filter((r) => r.lloji === key.lloji && r.shteti === key.shteti)
 
   const productCodes = [...new Set(displayRows.map((r) => r.kodi_produktit))]
-  const { data: products, error: productsError } = await supabase
-    .from('produkti')
-    .select('kodi,emri')
-    .in('kodi', productCodes)
-
-  if (productsError) return { error: productsError.message }
+  const products = await fetchProduktiNamesByKodi(supabase, tenantId, productCodes)
 
   const namesByCode = new Map((products ?? []).map((p) => [p.kodi, p.emri]))
 
@@ -298,14 +291,12 @@ export function mergeAndPaginateActions<T extends { data: string; created_at: st
   return { actions: sorted.slice(from, from + limit), total }
 }
 
-async function loadRowsForLegacyKey(supabase: SupabaseClient, key: LegacyBatchKey) {
-  const { data, error } = await supabase
-    .from('veprimi')
-    .select('*')
-    .is('batch_id', null)
-    .eq('data', key.data)
-
-  if (error) return { error: error.message as string }
+async function loadRowsForLegacyKey(
+  supabase: SupabaseClient,
+  tenantId: string,
+  key: LegacyBatchKey,
+) {
+  const data = await fetchLegacyVeprimetByDate(supabase, tenantId, key.data)
 
   const bucketRows = ((data ?? []) as VeprimRow[]).filter(
     (row) => rowSecond(row) === key.bucketSecond,
@@ -324,10 +315,14 @@ async function loadRowsForLegacyKey(supabase: SupabaseClient, key: LegacyBatchKe
   return { batch, bucketRows }
 }
 
-export async function resolveLegacyBatch(supabase: SupabaseClient, id: string) {
+export async function resolveLegacyBatch(
+  supabase: SupabaseClient,
+  tenantId: string,
+  id: string,
+) {
   const key = decodeLegacyBatchId(id)
   if (!key) return { error: 'Veprimi nuk u gjet.' as const }
-  return loadRowsForLegacyKey(supabase, key)
+  return loadRowsForLegacyKey(supabase, tenantId, key)
 }
 
 function findLegacySiblingRows(
@@ -361,18 +356,26 @@ function isLegacyDisplayRow(batch: LegacyBatch, row: VeprimRow) {
   return row.lloji === batch.key.lloji && row.shteti === batch.key.shteti
 }
 
-export async function deleteLegacyBatch(supabase: SupabaseClient, id: string) {
-  const resolved = await resolveLegacyBatch(supabase, id)
+export async function deleteLegacyBatch(
+  supabase: SupabaseClient,
+  tenantId: string,
+  id: string,
+) {
+  const resolved = await resolveLegacyBatch(supabase, tenantId, id)
   if ('error' in resolved) return resolved
 
   const ids = resolved.batch.rows.map((r) => r.id)
-  const { error } = await supabase.from('veprimi').delete().in('id', ids)
-  if (error) return { error: error.message }
+  try {
+    await deleteVeprimiByIds(supabase, tenantId, ids)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Delete failed' }
+  }
   return { ok: true as const }
 }
 
 export async function updateLegacyBatch(
   supabase: SupabaseClient,
+  tenantId: string,
   id: string,
   body: {
     data?: string
@@ -380,7 +383,7 @@ export async function updateLegacyBatch(
     destination_shteti?: Country
   },
 ) {
-  const resolved = await resolveLegacyBatch(supabase, id)
+  const resolved = await resolveLegacyBatch(supabase, tenantId, id)
   if ('error' in resolved) return resolved
 
   const { batch, bucketRows } = resolved
@@ -427,8 +430,11 @@ export async function updateLegacyBatch(
 
     if (Object.keys(patch).length === 0) continue
 
-    const { error } = await supabase.from('veprimi').update(patch).eq('id', row.id)
-    if (error) return { error: error.message }
+    try {
+      await patchVeprimi(supabase, tenantId, row.id, patch)
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Update failed' }
+    }
   }
 
   return { ok: true as const }
@@ -436,6 +442,7 @@ export async function updateLegacyBatch(
 
 export async function updateLegacyBatchItem(
   supabase: SupabaseClient,
+  tenantId: string,
   batchId: string,
   itemId: string,
   body: {
@@ -444,7 +451,7 @@ export async function updateLegacyBatchItem(
     sasia?: number
   },
 ) {
-  const resolved = await resolveLegacyBatch(supabase, batchId)
+  const resolved = await resolveLegacyBatch(supabase, tenantId, batchId)
   if ('error' in resolved) return resolved
 
   const { batch, bucketRows } = resolved
@@ -471,8 +478,11 @@ export async function updateLegacyBatchItem(
     }
     if (body.kodi_produktit) patch.kodi_produktit = nextKodi
 
-    const { error } = await supabase.from('veprimi').update(patch).eq('id', row.id)
-    if (error) return { error: error.message }
+    try {
+      await patchVeprimi(supabase, tenantId, row.id, patch)
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Update failed' }
+    }
   }
 
   return { ok: true as const }
@@ -488,6 +498,7 @@ function buildLegacyItemInsertRows(
   batch: LegacyBatch,
   bucketRows: VeprimRow[],
   item: LegacyItemInput,
+  tenantId: string,
 ): Record<string, unknown>[] {
   const base = {
     batch_id: null,
@@ -495,6 +506,7 @@ function buildLegacyItemInsertRows(
     kodi_produktit: item.kodi_produktit,
     cmimi_njesi: item.cmimi_njesi,
     sasia: item.sasia,
+    pronari_id: tenantId,
     created_at: batch.rows[0]?.created_at ?? new Date().toISOString(),
   }
 
@@ -524,10 +536,11 @@ function buildLegacyItemInsertRows(
 
 export async function createLegacyBatchItem(
   supabase: SupabaseClient,
+  tenantId: string,
   batchId: string,
   item: LegacyItemInput,
 ) {
-  const resolved = await resolveLegacyBatch(supabase, batchId)
+  const resolved = await resolveLegacyBatch(supabase, tenantId, batchId)
   if ('error' in resolved) return resolved
 
   const { batch, bucketRows } = resolved
@@ -537,15 +550,21 @@ export async function createLegacyBatchItem(
 
   let insertRows: Record<string, unknown>[]
   try {
-    insertRows = buildLegacyItemInsertRows(batch, bucketRows, item)
+    insertRows = buildLegacyItemInsertRows(batch, bucketRows, item, tenantId)
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Gabim gjate krijimit.' }
   }
 
-  const { data, error } = await supabase.from('veprimi').insert(insertRows).select('id, lloji, shteti')
-  if (error) return { error: error.message }
-
-  const inserted = (data ?? []) as { id: string; lloji: string; shteti: Country }[]
+  let inserted: { id: string; lloji: string; shteti: Country }[]
+  try {
+    inserted = (await insertVeprimiRows(supabase, tenantId, insertRows)) as {
+      id: string
+      lloji: string
+      shteti: Country
+    }[]
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Insert failed' }
+  }
   const displayRow =
     batch.key.lloji === 'Transfer'
       ? inserted.find((r) => r.lloji === 'Dalje' && r.shteti === batch.key.shteti)
@@ -557,10 +576,11 @@ export async function createLegacyBatchItem(
 
 export async function deleteLegacyBatchItem(
   supabase: SupabaseClient,
+  tenantId: string,
   batchId: string,
   itemId: string,
 ) {
-  const resolved = await resolveLegacyBatch(supabase, batchId)
+  const resolved = await resolveLegacyBatch(supabase, tenantId, batchId)
   if ('error' in resolved) return resolved
 
   const { batch, bucketRows } = resolved
@@ -576,8 +596,11 @@ export async function deleteLegacyBatchItem(
 
   const targets = [primary, ...findLegacySiblingRows(batch, bucketRows, primary)]
   const ids = targets.map((r) => r.id)
-  const { error } = await supabase.from('veprimi').delete().in('id', ids)
-  if (error) return { error: error.message }
+  try {
+    await deleteVeprimiByIds(supabase, tenantId, ids)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Delete failed' }
+  }
 
   return { ok: true as const }
 }
@@ -603,18 +626,19 @@ function allLegacyBatchRowIds(batch: LegacyBatch, bucketRows: VeprimRow[]) {
 
 export async function migrateLegacyBatchToRecord(
   supabase: SupabaseClient,
+  tenantId: string,
   legacyId: string,
   meta?: LegacyMigrationMeta,
 ) {
-  const resolved = await resolveLegacyBatch(supabase, legacyId)
+  const resolved = await resolveLegacyBatch(supabase, tenantId, legacyId)
   if ('error' in resolved) return { error: resolved.error }
 
   const { batch, bucketRows } = resolved
   const rowIds = allLegacyBatchRowIds(batch, bucketRows)
 
-  const { data: inserted, error: batchError } = await supabase
-    .from('veprim_batch')
-    .insert({
+  let batchId: string
+  try {
+    batchId = await insertLegacyVeprimBatch(supabase, tenantId, {
       lloji: batch.key.lloji,
       data: meta?.data ?? batch.key.data,
       shteti: meta?.shteti ?? batch.key.shteti,
@@ -625,20 +649,15 @@ export async function migrateLegacyBatchToRecord(
       ora: meta?.ora ?? null,
       pershkrimi: meta?.pershkrimi ?? null,
     })
-    .select('id')
-    .single()
-
-  if (batchError || !inserted) {
-    return { error: batchError?.message ?? 'Nuk u migrua veprimi.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Nuk u migrua veprimi.' }
   }
 
-  const batchId = inserted.id as string
-  const { error: linkError } = await supabase
-    .from('veprimi')
-    .update({ batch_id: batchId })
-    .in('id', rowIds)
-
-  if (linkError) return { error: linkError.message }
+  try {
+    await linkVeprimetToBatch(supabase, tenantId, rowIds, batchId)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Nuk u migrua veprimi.' }
+  }
   return { batch_id: batchId }
 }
 
@@ -648,11 +667,12 @@ export type EnsureRealBatchResult =
 
 export async function ensureRealBatchId(
   supabase: SupabaseClient,
+  tenantId: string,
   id: string,
   meta?: LegacyMigrationMeta,
 ): Promise<EnsureRealBatchResult> {
   if (!isLegacyBatchId(id)) return { id, migrated: false }
-  const result = await migrateLegacyBatchToRecord(supabase, id, meta)
+  const result = await migrateLegacyBatchToRecord(supabase, tenantId, id, meta)
   if ('error' in result) return { error: result.error ?? 'Nuk u migrua veprimi.' }
   return { id: result.batch_id, migrated: true }
 }

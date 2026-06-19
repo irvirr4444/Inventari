@@ -3,11 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsSummary } from '../lib/api'
 import { isoDateDaysAgo } from '../lib/dates'
 import { queryKeys } from '../lib/queryKeys'
+import { useAuth } from '../lib/auth/AuthProvider'
 
 export function useSummaryQuery(from: string, to: string) {
+  const { user } = useAuth()
   return useQuery({
-    queryKey: queryKeys.analyticsSummary(from, to),
+    queryKey: queryKeys.analyticsSummary(user?.id, from, to),
     queryFn: () => analyticsSummary({ from, to }),
+    enabled: Boolean(user),
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,

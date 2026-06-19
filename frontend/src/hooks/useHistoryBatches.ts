@@ -7,6 +7,7 @@ import {
 } from '../lib/api'
 import { invalidateAfterMutation } from '../lib/invalidateAppData'
 import { queryKeys } from '../lib/queryKeys'
+import { useAuth } from '../lib/auth/AuthProvider'
 
 export type HistoryFilterState = {
   lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
@@ -21,6 +22,7 @@ export function useHistoryBatches(options?: {
   onNotify?: (message: string, variant?: 'success' | 'default') => void
 }) {
   const qc = useQueryClient()
+  const { user } = useAuth()
   const [filters, setFilters] = React.useState<HistoryFilterState>({})
   const [page, setPage] = React.useState(1)
   const [error, setError] = React.useState<string | null>(null)
@@ -42,7 +44,7 @@ export function useHistoryBatches(options?: {
   }
 
   const listQuery = useQuery({
-    queryKey: [...queryKeys.actionBatches(filters), page],
+    queryKey: [...queryKeys.actionBatches(user?.id, filters), page],
     queryFn: () =>
       listActionBatches({
         page,
@@ -58,7 +60,7 @@ export function useHistoryBatches(options?: {
     mutationFn: (id: string) => deleteActionBatch(id),
     onSuccess: async () => {
       setError(null)
-      await invalidateAfterMutation(qc, 'all')
+      await invalidateAfterMutation(qc, 'all', { userId: user?.id })
       await listQuery.refetch()
       options?.onNotify?.('Veprimi u fshi me sukses.', 'success')
     },

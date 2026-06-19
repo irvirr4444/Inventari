@@ -19,6 +19,19 @@ import {
 import { z } from 'zod'
 import { findSiblingRows, isDisplayRow, isMirroredBatch } from './batchDomain.js'
 import { AppError } from './errors.js'
+import {
+  deleteVeprimBatchById,
+  deleteVeprimiByIds,
+  fetchProduktiNamesByKodi,
+  fetchVeprimBatchesFiltered,
+  fetchVeprimBatchById,
+  fetchVeprimetByBatchId,
+  fetchVeprimetByBatchIds,
+  insertVeprimiRows,
+  patchVeprimBatch,
+  patchVeprimi,
+  touchVeprimBatchUpdatedAt,
+} from './repositories/batchRepository.js'
 import { validateStock } from './services/actionsService.js'
 import {
   deleteLegacyBatch,
@@ -54,26 +67,16 @@ type VeprimRow = {
   created_at: string
 }
 
-async function loadBatchRows(supabase: SupabaseClient, batchId: string) {
-  const { data: batch, error: batchError } = await supabase
-    .from('veprim_batch')
-    .select('*')
-    .eq('id', batchId)
-    .single()
-
-  if (batchError || !batch) return { error: ERR_BATCH_NOT_FOUND }
-
-  const { data: rows, error: rowsError } = await supabase
-    .from('veprimi')
-    .select('*')
-    .eq('batch_id', batchId)
-    .order('kodi_produktit', { ascending: true })
-
-  if (rowsError) return { error: rowsError.message }
-
-  return {
-    batch: batch as VeprimBatchRow,
-    rows: (rows ?? []) as VeprimRow[],
+async function loadBatchRows(supabase: SupabaseClient, tenantId: string, batchId: string) {
+  try {
+    const batch = await fetchVeprimBatchById(supabase, tenantId, batchId)
+    const rows = await fetchVeprimetByBatchId(supabase, tenantId, batchId)
+    return {
+      batch: batch as VeprimBatchRow,
+      rows: rows as VeprimRow[],
+    }
+  } catch {
+    return { error: ERR_BATCH_NOT_FOUND }
   }
 }
 
@@ -104,6 +107,7 @@ function buildBatchItemInsertRows(
   batch: VeprimBatchRow,
   rows: VeprimRow[],
   item: BatchItemInput,
+  tenantId: string,
 ): Record<string, unknown>[] {
   const base = {
     batch_id: batch.id,
@@ -111,6 +115,7 @@ function buildBatchItemInsertRows(
     kodi_produktit: item.kodi_produktit,
     cmimi_njesi: item.cmimi_njesi,
     sasia: item.sasia,
+    pronari_id: tenantId,
   }
 
   if (batch.lloji === 'Transfer') {
@@ -141,15 +146,13 @@ function displayRowFromInserted(
   return inserted.find((r) => r.lloji === batch.lloji && r.shteti === batch.shteti)
 }
 
-async function touchBatchUpdatedAt(supabase: SupabaseClient, batchId: string) {
-  await supabase
-    .from('veprim_batch')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('id', batchId)
+async function touchBatchUpdatedAt(supabase: SupabaseClient, tenantId: string, batchId: string) {
+  await touchVeprimBatchUpdatedAt(supabase, tenantId, batchId)
 }
 
 export function registerActionBatchRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/action-batches', async (req) => {
+    const tenantId = req.user.id
     const query = z
       .object({
         page: z.coerce.number().int().positive().optional().default(1),
@@ -161,34 +164,25 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       })
       .parse((req.query ?? {}) as Record<string, unknown>)
 
-    let q = supabase
-      .from('veprim_batch')
-      .select('*')
-      .order('data', { ascending: false })
-      .order('created_at', { ascending: false })
-
-    if (query.lloji) q = q.eq('lloji', query.lloji)
-    if (query.shteti) q = q.eq('shteti', query.shteti)
-    if (query.dateFrom) q = q.gte('data', query.dateFrom)
-    if (query.dateTo) q = q.lte('data', query.dateTo)
-
-    const { data: batches, error } = await q
-
     let batchedActions: ReturnType<typeof aggregateBatch>[] = []
-    if (!error) {
-      const batchList = (batches ?? []) as VeprimBatchRow[]
-      const batchIds = batchList.map((b) => b.id)
+    try {
+      const batchList = (await fetchVeprimBatchesFiltered(supabase, tenantId, {
+        lloji: query.lloji,
+        shteti: query.shteti,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      })) as VeprimBatchRow[]
 
+      const batchIds = batchList.map((b) => b.id)
       const rowsByBatch = new Map<string, VeprimRow[]>()
       if (batchIds.length > 0) {
-        const { data: allRows, error: rowsError } = await supabase
-          .from('veprimi')
-          .select('*')
-          .in('batch_id', batchIds)
+        const allRows = (await fetchVeprimetByBatchIds(
+          supabase,
+          tenantId,
+          batchIds,
+        )) as VeprimRow[]
 
-        if (rowsError) throw rowsError
-
-        for (const row of (allRows ?? []) as VeprimRow[]) {
+        for (const row of allRows) {
           if (!row.batch_id) continue
           const list = rowsByBatch.get(row.batch_id) ?? []
           list.push(row)
@@ -199,11 +193,14 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       batchedActions = batchList.map((batch) =>
         aggregateBatch(batch, rowsByBatch.get(batch.id) ?? []),
       )
-    } else if (!error.message.includes('veprim_batch') && error.code !== '42P01') {
-      throw error
+    } catch (error) {
+      const err = error as { message?: string; code?: string }
+      if (!err.message?.includes('veprim_batch') && err.code !== '42P01') {
+        throw error
+      }
     }
 
-    const legacyActions = await fetchLegacyActionBatches(supabase, {
+    const legacyActions = await fetchLegacyActionBatches(supabase, tenantId, {
       lloji: query.lloji,
       shteti: query.shteti,
       dateFrom: query.dateFrom,
@@ -220,10 +217,11 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.get('/api/action-batches/:id', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
 
     if (isLegacyBatchId(params.id)) {
-      const legacy = await loadLegacyBatchDetail(supabase, params.id)
+      const legacy = await loadLegacyBatchDetail(supabase, tenantId, params.id)
       if ('error' in legacy) {
         reply.code(404)
         return { error: legacy.error }
@@ -236,7 +234,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       return { error: 'Veprimi nuk u gjet.' }
     }
 
-    const loaded = await loadBatchRows(supabase, params.id)
+    const loaded = await loadBatchRows(supabase, tenantId, params.id)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -246,14 +244,8 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const displayRows = rows.filter((r) => isDisplayRow(batch, r))
     const productCodes = [...new Set(displayRows.map((r) => r.kodi_produktit))]
 
-    const { data: products, error: productsError } = await supabase
-      .from('produkti')
-      .select('kodi,emri')
-      .in('kodi', productCodes)
-
-    if (productsError) throw productsError
-
-    const namesByCode = new Map((products ?? []).map((p) => [p.kodi, p.emri]))
+    const products = await fetchProduktiNamesByKodi(supabase, tenantId, productCodes)
+    const namesByCode = new Map(products.map((p) => [p.kodi, p.emri]))
 
     const items = displayRows.map((row) => ({
       id: row.id,
@@ -273,10 +265,11 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.patch('/api/action-batches/:id', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     const body = ActionBatchPatchSchema.parse(req.body ?? {})
 
-    const ensured = await ensureRealBatchId(supabase, params.id, {
+    const ensured = await ensureRealBatchId(supabase, tenantId, params.id, {
       data: body.data,
       shteti: body.shteti,
       destination_shteti: body.destination_shteti,
@@ -289,7 +282,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
     const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, batchId)
+    const loaded = await loadBatchRows(supabase, tenantId, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -329,15 +322,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     if (body.ora !== undefined) batchPatch.ora = body.ora
     if (body.pershkrimi !== undefined) batchPatch.pershkrimi = body.pershkrimi ?? null
 
-    const { error: batchError } = await supabase
-      .from('veprim_batch')
-      .update(batchPatch)
-      .eq('id', batchId)
-
-    if (batchError) {
-      reply.code(400)
-      return { error: batchError.message }
-    }
+    await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
 
     for (const row of rows) {
       const patch: Record<string, unknown> = {}
@@ -355,10 +340,11 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
       if (Object.keys(patch).length === 0) continue
 
-      const { error: rowError } = await supabase.from('veprimi').update(patch).eq('id', row.id)
-      if (rowError) {
+      try {
+        await patchVeprimi(supabase, tenantId, row.id, patch)
+      } catch (rowError) {
         reply.code(400)
-        return { error: rowError.message }
+        return { error: rowError instanceof Error ? rowError.message : 'Update failed' }
       }
     }
 
@@ -366,6 +352,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.patch('/api/action-batches/:id/items/:itemId', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z
       .object({ id: z.string().min(1), itemId: z.string().uuid() })
       .parse(req.params)
@@ -382,14 +369,14 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       return { error: ERR_NO_UPDATE_FIELDS }
     }
 
-    const ensured = await ensureRealBatchId(supabase, params.id)
+    const ensured = await ensureRealBatchId(supabase, tenantId, params.id)
     if ('error' in ensured) {
       reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
       return { error: ensured.error }
     }
     const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, batchId)
+    const loaded = await loadBatchRows(supabase, tenantId, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -423,14 +410,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
       if (body.kodi_produktit) patch.kodi_produktit = nextKodi
 
-      const { error: rowError } = await supabase.from('veprimi').update(patch).eq('id', row.id)
-      if (rowError) {
+      try {
+        await patchVeprimi(supabase, tenantId, row.id, patch)
+      } catch (rowError) {
         reply.code(400)
-        return { error: rowError.message }
+        return { error: rowError instanceof Error ? rowError.message : 'Update failed' }
       }
     }
 
-    await touchBatchUpdatedAt(supabase, batchId)
+    await touchBatchUpdatedAt(supabase, tenantId, batchId)
     return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
   })
 
@@ -441,17 +429,18 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.post('/api/action-batches/:id/items', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     const body = batchItemBodySchema.parse(req.body ?? {})
 
-    const ensured = await ensureRealBatchId(supabase, params.id)
+    const ensured = await ensureRealBatchId(supabase, tenantId, params.id)
     if ('error' in ensured) {
       reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
       return { error: ensured.error }
     }
     const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, batchId)
+    const loaded = await loadBatchRows(supabase, tenantId, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -467,7 +456,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     if (batch.lloji === 'Dalje' || batch.lloji === 'Transfer') {
       try {
-        await validateStock(supabase, [body], batch.shteti)
+        await validateStock(supabase, tenantId, [body], { shteti: batch.shteti })
       } catch (e) {
         reply.code(e instanceof AppError ? e.statusCode : 400)
         return { error: e instanceof AppError ? e.message : 'Gabim gjate validimit.' }
@@ -476,43 +465,50 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     let insertRows: Record<string, unknown>[]
     try {
-      insertRows = buildBatchItemInsertRows(batch, rows, body)
+      insertRows = buildBatchItemInsertRows(batch, rows, body, tenantId)
     } catch (e) {
       reply.code(e instanceof AppError ? e.statusCode : 400)
       return { error: e instanceof AppError ? e.message : 'Gabim gjate krijimit.' }
     }
 
-    const { data, error } = await supabase.from('veprimi').insert(insertRows).select('id, lloji, shteti')
-    if (error) {
+    let inserted: { id: string; lloji: string; shteti: Country }[]
+    try {
+      inserted = (await insertVeprimiRows(supabase, tenantId, insertRows)) as {
+        id: string
+        lloji: string
+        shteti: Country
+      }[]
+    } catch (error) {
       reply.code(400)
-      return { error: error.message }
+      return { error: error instanceof Error ? error.message : 'Insert failed' }
     }
 
-    const displayRow = displayRowFromInserted(batch, (data ?? []) as { id: string; lloji: string; shteti: Country }[])
+    const displayRow = displayRowFromInserted(batch, inserted)
     if (!displayRow) {
       reply.code(400)
       return { error: ERR_PRODUCT_LINE_NOT_FOUND }
     }
 
-    await touchBatchUpdatedAt(supabase, batchId)
+    await touchBatchUpdatedAt(supabase, tenantId, batchId)
     return ensured.migrated
       ? { ok: true, item_id: displayRow.id, batch_id: batchId }
       : { ok: true, item_id: displayRow.id }
   })
 
   app.delete('/api/action-batches/:id/items/:itemId', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z
       .object({ id: z.string().min(1), itemId: z.string().uuid() })
       .parse(req.params)
 
-    const ensured = await ensureRealBatchId(supabase, params.id)
+    const ensured = await ensureRealBatchId(supabase, tenantId, params.id)
     if ('error' in ensured) {
       reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
       return { error: ensured.error }
     }
     const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, batchId)
+    const loaded = await loadBatchRows(supabase, tenantId, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -533,20 +529,22 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     const targets = [primary, ...findSiblingRows(batch, rows, primary)]
     const ids = targets.map((r) => r.id)
-    const { error } = await supabase.from('veprimi').delete().in('id', ids)
-    if (error) {
+    try {
+      await deleteVeprimiByIds(supabase, tenantId, ids)
+    } catch (error) {
       reply.code(400)
-      return { error: error.message }
+      return { error: error instanceof Error ? error.message : 'Delete failed' }
     }
 
-    await touchBatchUpdatedAt(supabase, batchId)
+    await touchBatchUpdatedAt(supabase, tenantId, batchId)
     return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
   })
 
   app.delete('/api/action-batches/:id', async (req, reply) => {
+    const tenantId = req.user.id
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     if (isLegacyBatchId(params.id)) {
-      const result = await deleteLegacyBatch(supabase, params.id)
+      const result = await deleteLegacyBatch(supabase, tenantId, params.id)
       if ('error' in result && result.error) {
         reply.code(result.error.includes('nuk u gjet') ? 404 : 400)
         return { error: result.error }
@@ -554,40 +552,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       return { ok: true }
     }
 
-    const { error } = await supabase.from('veprim_batch').delete().eq('id', params.id)
-    if (error) {
+    try {
+      await deleteVeprimBatchById(supabase, tenantId, params.id)
+    } catch (error) {
       reply.code(400)
-      return { error: error.message }
+      return { error: error instanceof Error ? error.message : 'Delete failed' }
     }
 
     return { ok: true }
   })
 }
 
-export async function createActionBatchRecord(
-  supabase: SupabaseClient,
-  input: {
-    lloji: BatchLloji
-    data?: string
-    shteti: Country
-    destination_shteti?: Country
-    ora?: string
-    pershkrimi?: string
-  },
-) {
-  const { data, error } = await supabase
-    .from('veprim_batch')
-    .insert({
-      lloji: input.lloji,
-      data: input.data ?? new Date().toISOString().slice(0, 10),
-      shteti: input.shteti,
-      destination_shteti: input.destination_shteti ?? null,
-      ora: input.ora ?? null,
-      pershkrimi: input.pershkrimi ?? null,
-    })
-    .select('id')
-    .single()
-
-  if (error) throw error
-  return data.id as string
-}
+export { createActionBatchRecord } from './services/actionsService.js'

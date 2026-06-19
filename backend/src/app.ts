@@ -14,6 +14,7 @@ import { registerActionRoutes } from './routes/actions.js'
 import { registerAnalyticsRoutes } from './routes/analytics.js'
 import { registerExportRoutes } from './routes/exports.js'
 import { registerProductRoutes } from './routes/products.js'
+import { registerLokacionetRoutes } from './routes/lokacionet.js'
 import { createSupabaseAdmin } from './supabase.js'
 import { AppError, isAppError, mapZodError } from './errors.js'
 
@@ -26,6 +27,7 @@ const EnvSchema = z.object({
   LOGIN_EMAIL: z.string().email().optional(),
   LOGIN_PASSWORD: z.string().min(1).optional(),
   SESSION_SECRET: z.string().min(32).optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
 })
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -87,8 +89,12 @@ export async function buildApp() {
     serviceKey: env.SUPABASE_SERVICE_KEY,
   })
 
-  registerAuthPlugin(app, { sessionSecret })
-  registerAuthRoutes(app, { loginEmail, loginPassword, sessionSecret })
+  registerAuthPlugin(app, { sessionSecret, supabase })
+  registerAuthRoutes(app, {
+    sessionSecret,
+    supabase,
+    googleClientId: env.GOOGLE_CLIENT_ID,
+  })
 
   app.get('/api/health', async () => ({ ok: true }))
 
@@ -97,6 +103,7 @@ export async function buildApp() {
   registerActionBatchRoutes(app, supabase)
   registerAnalyticsRoutes(app, supabase)
   registerExportRoutes(app, supabase)
+  registerLokacionetRoutes(app, supabase)
 
   if (fs.existsSync(FRONTEND_DIST_DIR)) {
     await app.register(fastifyStatic, {

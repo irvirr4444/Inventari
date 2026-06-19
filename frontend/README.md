@@ -2,6 +2,8 @@
 
 React client for the Inventari inventory platform. This README covers local development and **desktop** product behavior (dashboard at `/` on wide screens). Mobile behavior is summarized in the [Mobile web app](#mobile-web-app) section.
 
+**Multi-tenancy:** the shell branches on session `uiLloji`. **Legacy** users (`legacy_fixed`) see the original Kosovo/Albania dashboard and mobile UI unchanged. **Dynamic** users sign up at `/signup`, complete location onboarding, and use the dynamic dashboard (N locations). See [Authentication & routing](#authentication--routing).
+
 ## Development
 
 ### Stack
@@ -16,7 +18,8 @@ The browser talks only to the backend API. Supabase credentials stay on the serv
 ### Prerequisites
 
 - Node.js 20+
-- Backend running on `http://localhost:3001` (see [backend/README.md](../backend/README.md) and repo root [README.md](../README.md))
+- Backend running on `http://localhost:3001` (see [backend/README.md](../backend/README.md))
+- Supabase migrations **07** + **APPLY_08_through_11** applied for multi-tenant auth (see repo [README.md](../README.md))
 
 ### Setup
 
@@ -36,6 +39,8 @@ npm -w frontend run dev
 ```
 
 Vite serves the app on `http://localhost:5173` and proxies `/api` to the backend.
+
+Log in with legacy credentials from `backend/.env` (`login_email` / `login_password`), or register at `/signup` for a new account.
 
 ### Scripts
 
@@ -63,45 +68,51 @@ In development, Vite proxies `/api` to `http://localhost:3001`. In production, s
 ```text
 frontend/
   src/
-    App.tsx                    Login gate and authenticated shell
-    main.tsx                   App bootstrap + React Query provider
+    App.tsx                    Routes, auth gate, legacy vs dynamic shell
+    main.tsx                   Bootstrap + providers
+    providers/AppProviders.tsx AuthProvider, React Query, LokacioniProvider (dynamic)
     index.css                  Imports styles/index.css hub
     styles/                    Design tokens, components, features, responsive
-    components/                Modal, ConfirmModal, DateInput, OraInput, TimePickerPopover,
-                               Snackbar, NumericInput, ProductSearchSelect, icons, …
-    hooks/                     useSnackbar, useActionItems, feature hooks (products, actions, history, summary)
-    mobile/                    Purpose-built mobile UI at /mobile (see Mobile section below)
-      MobileApp.tsx            Shell, tab state, header with Dil
-      components/              BottomSheet, BottomNav, cards, pickers, …
-      tabs/                    Veprime, Transfer, Produkte, Histori, Permbledhje
-      styles/                  Mobile-only CSS (imports tokens.css only)
+    components/                Modal, ConfirmModal, DateInput, OraInput, …
+    hooks/                     useSnackbar, useActionItems, feature hooks, useMobileClient
+    lib/
+      api.ts                   Main API client (products, actions, exports)
+      api/http.ts              Fetch wrapper (credentials, errors)
+      api/auth.ts              login, signup, session, Google
+      api/lokacionet.ts        Location CRUD
+      auth/AuthProvider.tsx    Session state, refreshSession, logout
+      auth/types.ts            SessionUser shape
+      lokacioni/               Dynamic location types + provider
     features/
-      actions/                 ActionEntryPanel, ActionItemsTable, ActionReviewModal, TransferModal
+      auth/                    SignupPage, GoogleSignInButton
+      onboarding/              LocationsOnboardingPage (dynamic gate)
+      settings/                LocationsSettingsPage
+      dynamic/                 Dynamic dashboard/mobile (N locations)
+      actions/                 ActionEntryPanel, TransferModal, …
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
-      history/                 HistoryModal, HistoryFilterBar, HistoryBatchMetaDisplay, historyBadges, edit/list submodules
+      history/                 HistoryModal, filters, edit submodules
+    mobile/                    Legacy mobile UI (XK/AL tabs)
     pages/
-      DashboardPage.tsx        Composes feature panels (~180 lines)
-      LoginPage.tsx            Login form
+      DashboardPage.tsx        Legacy desktop dashboard
+      LoginPage.tsx            Email/password login
       useDashboardPage.ts      Dashboard state, queries, mutations
-    lib/
-      api.ts                   Backend API client
-      country.tsx              Country context + selector (XK / AL)
-      format.ts                Re-exports shared formatters + UI helpers
-      actionMeta.ts            Ora display/format helpers for batch metadata
-      actionBatch.ts           Legacy batch id helper (`legacy:…` ids in list until first save migrates them)
-      historyClientFilters.ts  Client-side Historiku filter logic (Ora, Pershkrimi, Totali, Produkte)
-      historyBatchEdit.ts      Batch edit validation/save (metadata + add/update/delete product lines)
-      numericInput.ts          Helpers for zero-as-placeholder numeric fields
-      queryKeys.ts             React Query key factories
-      invalidateAppData.ts     Cache invalidation helper
-      dates.ts                 Date helpers
-    types/
-      actionItem.ts            Action line-item draft type
-  public/                      Static assets (flags, icons)
-  vite.config.ts               Dev server + API proxy + @inventari/shared alias
-packages/shared/               Zod schemas, productLabel, buildSummaryByCountry (workspace)
+    …
+packages/shared/               Zod schemas, productLabel, summary builders
 ```
+
+### Authentication & routing
+
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `/login` | Public | Email/password login |
+| `/signup` | Public | New dynamic account |
+| `/onboarding/locations` | Auth, dynamic | First-time location setup (redirect until `has_locations`) |
+| `/settings/locations` | Auth, dynamic | Edit locations |
+| `/` | Auth | Legacy or dynamic dashboard (desktop/mobile by viewport) |
+| `/mobile/*` | — | Redirects to `/` |
+
+`AuthProvider` loads `GET /api/session` on mount. Session user includes `uiLloji`, `isLegacy`, and `has_locations`. Legacy users skip onboarding and render `DashboardPage` / `MobileApp` unchanged.
 
 ### Desktop UI architecture
 
@@ -208,7 +219,7 @@ Transfer is separate from the main action form:
 - `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
 - `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` to add optional **Ora** and **Pershkrimi** on `veprim_batch` (batch-level metadata, not on individual `veprimi` line rows). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql` then `docs/sql/APPLY_08_through_11.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
 ### Mobile web app
 
@@ -258,20 +269,20 @@ Design reference: [MOBILE_DESIGN_PROMPT.md](../MOBILE_DESIGN_PROMPT.md) at repo 
 
 ### API client
 
-`src/lib/api.ts` wraps all backend calls with cookie-based auth (`credentials: 'include'`).
+`src/lib/api.ts` and `src/lib/api/*` wrap backend calls with cookie-based auth (`credentials: 'include'`).
 
 Main endpoints used by the UI:
 
-| Function | Purpose |
+| Function / module | Purpose |
 | --- | --- |
-| `login` / `logout` / `currentSession` | Authentication |
+| `api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` | Authentication |
+| `api/lokacionet.ts` — CRUD | Dynamic user locations |
 | `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Product CRUD |
 | `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
 | `listActionBatches` / `getActionBatch` | Paginated history list and detail |
-| `updateActionBatch` / `updateActionBatchItem` / `createActionBatchItem` / `deleteActionBatchItem` / `deleteActionBatch` | Edit or delete past actions (PATCH may return `batch_id` when a legacy batch migrates) |
-| `analyticsSummary` | Summary panel numbers (both countries, one request) |
-| `exportProductsUrl` | Products `.xlsx` download |
-| `exportUrl` | Summary `.xlsx` download |
+| `updateActionBatch` / item routes / `deleteActionBatch` | Edit or delete past actions |
+| `analyticsSummary` | Summary panel numbers |
+| `exportProductsUrl` / `exportUrl` | Excel downloads |
 
 Transfer payload shape:
 
@@ -409,17 +420,21 @@ This section describes the platform from a data and workflow perspective: what t
 
 ### Authentication
 
-The platform starts with a login step.
+The platform starts with a login step (`/login`). New users can register at `/signup` (dynamic accounts with configurable locations).
 
 Input fields:
 
 - `email`
 - `password`
 
+Optional: Google sign-in when `GOOGLE_CLIENT_ID` is configured on the backend.
+
+Legacy deployment: use `login_email` / `login_password` from `.env` (seeded once via `npm run seed:legacy-user -w backend`).
+
 Purpose:
 
 - Confirms that the user is allowed to access the inventory system.
-- Keeps inventory data behind a controlled session instead of exposing it publicly.
+- Keeps inventory data behind a controlled, tenant-scoped session instead of exposing it publicly.
 
 ### Product Creation
 
@@ -814,13 +829,14 @@ Purpose:
 
 ## Data Flow
 
-1. User creates products.
-2. User records stock movements.
-3. The backend validates the input.
-4. The database stores products and action history.
-5. Stock quantities are updated.
-6. The frontend refreshes product and summary data.
-7. The user views live numbers or downloads Excel reports.
+1. User logs in (legacy or signup).
+2. User creates products.
+3. User records stock movements.
+4. The backend validates the input and scopes data by `pronari_id`.
+5. The database stores products and action history.
+6. Stock quantities are updated (legacy columns and/or `gjendje` table).
+7. The frontend refreshes product and summary data.
+8. The user views live numbers or downloads Excel reports.
 
 ## System Boundary
 
@@ -841,3 +857,11 @@ The platform is not meant to be:
 - A warehouse barcode scanner system.
 
 It is focused on the practical inventory workflow: enter product movements once, keep stock correct, and produce the reports the business needs.
+
+## Related docs
+
+- [Backend API and architecture](../backend/README.md)
+- [Repo root quick start](../README.md)
+- [Local development](../docs/local-dev.md)
+- [SQL migrations](../docs/sql/)
+- [Multi-tenancy plan](../MULTI_TENANCY_PLAN.md)

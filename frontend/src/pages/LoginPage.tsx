@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { login } from '../lib/api'
+import { login } from '../lib/api/auth'
+import { GoogleSignInButton } from '../features/auth/GoogleSignInButton'
 import { Snackbar } from '../components/Snackbar'
 import { useSnackbar } from '../hooks/useSnackbar'
 
@@ -60,6 +61,7 @@ export function LoginPage(props: { onSuccess: () => void }) {
             {loading ? 'Duke hyre...' : 'Hyr'}
           </button>
         </form>
+        <GoogleSignInButton onSuccess={props.onSuccess} />
       </section>
 
       <Snackbar snackbar={snackbar ? { message: snackbar.message, variant: snackbar.variant } : null} />

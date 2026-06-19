@@ -1,36 +1,8 @@
-import type { SummaryByCountry } from '@inventari/shared'
+import type { SummaryByCountry, SummaryByLocation } from '@inventari/shared'
 import type { Country } from './country'
-
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api'
-
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers)
-  if (init?.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json')
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers,
-    credentials: 'include',
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    let message = text || `HTTP ${res.status}`
-    try {
-      const parsed = JSON.parse(text) as { error?: string }
-      if (parsed.error) message = parsed.error
-    } catch {
-      /* plain text error body */
-    }
-    throw new Error(message)
-  }
-
-  const contentType = res.headers.get('content-type') ?? ''
-  if (contentType.includes('application/json')) return (await res.json()) as T
-  return (await res.text()) as T
-}
+import { http, API_BASE } from './api/http'
+export { login, logout, signup, loginWithGoogle, fetchSession } from './api/auth'
+export type { SessionUser } from './auth/types'
 
 export type Produkti = {
   id: string
@@ -54,18 +26,6 @@ export type Veprimi = {
   created_at?: string
 }
 
-export async function login(input: { email: string; password: string }): Promise<void> {
-  await http<{ ok: true }>(`/login`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
-}
-
-export async function logout(): Promise<void> {
-  await http<{ ok: true }>(`/logout`, {
-    method: 'POST',
-  })
-}
 
 export async function currentSession(): Promise<boolean> {
   const res = await http<{ ok: boolean }>(`/session`)
@@ -276,7 +236,7 @@ export type { CountrySummary as CountrySummaryData, SummaryByCountry } from '@in
 export async function analyticsSummary(opts: {
   from: string
   to: string
-}): Promise<SummaryByCountry> {
+}): Promise<SummaryByCountry | SummaryByLocation> {
   const qs = new URLSearchParams(opts)
   const res = await http<{ data: SummaryByCountry }>(`/analytics/summary?${qs.toString()}`)
   return res.data

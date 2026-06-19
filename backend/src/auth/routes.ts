@@ -1,39 +1,113 @@
 import type { FastifyInstance } from 'fastify'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { clearSessionCookie, setSessionCookie, verifySessionToken } from './session.js'
 import { parseOrThrow } from '../errors.js'
+import { isAppError } from '../errors.js'
+import {
+  clearSessionCookie,
+  decodeSessionToken,
+  SESSION_COOKIE,
+  setSessionCookie,
+} from './session.js'
+import {
+  getSessionPayload,
+  loginWithGoogle,
+  loginWithPassword,
+  resolveSessionUser,
+  signupWithPassword,
+} from '../services/authService.js'
 
 export type AuthRoutesDeps = {
-  loginEmail: string
-  loginPassword: string
   sessionSecret: string
+  supabase: SupabaseClient
+  googleClientId?: string
 }
+
+const LoginBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+})
+
+const SignupBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  emri: z.string().min(1).optional(),
+})
+
+const GoogleBodySchema = z.object({
+  id_token: z.string().min(1),
+})
 
 export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
   app.post('/api/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
-    const body = parseOrThrow(
-      z.object({
-        email: z.string().email(),
-        password: z.string().min(1),
-      }),
-      req.body,
-    )
-
-    if (body.email.trim().toLowerCase() !== deps.loginEmail || body.password.trim() !== deps.loginPassword) {
-      reply.code(401)
-      return { error: 'Invalid credentials' }
+    const body = parseOrThrow(LoginBodySchema, req.body)
+    try {
+      const user = await loginWithPassword(deps.supabase, body.email, body.password)
+      setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
+      return { ok: true }
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
     }
-
-    setSessionCookie(reply, deps.sessionSecret)
-    return { ok: true }
   })
+
+  app.post(
+    '/api/auth/signup',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (req, reply) => {
+      const body = parseOrThrow(SignupBodySchema, req.body)
+      try {
+        const user = await signupWithPassword(deps.supabase, body)
+        setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
+        return { ok: true }
+      } catch (err) {
+        if (isAppError(err)) {
+          reply.code(err.statusCode)
+          return { error: err.message }
+        }
+        throw err
+      }
+    },
+  )
+
+  app.post(
+    '/api/auth/google',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (req, reply) => {
+      if (!deps.googleClientId) {
+        reply.code(503)
+        return { error: 'Google sign-in is not configured' }
+      }
+      const body = parseOrThrow(GoogleBodySchema, req.body)
+      try {
+        const user = await loginWithGoogle(deps.supabase, body.id_token, deps.googleClientId)
+        setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
+        return { ok: true }
+      } catch (err) {
+        if (isAppError(err)) {
+          reply.code(err.statusCode)
+          return { error: err.message }
+        }
+        throw err
+      }
+    },
+  )
 
   app.post('/api/logout', async (_req, reply) => {
     clearSessionCookie(reply)
     return { ok: true }
   })
 
-  app.get('/api/session', async (req) => ({
-    ok: verifySessionToken(deps.sessionSecret, req.cookies.inventari_session),
-  }))
+  app.get('/api/session', async (req) => {
+    const payload = decodeSessionToken(deps.sessionSecret, req.cookies[SESSION_COOKIE])
+    if (!payload) return { ok: false as const }
+
+    const user = await resolveSessionUser(deps.supabase, payload.sub)
+    if (!user) return { ok: false as const }
+
+    return getSessionPayload(deps.supabase, user)
+  })
 }

@@ -7,6 +7,7 @@ import type { Country } from '../lib/country'
 import { todayISODate } from '../lib/dates'
 import { countryLabel, productLabel } from '../lib/format'
 import { invalidateAfterMutation } from '../lib/invalidateAppData'
+import { useAuth } from '../lib/auth/AuthProvider'
 import type { Produkti } from '../lib/api'
 
 export function useTransferEntry(options: {
@@ -16,6 +17,7 @@ export function useTransferEntry(options: {
   onSuccess?: () => void
 }) {
   const qc = useQueryClient()
+  const { user } = useAuth()
   const [transferFrom, setTransferFrom] = React.useState<Country>(options.initialFrom ?? 'XK')
   const [transferTo, setTransferTo] = React.useState<Country>(
     (options.initialFrom ?? 'XK') === 'XK' ? 'AL' : 'XK',
@@ -72,7 +74,7 @@ export function useTransferEntry(options: {
       itemsState.reset()
       setTransferOra('')
       setTransferPershkrimi('')
-      await invalidateAfterMutation(qc, 'all', { refetchSummary: true })
+      await invalidateAfterMutation(qc, 'all', { refetchSummary: true, userId: user?.id })
       options.onSuccess?.()
     },
     onError: (e) => {

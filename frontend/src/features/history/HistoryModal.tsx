@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Country } from '../../lib/country'
 import {
   deleteActionBatch,
   getActionBatch,
@@ -12,22 +11,23 @@ import {
   fmtEuro,
   formatDisplayDate,
 } from '../../lib/format'
+import {
+  applyHistoryClientFilters,
+  EMPTY_CLIENT_FILTERS,
+  hasActiveClientFilters,
+  hasActiveServerFilters,
+  type HistoryClientFilters,
+  type HistoryServerFilters,
+} from '../../lib/historyClientFilters'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
 import { ConfirmModal } from '../../components/ConfirmModal'
-import { DateInput } from '../../components/DateInput'
 import { ActionEditModal } from './ActionEditModal'
 import { ExpandedActionDetail } from './ExpandedActionDetail'
 import { CountryCell, EditIcon, DeleteIcon, LlojiBadge } from './historyBadges'
 import { HistoryBatchMetaDisplay } from './HistoryBatchMetaDisplay'
+import { HistoryFilterBar } from './HistoryFilterBar'
 import { HistorySkeletonTable, HISTORY_TABLE_COL_COUNT } from './HistorySkeletonTable'
-
-type FilterState = {
-  lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
-  shteti?: Country
-  dateFrom?: string
-  dateTo?: string
-}
 
 const PAGE_SIZE = 8
 
@@ -38,25 +38,40 @@ export function HistoryModal(props: {
 }) {
   const { products, onClose, onNotify } = props
   const qc = useQueryClient()
-  const [filters, setFilters] = React.useState<FilterState>({})
+  const [filters, setFilters] = React.useState<HistoryServerFilters>({})
+  const [clientFilters, setClientFilters] =
+    React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
   const [page, setPage] = React.useState(1)
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(() => new Set())
   const [editActionId, setEditActionId] = React.useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = React.useState<ActionBatch | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
-  const updateFilters = (patch: Partial<FilterState>) => {
+  const updateFilters = (patch: Partial<HistoryServerFilters>) => {
     setFilters((prev) => {
       const next = { ...prev }
       for (const [key, value] of Object.entries(patch)) {
         if (value === undefined || value === '') {
-          delete next[key as keyof FilterState]
+          delete next[key as keyof HistoryServerFilters]
         } else {
           ;(next as Record<string, unknown>)[key] = value
         }
       }
       return next
     })
+    setPage(1)
+    setExpandedIds(new Set())
+    setError(null)
+  }
+
+  const updateClientFilters = (patch: Partial<HistoryClientFilters>) => {
+    setClientFilters((prev) => ({ ...prev, ...patch }))
+    setExpandedIds(new Set())
+  }
+
+  const clearAllFilters = () => {
+    setFilters({})
+    setClientFilters(EMPTY_CLIENT_FILTERS)
     setPage(1)
     setExpandedIds(new Set())
     setError(null)
@@ -131,6 +146,12 @@ export function HistoryModal(props: {
   })
 
   const actions = listQuery.data?.actions ?? []
+  const filteredActions = React.useMemo(
+    () => applyHistoryClientFilters(listQuery.data?.actions ?? [], clientFilters),
+    [listQuery.data?.actions, clientFilters],
+  )
+  const showClearLink =
+    hasActiveServerFilters(filters) || hasActiveClientFilters(clientFilters)
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
@@ -175,50 +196,14 @@ export function HistoryModal(props: {
               </button>
             </div>
 
-            <div className="history-filters-stack">
-              <DateInput
-                className="history-filter-date"
-                value={filters.dateFrom ?? ''}
-                placeholder="Nga data"
-                onChange={(v) => updateFilters({ dateFrom: v || undefined })}
-              />
-              <span className="history-date-sep" aria-hidden="true">
-                —
-              </span>
-              <DateInput
-                className="history-filter-date"
-                value={filters.dateTo ?? ''}
-                placeholder="Deri"
-                onChange={(v) => updateFilters({ dateTo: v || undefined })}
-              />
-              <select
-                className="select history-filter-select"
-                value={filters.lloji ?? ''}
-                onChange={(e) =>
-                  updateFilters({
-                    lloji: (e.target.value || undefined) as FilterState['lloji'],
-                  })
-                }
-              >
-                <option value="">Te gjitha llojet</option>
-                <option value="Hyrje">Hyrje</option>
-                <option value="Dalje">Dalje</option>
-                <option value="Transfer">Transfer</option>
-              </select>
-              <select
-                className="select history-filter-select"
-                value={filters.shteti ?? ''}
-                onChange={(e) =>
-                  updateFilters({
-                    shteti: (e.target.value || undefined) as Country | undefined,
-                  })
-                }
-              >
-                <option value="">Te gjitha shtetet</option>
-                <option value="XK">Kosove</option>
-                <option value="AL">Shqiperi</option>
-              </select>
-            </div>
+            <HistoryFilterBar
+              serverFilters={filters}
+              clientFilters={clientFilters}
+              onServerFilterChange={updateFilters}
+              onClientFilterChange={updateClientFilters}
+              onClearAll={clearAllFilters}
+              showClearLink={showClearLink}
+            />
           </div>
 
           <div className="history-table-wrap">
@@ -269,9 +254,17 @@ export function HistoryModal(props: {
                     </td>
                   </tr>
                 </tbody>
+              ) : filteredActions.length === 0 ? (
+                <tbody>
+                  <tr>
+                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
+                      <p className="muted">Asnjë rezultat</p>
+                    </td>
+                  </tr>
+                </tbody>
               ) : (
                 <tbody>
-                  {actions.map((action) => {
+                  {filteredActions.map((action) => {
                     const expanded = expandedIds.has(action.id)
                     return (
                       <React.Fragment key={action.id}>

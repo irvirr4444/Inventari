@@ -2,6 +2,7 @@ export type FilterChip = {
   id: string
   label: string
   active?: boolean
+  indicator?: boolean
 }
 
 export function FilterChips(props: {
@@ -14,7 +15,7 @@ export function FilterChips(props: {
         <button
           key={chip.id}
           type="button"
-          className={`mobile-chip${chip.active ? ' active' : ''}`}
+          className={`mobile-chip${chip.active ? ' active' : ''}${chip.indicator ? ' has-indicator' : ''}`}
           onClick={() => props.onSelect(chip.id)}
         >
           {chip.label}

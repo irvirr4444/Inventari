@@ -407,6 +407,114 @@
   color: #fff;
 }
 
+.mobile-chip.has-indicator {
+  position: relative;
+  padding-right: 22px;
+}
+
+.mobile-chip.has-indicator::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translateY(-50%);
+}
+
+.mobile-chip.active.has-indicator::after {
+  background: #fff;
+}
+
+.mobile-advanced-filters-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.28s ease;
+}
+
+.mobile-advanced-filters-panel.open {
+  max-height: 560px;
+}
+
+.mobile-advanced-filters-panel-inner {
+  padding: var(--mobile-space-sm) 0 var(--mobile-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-space-md);
+}
+
+.mobile-advanced-filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-space-sm);
+}
+
+.mobile-advanced-filters-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mobile-space-sm);
+}
+
+.mobile-advanced-filters-actions {
+  display: flex;
+  gap: var(--mobile-space-sm);
+  justify-content: flex-end;
+  padding-top: var(--mobile-space-xs);
+}
+
+.mobile-advanced-filters-actions .mobile-btn-outline,
+.mobile-advanced-filters-actions .mobile-btn-primary {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.mobile-card-meta-secondary {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.mobile-meta-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.mobile-tab-panel.is-editing {
+  padding-bottom: calc(var(--mobile-sticky-cta-height, 56px) + 72px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-edit-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  padding: 10px var(--mobile-space-md);
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-edit-footer .mobile-btn-primary,
+.mobile-edit-footer .mobile-btn-outline {
+  width: 100%;
+  min-height: 48px;
+}
+
+.mobile-history-edit-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-space-sm);
+  padding: var(--mobile-space-md);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
 .mobile-skeleton {
   background: linear-gradient(
     90deg,

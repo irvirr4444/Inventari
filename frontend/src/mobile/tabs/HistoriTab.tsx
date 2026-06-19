@@ -5,11 +5,18 @@ import type { ActionBatch } from '../../lib/api'
 import { DaljeIcon, HyrjeIcon, LlojiTransferIcon } from '../../components/icons'
 import { fmtEuro, formatDisplayDate, productCountLabel, countryLabel } from '../../lib/format'
 import { formatActionDateTime } from '../../lib/actionMeta'
+import {
+  applyHistoryClientFilters,
+  EMPTY_CLIENT_FILTERS,
+  hasActiveClientFilters,
+  type HistoryClientFilters,
+} from '../../lib/historyClientFilters'
 import { useHistoryBatches } from '../../hooks/useHistoryBatches'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
 import { FilterChips } from '../components/FilterChips'
+import { HistoriAdvancedFiltersPanel } from '../components/HistoriAdvancedFiltersPanel'
 import { MobileDateInput } from '../components/MobileDateInput'
 import { SkeletonRow } from '../components/SkeletonRow'
 import type { MobileHeaderState } from '../types'
@@ -32,7 +39,7 @@ const LLOJI_FILTER_OPTIONS = [
 ]
 
 export function HistoriTab(props: {
-  notify: (message: string, variant?: 'success' | 'default') => void
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onHeaderChange: (header: MobileHeaderState) => void
 }) {
   const productsQuery = useProductsQuery()
@@ -46,8 +53,36 @@ export function HistoriTab(props: {
   > | null>(null)
   const [llojiOpen, setLlojiOpen] = React.useState(false)
   const [shtetiOpen, setShtetiOpen] = React.useState(false)
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = React.useState(false)
+  const [draftClientFilters, setDraftClientFilters] =
+    React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
+  const [appliedClientFilters, setAppliedClientFilters] =
+    React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
 
   const products = productsQuery.data ?? []
+
+  const filteredActions = React.useMemo(
+    () => applyHistoryClientFilters(history.actions, appliedClientFilters),
+    [history.actions, appliedClientFilters],
+  )
+
+  const hasAdvancedFilters = hasActiveClientFilters(appliedClientFilters)
+
+  const openAdvancedFilters = React.useCallback(() => {
+    setDraftClientFilters(appliedClientFilters)
+    setAdvancedFiltersOpen((open) => !open)
+  }, [appliedClientFilters])
+
+  const applyAdvancedFilters = React.useCallback(() => {
+    setAppliedClientFilters(draftClientFilters)
+    setAdvancedFiltersOpen(false)
+  }, [draftClientFilters])
+
+  const clearAdvancedFilters = React.useCallback(() => {
+    setDraftClientFilters(EMPTY_CLIENT_FILTERS)
+    setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
+    setAdvancedFiltersOpen(false)
+  }, [])
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
 
@@ -79,117 +114,179 @@ export function HistoriTab(props: {
       ) : (
         <>
           <div className="mobile-tab-panel">
-        <FilterChips
-          chips={[
-            { id: 'lloji', label: llojiLabel, active: !!history.filters.lloji },
-            { id: 'shteti', label: shtetiLabel, active: !!history.filters.shteti },
-            ...(history.filters.lloji || history.filters.shteti || history.filters.dateFrom || history.filters.dateTo
-              ? [{ id: 'clear', label: 'Pastro', active: false }]
-              : []),
-          ]}
-          onSelect={(id) => {
-            if (id === 'clear') {
-              history.updateFilters({ lloji: undefined, shteti: undefined, dateFrom: undefined, dateTo: undefined })
-              return
-            }
-            if (id === 'lloji') setLlojiOpen(true)
-            if (id === 'shteti') setShtetiOpen(true)
-          }}
-        />
-
-        <div className="mobile-field-row">
-          <div>
-            <label className="mobile-label">Nga</label>
-            <MobileDateInput
-              value={history.filters.dateFrom ?? ''}
-              onChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
-              aria-label="Nga data"
-              placeholder="Nga"
+            <FilterChips
+              chips={[
+                { id: 'lloji', label: llojiLabel, active: !!history.filters.lloji },
+                { id: 'shteti', label: shtetiLabel, active: !!history.filters.shteti },
+                {
+                  id: 'advanced',
+                  label: advancedFiltersOpen ? 'Filtrat e avancuara ▴' : 'Filtrat e avancuara ▾',
+                  active: advancedFiltersOpen,
+                  indicator: hasAdvancedFilters,
+                },
+                ...(history.filters.lloji ||
+                history.filters.shteti ||
+                history.filters.dateFrom ||
+                history.filters.dateTo
+                  ? [{ id: 'clear', label: 'Pastro', active: false }]
+                  : []),
+              ]}
+              onSelect={(id) => {
+                if (id === 'clear') {
+                  history.updateFilters({
+                    lloji: undefined,
+                    shteti: undefined,
+                    dateFrom: undefined,
+                    dateTo: undefined,
+                  })
+                  return
+                }
+                if (id === 'advanced') {
+                  openAdvancedFilters()
+                  return
+                }
+                if (id === 'lloji') setLlojiOpen(true)
+                if (id === 'shteti') setShtetiOpen(true)
+              }}
             />
-          </div>
-          <div>
-            <label className="mobile-label">Deri</label>
-            <MobileDateInput
-              value={history.filters.dateTo ?? ''}
-              onChange={(v) => history.updateFilters({ dateTo: v || undefined })}
-              aria-label="Deri data"
-              placeholder="Deri"
+
+            <HistoriAdvancedFiltersPanel
+              open={advancedFiltersOpen}
+              draft={draftClientFilters}
+              onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
+              onApply={applyAdvancedFilters}
+              onClear={clearAdvancedFilters}
             />
-          </div>
-        </div>
 
-        {history.error ? <div className="mobile-inline-error">{history.error}</div> : null}
+            <div className="mobile-field-row">
+              <div>
+                <label className="mobile-label">Nga</label>
+                <MobileDateInput
+                  value={history.filters.dateFrom ?? ''}
+                  onChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
+                  aria-label="Nga data"
+                  placeholder="Nga"
+                />
+              </div>
+              <div>
+                <label className="mobile-label">Deri</label>
+                <MobileDateInput
+                  value={history.filters.dateTo ?? ''}
+                  onChange={(v) => history.updateFilters({ dateTo: v || undefined })}
+                  aria-label="Deri data"
+                  placeholder="Deri"
+                />
+              </div>
+            </div>
 
-        {history.listQuery.isLoading ? (
-          <SkeletonRow count={5} />
-        ) : history.actions.length === 0 ? (
-          <div className="mobile-empty">
-            <div className="mobile-empty-title">Nuk ka veprime</div>
-          </div>
-        ) : (
-          <div className="mobile-list-stack">
-            {history.actions.map((action) => (
-              <button
-                key={action.id}
-                type="button"
-                className="mobile-row-card"
-                style={{ width: '100%', flexDirection: 'column', alignItems: 'flex-start', cursor: 'pointer' }}
-                onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
-              >
-                <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
-                  <MobileLlojiBadge lloji={action.lloji} />
-                  <span className="mobile-card-meta">
-                    {formatActionDateTime(action.data, action.ora)}
-                  </span>
-                </div>
-                {action.pershkrimi?.trim() ? (
-                  <div className="mobile-card-meta mobile-meta-truncate" title={action.pershkrimi.trim()}>
-                    {action.pershkrimi.trim()}
-                  </div>
-                ) : null}
-                {action.lloji === 'Transfer' && action.destination_shteti ? (
-                  <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }}>
-                    <img className="flagIcon" src={COUNTRY_META[action.shteti].flagSrc} alt="" width={16} height={11} />
-                    {countryLabel(action.shteti)} → {countryLabel(action.destination_shteti)}
-                    <img className="flagIcon" src={COUNTRY_META[action.destination_shteti].flagSrc} alt="" width={16} height={11} />
-                  </div>
-                ) : (
-                  <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }}>
-                    <img className="flagIcon" src={COUNTRY_META[action.shteti].flagSrc} alt="" width={16} height={11} />
-                    {countryLabel(action.shteti)}
-                  </div>
-                )}
-                <div className="mobile-card-meta" style={{ marginTop: 6 }}>
-                  {productCountLabel(action.item_count)} · {fmtEuro(action.totali)}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+            {history.error ? <div className="mobile-inline-error">{history.error}</div> : null}
 
-        {history.total > 0 ? (
-          <div className="mobile-pagination">
-            <button
-              type="button"
-              className="mobile-pagination-btn"
-              disabled={history.page <= 1}
-              onClick={() => history.setPage((p) => Math.max(1, p - 1))}
-            >
-              Prev
-            </button>
-            <span className="mobile-card-meta">
-              {history.page} / {history.totalPages}
-            </span>
-            <button
-              type="button"
-              className="mobile-pagination-btn"
-              disabled={history.page >= history.totalPages}
-              onClick={() => history.setPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </div>
-        ) : null}
+            {history.listQuery.isLoading ? (
+              <SkeletonRow count={5} />
+            ) : history.actions.length === 0 ? (
+              <div className="mobile-empty">
+                <div className="mobile-empty-title">Nuk ka veprime</div>
+              </div>
+            ) : filteredActions.length === 0 ? (
+              <div className="mobile-empty">
+                <div className="mobile-empty-title">Asnjë rezultat</div>
+              </div>
+            ) : (
+              <div className="mobile-list-stack">
+                {filteredActions.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    className="mobile-row-card"
+                    style={{
+                      width: '100%',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
+                  >
+                    <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
+                      <MobileLlojiBadge lloji={action.lloji} />
+                      <span className="mobile-card-meta">
+                        {formatActionDateTime(action.data, action.ora)}
+                      </span>
+                    </div>
+                    {action.pershkrimi?.trim() ? (
+                      <div
+                        className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
+                        title={action.pershkrimi.trim()}
+                      >
+                        {action.pershkrimi.trim()}
+                      </div>
+                    ) : null}
+                    {action.lloji === 'Transfer' && action.destination_shteti ? (
+                      <div
+                        className="mobile-card-meta row"
+                        style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
+                      >
+                        <img
+                          className="flagIcon"
+                          src={COUNTRY_META[action.shteti].flagSrc}
+                          alt=""
+                          width={16}
+                          height={11}
+                        />
+                        {countryLabel(action.shteti)} → {countryLabel(action.destination_shteti)}
+                        <img
+                          className="flagIcon"
+                          src={COUNTRY_META[action.destination_shteti].flagSrc}
+                          alt=""
+                          width={16}
+                          height={11}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="mobile-card-meta row"
+                        style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
+                      >
+                        <img
+                          className="flagIcon"
+                          src={COUNTRY_META[action.shteti].flagSrc}
+                          alt=""
+                          width={16}
+                          height={11}
+                        />
+                        {countryLabel(action.shteti)}
+                      </div>
+                    )}
+                    <div className="mobile-card-meta" style={{ marginTop: 6 }}>
+                      {productCountLabel(action.item_count)} · {fmtEuro(action.totali)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {history.total > 0 ? (
+              <div className="mobile-pagination">
+                <button
+                  type="button"
+                  className="mobile-pagination-btn"
+                  disabled={history.page <= 1}
+                  onClick={() => history.setPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+                <span className="mobile-card-meta">
+                  {history.page} / {history.totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="mobile-pagination-btn"
+                  disabled={history.page >= history.totalPages}
+                  onClick={() => history.setPage((p) => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <BottomSheet open={llojiOpen} title="Lloji" onClose={() => setLlojiOpen(false)}>

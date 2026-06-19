@@ -79,7 +79,7 @@ frontend/
       actions/                 ActionEntryPanel, ActionItemsTable, ActionReviewModal, TransferModal
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
-      history/                 HistoryModal, HistoryBatchMetaDisplay, historyBadges, edit/list submodules
+      history/                 HistoryModal, HistoryFilterBar, HistoryBatchMetaDisplay, historyBadges, edit/list submodules
     pages/
       DashboardPage.tsx        Composes feature panels (~180 lines)
       LoginPage.tsx            Login form
@@ -90,6 +90,7 @@ frontend/
       format.ts                Re-exports shared formatters + UI helpers
       actionMeta.ts            Ora display/format helpers for batch metadata
       actionBatch.ts           Legacy batch id detection
+      historyClientFilters.ts  Client-side Historiku filter logic (Ora, Pershkrimi, Totali, Produkte)
       numericInput.ts          Helpers for zero-as-placeholder numeric fields
       queryKeys.ts             React Query key factories
       invalidateAppData.ts     Cache invalidation helper
@@ -137,7 +138,12 @@ Desktop product lines use the same controls everywhere:
 #### Historiku (action history)
 
 - Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal` (~**1200px** wide).
-- Filter by type, country, and date range; paginated table (**8 per page**).
+- **Filter bar** (`HistoryFilterBar`) — horizontal grouped row with uppercase labels; wraps to two rows on narrow widths.
+  - **Server-side** (API + page reset): **Veprime** (type), **Shteti**, **Data** (`Nga` / `Deri` date pickers).
+  - **Client-side** (current page only, no extra API calls): **Ora** range (`OraInput`), **Pershkrimi** search (substring, case-insensitive), **Totali (€)** Min/Max, **Produkte** count Min/Max.
+  - **Pershkrimi** input flex-grows to fill the first row; **× Pastro filtrat** appears when any filter is active and resets all fields.
+  - Filter logic lives in `lib/historyClientFilters.ts`; state is split in `HistoryModal` (server vs client filters).
+- Paginated table (**8 per page**); pagination total reflects server filters only.
 - List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti**, **Produkte**, **Totali**, **Veprime** (read-only in the list; empty Ora/Pershkrimi show `—`).
 - **Data**, **Ora**, and **Pershkrimi** are left-aligned; **Produkte**, **Totali**, and **Veprime** are right-aligned. Edit/delete icon buttons sit flush right in **Veprime**.
 - **Pershkrimi** gets the widest meta column (~**22%**); long text ellipsizes with the full value in a `title` tooltip.
@@ -190,7 +196,8 @@ Transfer is separate from the main action form:
 
 - `features/actions/ActionItemsTable` — product rows for action form and transfer modal.
 - `features/actions/ActionMetaFields` / `ActionMetaDisplay` — optional Ora + Pershkrimi entry and read-only display (`OraInput` + text field).
-- `features/history/HistoryBatchMetaDisplay`, `features/history/historyBadges` — history list meta columns and type/country badges.
+- `features/history/HistoryFilterBar`, `features/history/HistoryBatchMetaDisplay`, `features/history/historyBadges` — filter bar, history list meta columns, and type/country badges.
+- `lib/historyClientFilters.ts` — client-side Historiku filters applied after the paginated list fetch.
 - `components/OraInput`, `components/TimePickerPopover` — shared time entry (`HH:mm`) for actions, transfers, and history edit.
 - `features/actions/ActionReviewModal` — large finalize review for Hyrje/Dalje (desktop).
 - `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
@@ -222,8 +229,9 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 - Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete). Desktop Hyrje/Dalje uses **`ActionReviewModal`** for finalize; mobile still uses a compact **BottomSheet** confirm.
 - Card lists instead of tables; touch targets ≥48px.
 - Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
-- Veprime and Transfer tabs include optional **Ora** (`OraInput`) / **Pershkrimi** fields; Histori list cards and detail show them when set (date + time on one line; Pershkrimi truncates with tooltip on cards).
-- Histori batch edit (`HistoriBatchDetail`) can change **Ora** and **Pershkrimi** for non-legacy batches.
+- Veprime and Transfer tabs include optional **Ora** (`OraInput`) / **Pershkrimi** fields; Histori list cards and detail show them when set (date · ora on one line; Pershkrimi as a muted truncated second line with `title` tooltip).
+- **Histori tab filters:** type/country chips + date row (server-side, via `useHistoryBatches`); **Filtrat e avancuara ▾** pill opens a collapsible panel for client-side **Ora**, **Pershkrimi**, **Totali**, and **Produkte** filters (reuses `lib/historyClientFilters.ts`; **Apliko** / **Pastro**; active dot on pill when advanced filters are on).
+- **Histori batch edit** (`HistoriBatchDetail`): tap **Ndrysho** to enter inline edit mode — metadata (date, country/route, Ora, Pershkrimi for non-legacy batches) and **all product rows** editable at once via `ProductPickerSheet` + `NumericInput`; sticky **Ruaj** / **Anulo** footer saves via `lib/historyBatchEdit.ts` (no per-row **Ndrysho Produktin**).
 - Histori detail is an in-tab stack (back button), not a URL route in v1.
 - Same API payloads, Albanian strings, and business rules as desktop.
 
@@ -233,14 +241,16 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 src/mobile/
   MobileApp.tsx           Shell + tab routing (useState, instant switch)
   types.ts                TabId union
-  components/             BottomSheet, BottomNav, ProductRowCard, …
+  components/             BottomSheet, BottomNav, HistoriAdvancedFiltersPanel, ProductRowCard, …
   tabs/                   One file per tab (+ HistoriBatchDetail)
   styles/                 mobile.css hub (tokens + layout + components)
 ```
 
-**Shared hooks** (used by desktop and mobile):
+**Shared libs/hooks** (used by desktop and mobile):
 
 - `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches`
+- `lib/historyClientFilters.ts` — client-side Historiku filters (desktop modal + mobile advanced panel)
+- `lib/historyBatchEdit.ts` — batch edit validation/save orchestration (mobile Histori detail)
 - Desktop `useDashboardPage.ts` composes these; mobile tabs call them directly.
 
 Design reference: [MOBILE_DESIGN_PROMPT.md](../MOBILE_DESIGN_PROMPT.md) at repo root.
@@ -294,10 +304,11 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `components/stock-badges.css` | Stock badges |
 | `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
 | `features/summary.css` | Permbledhje panel |
-| `features/history.css` | Historiku modal (fixed column widths, alignment, transfer route flags), edit subtable, inline edit row highlight |
+| `features/history.css` | Historiku modal (horizontal filter bar, fixed column widths, alignment, transfer route flags), edit subtable, inline edit row highlight |
 | `responsive.css` | Breakpoints (stock cards stack on narrow desktop widths) |
 
 - Dashboard layout is viewport-locked with internal scrolling in the action table (2 rows), products table, and review modal list (10 row slots; scroll only when >10 products).
+- Historiku filter bar uses `.history-filters-bar` with grouped controls (32px height, vertical separators, labeled fields). Pershkrimi stretches on row 1; Totali/Produkte sit on row 2.
 - Historiku list uses `table-layout: fixed` with percentage column widths (expand 3%, Data 12%, Ora 8%, Pershkrimi 22%, Lloji 9%, Shteti 17%, Produkte 8%, Totali 11%, Veprime 10%). Lloji/Shteti keep `min-width` so badges and transfer routes do not wrap awkwardly.
 - Action and history-edit product tables scroll horizontally when columns need more space.
 - Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals (product delete, transfer finalize).
@@ -317,7 +328,7 @@ The goal is not to replace Excel as an output. The goal is to stop running the b
 - Tracks products by code and name.
 - Keeps separate stock quantities for Kosovo and Albania.
 - Records stock entries (`Hyrje`), exits (`Dalje`), and country-to-country transfers via the **Transfero** popup.
-- **Historiku** modal to view, filter, edit, and delete past actions.
+- **Historiku** modal to view, filter (type/country/date + client-side Ora/Pershkrimi/Totali/Produkte), edit, and delete past actions.
 - Calculates totals automatically from quantity and unit price.
 - Shows live product stock in a sortable table.
 - Shows summary numbers for each country over a selected date range.
@@ -591,11 +602,19 @@ Stored result:
 
 Opened from the **Historiku** button on the action card.
 
-Input / filters:
+Filter bar (top of modal):
 
-- Action type (`Hyrje`, `Dalje`, `Transfer`, or all).
-- Country (for non-transfer batches).
-- Date range (`Nga` / `Deri`).
+| Group | Fields | Scope |
+| --- | --- | --- |
+| Veprime / Shteti | Type and country dropdowns | Server — refetches list, resets to page 1 |
+| Data | `Nga` / `Deri` date pickers | Server |
+| Ora | `Nga` / `Deri` time pickers (`OraInput`, `HH:mm`) | Client — filters current page rows; batches with null Ora excluded when a bound is set |
+| Pershkrimi | Text search (`Kërko…`) | Client — case-insensitive substring |
+| Totali (€) | Min / Max | Client — inclusive euro range |
+| Produkte | Min / Max | Client — inclusive line-item count range |
+
+- **Pastro filtrat** (×) clears all server and client filters when any filter is active.
+- Client-side filters can show **Asnjë rezultat** on a page that still has server rows; pagination count stays server-based.
 
 List behavior:
 

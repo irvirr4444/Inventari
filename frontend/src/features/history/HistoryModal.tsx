@@ -111,14 +111,16 @@ export function HistoryModal(props: {
   )
 
   const handleEditSaveComplete = React.useCallback(
-    async (actionId: string) => {
+    async (actionId: string, migratedBatchId?: string) => {
+      const resolvedId = migratedBatchId ?? actionId
       setEditActionId(null)
       setExpandedIds((prev) => {
         const next = new Set(prev)
-        next.add(actionId)
+        next.delete(actionId)
+        next.add(resolvedId)
         return next
       })
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: actionId })
+      await invalidateAfterMutation(qc, 'all', { actionBatchId: resolvedId })
       await listQuery.refetch()
       onNotify?.('Ndryshimet u ruajtuan me sukses.', 'success')
     },
@@ -395,7 +397,7 @@ export function HistoryModal(props: {
           actionId={editActionId}
           products={products}
           onClose={() => setEditActionId(null)}
-          onSaveComplete={() => void handleEditSaveComplete(editActionId)}
+          onSaveComplete={(migratedId) => void handleEditSaveComplete(editActionId, migratedId)}
           onError={setError}
         />
       )}

@@ -9,17 +9,25 @@ import {
 } from '../../lib/api'
 import { countryLabel, fmtEuro, productLabel, sortProductsByKodi } from '../../lib/format'
 import { formatActionDateTime, formatDisplayTime } from '../../lib/actionMeta'
-import { isLegacyBatchId } from '../../lib/actionBatch'
 import {
-  draftsFromItems,
+  batchTotal,
+  createEmptyEditRow,
+  isHistoryEditDirty,
+  lineTotal,
+  rowsFromDetail,
   saveHistoryBatchEdits,
-  type HistoryItemDraft,
+  type HistoryBatchMetaDraft,
+  type HistoryEditRow,
+  type HistoryEditSnapshot,
 } from '../../lib/historyBatchEdit'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { DeleteIcon } from '../../components/icons'
 import { NumericInput } from '../../components/NumericInput'
 import { queryKeys } from '../../lib/queryKeys'
+import { BottomSheet } from '../components/BottomSheet'
 import { ProductPickerSheet } from '../components/ProductPickerSheet'
 import {
+  SheetActionFooter,
   SheetConfirmButton,
   SheetEditButton,
   SheetFooterRow,
@@ -28,6 +36,7 @@ import { MobileDateInput } from '../components/MobileDateInput'
 import { MobileCountryField } from '../components/MobileCountryField'
 import { SkeletonRow } from '../components/SkeletonRow'
 import { OraInput } from '../../components/OraInput'
+import type { MobileHeaderState } from '../types'
 
 function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   const cls =
@@ -39,12 +48,27 @@ function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   return <span className={`mobile-badge ${cls}`}>{props.lloji}</span>
 }
 
+function buildEditSnapshot(batch: ActionBatchDetail): HistoryEditSnapshot {
+  return {
+    meta: {
+      data: batch.data,
+      ora: formatDisplayTime(batch.ora),
+      pershkrimi: batch.pershkrimi ?? '',
+      shteti: batch.shteti,
+      destination: batch.destination_shteti ?? '',
+    },
+    rows: rowsFromDetail(batch.items),
+  }
+}
+
 function HistoriEditProductRow(props: {
-  draft: HistoryItemDraft
+  draft: HistoryEditRow['draft']
   products: Produkti[]
   otherKodis: string[]
   disabled: boolean
-  onDraftChange: (patch: Partial<HistoryItemDraft>) => void
+  canRemove: boolean
+  onDraftChange: (patch: Partial<HistoryEditRow['draft']>) => void
+  onRemove: () => void
 }) {
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const product = props.products.find((p) => p.kodi === props.draft.kodi_produktit)
@@ -54,20 +78,17 @@ function HistoriEditProductRow(props: {
 
   return (
     <div className="mobile-history-edit-card">
-      <div>
-        <label className="mobile-label">Produkti</label>
-        <button
-          type="button"
-          className="mobile-tap-field"
-          disabled={props.disabled}
-          onClick={() => setPickerOpen(true)}
-        >
-          <span className="mobile-meta-truncate" style={{ textAlign: 'left' }}>
-            {label}
-          </span>
-          <span aria-hidden="true">▾</span>
-        </button>
-      </div>
+      <button
+        type="button"
+        className="mobile-tap-field"
+        disabled={props.disabled}
+        onClick={() => setPickerOpen(true)}
+      >
+        <span className="mobile-meta-truncate" style={{ textAlign: 'left' }}>
+          {label}
+        </span>
+        <span aria-hidden="true">▾</span>
+      </button>
       <div className="mobile-field-row">
         <div>
           <label className="mobile-label">Cmimi/Njesi</label>
@@ -93,6 +114,20 @@ function HistoriEditProductRow(props: {
           />
         </div>
       </div>
+      <div className="mobile-history-edit-card-footer">
+        <span className="mobile-row-card-total">Totali: {fmtEuro(lineTotal(props.draft))}</span>
+        {props.canRemove ? (
+          <button
+            type="button"
+            className="mobile-icon-btn"
+            aria-label="Fshi produktin"
+            disabled={props.disabled}
+            onClick={props.onRemove}
+          >
+            <DeleteIcon />
+          </button>
+        ) : null}
+      </div>
 
       <ProductPickerSheet
         open={pickerOpen}
@@ -114,11 +149,183 @@ function HistoriEditProductRow(props: {
   )
 }
 
+function HistoriBatchEditView(props: {
+  detail: ActionBatchDetail
+  products: Produkti[]
+  meta: HistoryBatchMetaDraft
+  rows: HistoryEditRow[]
+  busy: boolean
+  error: string | null
+  onMetaChange: (meta: HistoryBatchMetaDraft) => void
+  onRowsChange: (rows: HistoryEditRow[]) => void
+  onSave: () => void
+}) {
+  const productsByKodi = sortProductsByKodi(props.products)
+
+  const updateFrom = (next: Country) => {
+    const updated = { ...props.meta, shteti: next }
+    if (props.detail.lloji === 'Transfer' && next === props.meta.destination) {
+      updated.destination = next === 'XK' ? 'AL' : 'XK'
+    }
+    props.onMetaChange(updated)
+  }
+
+  const updateRow = (key: string, patch: Partial<HistoryEditRow['draft']>) => {
+    props.onRowsChange(
+      props.rows.map((row) =>
+        row.key === key ? { ...row, draft: { ...row.draft, ...patch } } : row,
+      ),
+    )
+  }
+
+  const removeRow = (key: string) => {
+    if (props.rows.length <= 1) return
+    props.onRowsChange(props.rows.filter((row) => row.key !== key))
+  }
+
+  const addRow = () => {
+    props.onRowsChange([...props.rows, createEmptyEditRow()])
+  }
+
+  const total = batchTotal(props.rows)
+
+  return (
+    <>
+      <div className="mobile-tab-panel is-editing">
+        <div className="mobile-history-edit-section">
+          <div className="mobile-section-label">DETAJET</div>
+          <div className="mobile-history-edit-meta-card">
+            <div className="mobile-list-stack">
+              <div className="mobile-history-meta-field">
+                <label className="mobile-label">Data</label>
+                <MobileDateInput
+                  value={props.meta.data}
+                  onChange={(data) => props.onMetaChange({ ...props.meta, data })}
+                  disabled={props.busy}
+                  aria-label="Data"
+                  placeholder="Data"
+                />
+              </div>
+
+              {props.detail.lloji === 'Transfer' ? (
+                <div className="mobile-field-row mobile-history-route-row">
+                  <MobileCountryField
+                    label="Nga"
+                    value={props.meta.shteti}
+                    disabled={props.busy}
+                    sheetTitle="Nga"
+                    onChange={updateFrom}
+                  />
+                  <MobileCountryField
+                    label="Ne"
+                    value={props.meta.destination || (props.meta.shteti === 'XK' ? 'AL' : 'XK')}
+                    disabled={props.busy}
+                    exclude={props.meta.shteti}
+                    sheetTitle="Ne"
+                    onChange={(c) => props.onMetaChange({ ...props.meta, destination: c })}
+                  />
+                </div>
+              ) : (
+                <MobileCountryField
+                  label="Shteti"
+                  value={props.meta.shteti}
+                  disabled={props.busy || props.detail.mirrored_to_albania}
+                  sheetTitle="Shteti"
+                  onChange={(shteti) => props.onMetaChange({ ...props.meta, shteti })}
+                />
+              )}
+
+              <div className="mobile-history-meta-field">
+                <label className="mobile-label" htmlFor="batch-edit-ora">
+                  Ora
+                </label>
+                <OraInput
+                  id="batch-edit-ora"
+                  className="mobile-input"
+                  value={props.meta.ora}
+                  onChange={(ora) => props.onMetaChange({ ...props.meta, ora })}
+                  disabled={props.busy}
+                />
+              </div>
+              <div className="mobile-history-meta-field">
+                <label className="mobile-label" htmlFor="batch-edit-pershkrimi">
+                  Pershkrimi
+                </label>
+                <input
+                  id="batch-edit-pershkrimi"
+                  type="text"
+                  className="mobile-input"
+                  value={props.meta.pershkrimi}
+                  onChange={(e) =>
+                    props.onMetaChange({ ...props.meta, pershkrimi: e.target.value })
+                  }
+                  disabled={props.busy}
+                  maxLength={500}
+                  placeholder="Opsionale"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mobile-history-edit-section">
+          <div className="mobile-section-label">PRODUKTET</div>
+          <div className="mobile-list-stack">
+            {props.rows.map((row) => (
+              <HistoriEditProductRow
+                key={row.key}
+                draft={row.draft}
+                products={productsByKodi}
+                otherKodis={props.rows
+                  .filter((x) => x.key !== row.key)
+                  .map((x) => x.draft.kodi_produktit)
+                  .filter(Boolean)}
+                disabled={props.busy}
+                canRemove={props.rows.length > 1}
+                onDraftChange={(patch) => updateRow(row.key, patch)}
+                onRemove={() => removeRow(row.key)}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="mobile-btn-outline mobile-history-add-product"
+            disabled={props.busy}
+            onClick={addRow}
+          >
+            + Shto Produkt
+          </button>
+        </div>
+
+        {props.error ? <div className="mobile-inline-error">{props.error}</div> : null}
+      </div>
+
+      <div className="mobile-edit-footer">
+        <div className="mobile-total-row mobile-history-edit-total">
+          <span>Totali i veprimit:</span>
+          <span className="mobile-num">{fmtEuro(total)}</span>
+        </div>
+        <button
+          type="button"
+          className="mobile-btn-primary"
+          disabled={props.busy}
+          onClick={props.onSave}
+        >
+          {props.busy ? 'Duke ruajtur…' : 'Ruaj Ndryshimet'}
+        </button>
+      </div>
+    </>
+  )
+}
+
 export function HistoriBatchDetail(props: {
   batchId: string
   products: Produkti[]
   onNotify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onDeleteRequest: (batch: Pick<ActionBatchDetail, 'id' | 'lloji' | 'data'>) => void
+  onHeaderChange: (header: MobileHeaderState) => void
+  onBackToList: () => void
+  onBatchIdChange: (batchId: string) => void
 }) {
   const qc = useQueryClient()
   const detailQuery = useQuery({
@@ -127,26 +334,29 @@ export function HistoriBatchDetail(props: {
   })
 
   const [isEditing, setIsEditing] = React.useState(false)
+  const [cancelSheetOpen, setCancelSheetOpen] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [data, setData] = React.useState('')
-  const [ora, setOra] = React.useState('')
-  const [pershkrimi, setPershkrimi] = React.useState('')
-  const [shteti, setShteti] = React.useState<Country>('XK')
-  const [destination, setDestination] = React.useState<Country | ''>('')
-  const [editRows, setEditRows] = React.useState<Record<string, HistoryItemDraft>>({})
+  const [initialSnapshot, setInitialSnapshot] = React.useState<HistoryEditSnapshot | null>(null)
+  const [editMeta, setEditMeta] = React.useState<HistoryBatchMetaDraft | null>(null)
+  const [editRows, setEditRows] = React.useState<HistoryEditRow[]>([])
 
   const detail = detailQuery.data
-  const isLegacy = detail ? isLegacyBatchId(detail.id) : false
 
-  const resetEditState = React.useCallback((batch: ActionBatchDetail) => {
-    setData(batch.data)
-    setOra(formatDisplayTime(batch.ora))
-    setPershkrimi(batch.pershkrimi ?? '')
-    setShteti(batch.shteti)
-    setDestination(batch.destination_shteti ?? '')
-    setEditRows(draftsFromItems(batch.items))
-    setError(null)
-  }, [])
+  const currentSnapshot = React.useMemo((): HistoryEditSnapshot | null => {
+    if (!editMeta) return null
+    return { meta: editMeta, rows: editRows }
+  }, [editMeta, editRows])
+
+  const resetEditState = React.useCallback(
+    (batch: ActionBatchDetail) => {
+      const snapshot = buildEditSnapshot(batch)
+      setInitialSnapshot(snapshot)
+      setEditMeta(snapshot.meta)
+      setEditRows(snapshot.rows)
+      setError(null)
+    },
+    [],
+  )
 
   const startEditing = React.useCallback(() => {
     if (!detail) return
@@ -156,24 +366,68 @@ export function HistoriBatchDetail(props: {
 
   const cancelEditing = React.useCallback(() => {
     setIsEditing(false)
+    setCancelSheetOpen(false)
     setError(null)
+    setInitialSnapshot(null)
+    setEditMeta(null)
+    setEditRows([])
   }, [])
+
+  const requestCancel = React.useCallback(() => {
+    if (!initialSnapshot || !currentSnapshot) {
+      cancelEditing()
+      return
+    }
+    if (isHistoryEditDirty(initialSnapshot, currentSnapshot)) {
+      setCancelSheetOpen(true)
+    } else {
+      cancelEditing()
+    }
+  }, [initialSnapshot, currentSnapshot, cancelEditing])
+
+  const { onHeaderChange, onBackToList } = props
+
+  React.useEffect(() => {
+    if (isEditing) {
+      onHeaderChange({
+        kind: 'sub',
+        title: 'Ndrysho',
+        onBack: requestCancel,
+      })
+    } else {
+      onHeaderChange({
+        kind: 'sub',
+        title: 'Detajet',
+        onBack: onBackToList,
+      })
+    }
+    return () => onHeaderChange({ kind: 'tab' })
+  }, [isEditing, requestCancel, onBackToList, onHeaderChange])
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      if (!detail) throw new Error('Missing batch')
-      await saveHistoryBatchEdits({
+      if (!detail || !editMeta) throw new Error('Missing batch')
+      return saveHistoryBatchEdits({
         detail,
-        meta: { data, ora, pershkrimi, shteti, destination },
-        itemDrafts: editRows,
-        isLegacy,
+        meta: editMeta,
+        rows: editRows,
       })
     },
-    onSuccess: async () => {
-      setIsEditing(false)
-      setError(null)
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: props.batchId })
-      await detailQuery.refetch()
+    onSuccess: async (result) => {
+      const nextBatchId = result.batch_id ?? props.batchId
+      if (result.batch_id) {
+        props.onBatchIdChange(result.batch_id)
+      }
+      cancelEditing()
+      await invalidateAfterMutation(qc, 'all', { actionBatchId: nextBatchId })
+      if (result.batch_id) {
+        await qc.fetchQuery({
+          queryKey: queryKeys.actionBatch(nextBatchId),
+          queryFn: () => getActionBatch(nextBatchId),
+        })
+      } else {
+        await detailQuery.refetch()
+      }
       props.onNotify('Veprimi u përditësua me sukses.', 'success')
     },
     onError: (e) => {
@@ -182,21 +436,6 @@ export function HistoriBatchDetail(props: {
       props.onNotify(message, 'error')
     },
   })
-
-  const updateFrom = (next: Country) => {
-    setShteti(next)
-    if (detail?.lloji === 'Transfer' && next === destination) {
-      setDestination(next === 'XK' ? 'AL' : 'XK')
-    }
-  }
-
-  const updateEditRow = (itemId: string, patch: Partial<HistoryItemDraft>) => {
-    setEditRows((prev) => {
-      const current = prev[itemId]
-      if (!current) return prev
-      return { ...prev, [itemId]: { ...current, ...patch } }
-    })
-  }
 
   if (detailQuery.isLoading) {
     return (
@@ -215,188 +454,105 @@ export function HistoriBatchDetail(props: {
   }
 
   const busy = saveMut.isPending
-  const productsByKodi = sortProductsByKodi(props.products)
+
+  if (isEditing && initialSnapshot && editMeta) {
+    return (
+      <>
+        <HistoriBatchEditView
+          detail={detail}
+          products={props.products}
+          meta={editMeta}
+          rows={editRows}
+          busy={busy}
+          error={error}
+          onMetaChange={setEditMeta}
+          onRowsChange={setEditRows}
+          onSave={() => saveMut.mutate()}
+        />
+
+        <BottomSheet
+          open={cancelSheetOpen}
+          title="Ke ndryshime të paruajtura."
+          onClose={() => setCancelSheetOpen(false)}
+          footer={
+            <SheetActionFooter
+              cancelLabel="Vazhdo Editimin"
+              confirmLabel="Mbyll pa ruajtur"
+              confirmVariant="danger"
+              confirmIcon="delete"
+              onCancel={() => setCancelSheetOpen(false)}
+              onConfirm={cancelEditing}
+            />
+          }
+        >
+          <p className="mobile-card-meta">Ndryshimet do të humbasin nëse mbyll pa ruajtur.</p>
+        </BottomSheet>
+      </>
+    )
+  }
 
   return (
-    <>
-      <div className={`mobile-tab-panel${isEditing ? ' is-editing' : ''}`}>
-        <div className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-          <MobileLlojiBadge lloji={detail.lloji} />
-
-          {isEditing ? (
-            <div className="mobile-list-stack" style={{ width: '100%', marginTop: 12 }}>
-              <div>
-                <label className="mobile-label">Data</label>
-                <MobileDateInput
-                  value={data}
-                  onChange={setData}
-                  disabled={busy}
-                  aria-label="Data"
-                  placeholder="Data"
-                />
-              </div>
-
-              {!isLegacy ? (
-                <>
-                  <div>
-                    <label className="mobile-label" htmlFor="batch-edit-ora">
-                      Ora
-                    </label>
-                    <OraInput
-                      id="batch-edit-ora"
-                      className="mobile-input"
-                      value={ora}
-                      onChange={setOra}
-                      disabled={busy}
-                    />
-                  </div>
-                  <div>
-                    <label className="mobile-label" htmlFor="batch-edit-pershkrimi">
-                      Pershkrimi
-                    </label>
-                    <input
-                      id="batch-edit-pershkrimi"
-                      type="text"
-                      className="mobile-input"
-                      value={pershkrimi}
-                      onChange={(e) => setPershkrimi(e.target.value)}
-                      disabled={busy}
-                      maxLength={500}
-                      placeholder="Opsionale"
-                    />
-                  </div>
-                </>
-              ) : null}
-
-              {detail.lloji === 'Transfer' ? (
-                <>
-                  <MobileCountryField
-                    label="Nga"
-                    value={shteti}
-                    disabled={busy}
-                    sheetTitle="Nga"
-                    onChange={updateFrom}
-                  />
-                  <MobileCountryField
-                    label="Ne"
-                    value={destination || (shteti === 'XK' ? 'AL' : 'XK')}
-                    disabled={busy}
-                    exclude={shteti}
-                    sheetTitle="Ne"
-                    onChange={(c) => setDestination(c)}
-                  />
-                </>
-              ) : (
-                <MobileCountryField
-                  label="Shteti"
-                  value={shteti}
-                  disabled={busy || detail.mirrored_to_albania}
-                  sheetTitle="Shteti"
-                  onChange={setShteti}
-                />
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="mobile-card-meta" style={{ marginTop: 8 }}>
-                {formatActionDateTime(detail.data, detail.ora)}
-              </div>
-              {detail.pershkrimi?.trim() ? (
-                <div className="mobile-card-meta mobile-card-meta-secondary" style={{ marginTop: 4 }}>
-                  {detail.pershkrimi.trim()}
-                </div>
-              ) : null}
-              {detail.lloji === 'Transfer' && detail.destination_shteti ? (
-                <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
-                  <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
-                  {countryLabel(detail.shteti)} → {countryLabel(detail.destination_shteti)}
-                  <img
-                    className="flagIcon"
-                    src={COUNTRY_META[detail.destination_shteti].flagSrc}
-                    alt=""
-                    width={18}
-                    height={12}
-                  />
-                </div>
-              ) : (
-                <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
-                  <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
-                  {countryLabel(detail.shteti)}
-                </div>
-              )}
-              <div className="mobile-card-label" style={{ marginTop: 8 }}>
-                Total: {fmtEuro(detail.totali)}
-              </div>
-            </>
-          )}
+    <div className="mobile-tab-panel">
+      <div className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+        <MobileLlojiBadge lloji={detail.lloji} />
+        <div className="mobile-card-meta" style={{ marginTop: 8 }}>
+          {formatActionDateTime(detail.data, detail.ora)}
         </div>
-
-        <div className="mobile-section-label">Produktet</div>
-
-        {isEditing ? (
-          <div className="mobile-list-stack">
-            {detail.items.map((item) => (
-              <HistoriEditProductRow
-                key={item.id}
-                draft={editRows[item.id] ?? draftsFromItems([item])[item.id]}
-                products={productsByKodi}
-                otherKodis={detail.items
-                  .filter((x) => x.id !== item.id)
-                  .map((x) => editRows[x.id]?.kodi_produktit ?? x.kodi_produktit)
-                  .filter(Boolean)}
-                disabled={busy}
-                onDraftChange={(patch) => updateEditRow(item.id, patch)}
-              />
-            ))}
+        {detail.pershkrimi?.trim() ? (
+          <div className="mobile-card-meta mobile-card-meta-secondary" style={{ marginTop: 4 }}>
+            {detail.pershkrimi.trim()}
+          </div>
+        ) : null}
+        {detail.lloji === 'Transfer' && detail.destination_shteti ? (
+          <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
+            <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
+            {countryLabel(detail.shteti)} → {countryLabel(detail.destination_shteti)}
+            <img
+              className="flagIcon"
+              src={COUNTRY_META[detail.destination_shteti].flagSrc}
+              alt=""
+              width={18}
+              height={12}
+            />
           </div>
         ) : (
-          <div className="mobile-list-stack">
-            {detail.items.map((item) => (
-              <div key={item.id} className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <div className="mobile-row-card-title">
-                  {productLabel(item.emri_produktit, item.kodi_produktit)}
-                </div>
-                <div className="mobile-row-card-sub">
-                  {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
-                </div>
-                <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
-              </div>
-            ))}
+          <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
+            <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
+            {countryLabel(detail.shteti)}
           </div>
         )}
-
-        {error ? <div className="mobile-inline-error">{error}</div> : null}
-
-        {!isEditing ? (
-          <SheetFooterRow>
-            <SheetEditButton label="Ndrysho" onClick={startEditing} />
-            <SheetConfirmButton
-              label="Fshi"
-              variant="danger"
-              icon="delete"
-              onClick={() =>
-                props.onDeleteRequest({ id: detail.id, lloji: detail.lloji, data: detail.data })
-              }
-            />
-          </SheetFooterRow>
-        ) : null}
+        <div className="mobile-card-label" style={{ marginTop: 8 }}>
+          Total: {fmtEuro(detail.totali)}
+        </div>
       </div>
 
-      {isEditing ? (
-        <div className="mobile-edit-footer">
-          <button type="button" className="mobile-btn-outline" disabled={busy} onClick={cancelEditing}>
-            Anulo
-          </button>
-          <button
-            type="button"
-            className="mobile-btn-primary"
-            disabled={busy}
-            onClick={() => saveMut.mutate()}
-          >
-            {busy ? 'Duke ruajtur…' : 'Ruaj'}
-          </button>
-        </div>
-      ) : null}
-    </>
+      <div className="mobile-section-label">Produktet</div>
+
+      <div className="mobile-list-stack">
+        {detail.items.map((item) => (
+          <div key={item.id} className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div className="mobile-row-card-title">
+              {productLabel(item.emri_produktit, item.kodi_produktit)}
+            </div>
+            <div className="mobile-row-card-sub">
+              {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
+            </div>
+            <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
+          </div>
+        ))}
+      </div>
+
+      <SheetFooterRow>
+        <SheetEditButton label="Ndrysho" onClick={startEditing} />
+        <SheetConfirmButton
+          label="Fshi"
+          variant="danger"
+          icon="delete"
+          onClick={() =>
+            props.onDeleteRequest({ id: detail.id, lloji: detail.lloji, data: detail.data })
+          }
+        />
+      </SheetFooterRow>
+    </div>
   )
 }

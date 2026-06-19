@@ -6,6 +6,7 @@ import {
   ActionBatchPatchSchema,
   ERR_BATCH_NOT_FOUND,
   ERR_DUPLICATE_PRODUCT_IN_ACTION,
+  ERR_LAST_PRODUCT_LINE,
   ERR_MIRROR_COUNTRY_CHANGE,
   ERR_NO_UPDATE_FIELDS,
   ERR_PRODUCT_LINE_NOT_FOUND,
@@ -17,14 +18,15 @@ import {
 } from '@inventari/shared'
 import { z } from 'zod'
 import { findSiblingRows, isDisplayRow, isMirroredBatch } from './batchDomain.js'
+import { AppError } from './errors.js'
+import { validateStock } from './services/actionsService.js'
 import {
   deleteLegacyBatch,
+  ensureRealBatchId,
   fetchLegacyActionBatches,
   isLegacyBatchId,
   loadLegacyBatchDetail,
   mergeAndPaginateActions,
-  updateLegacyBatch,
-  updateLegacyBatchItem,
 } from './legacyBatches.js'
 
 type VeprimBatchRow = {
@@ -90,6 +92,60 @@ function aggregateBatch(batch: VeprimBatchRow, rows: VeprimRow[]) {
     created_at: batch.created_at,
     item_count: displayRows.length,
   }
+}
+
+type BatchItemInput = {
+  kodi_produktit: string
+  cmimi_njesi: number
+  sasia: number
+}
+
+function buildBatchItemInsertRows(
+  batch: VeprimBatchRow,
+  rows: VeprimRow[],
+  item: BatchItemInput,
+): Record<string, unknown>[] {
+  const base = {
+    batch_id: batch.id,
+    data: batch.data,
+    kodi_produktit: item.kodi_produktit,
+    cmimi_njesi: item.cmimi_njesi,
+    sasia: item.sasia,
+  }
+
+  if (batch.lloji === 'Transfer') {
+    if (!batch.destination_shteti) throw new AppError(400, ERR_TRANSFER_NEEDS_DESTINATION)
+    return [
+      { ...base, lloji: 'Dalje', shteti: batch.shteti },
+      { ...base, lloji: 'Hyrje', shteti: batch.destination_shteti },
+    ]
+  }
+
+  if (batch.lloji === 'Dalje' && batch.shteti === 'XK' && isMirroredBatch(batch, rows)) {
+    return [
+      { ...base, lloji: 'Dalje', shteti: 'XK' },
+      { ...base, lloji: 'Hyrje', shteti: 'AL' },
+    ]
+  }
+
+  return [{ ...base, lloji: batch.lloji, shteti: batch.shteti }]
+}
+
+function displayRowFromInserted(
+  batch: VeprimBatchRow,
+  inserted: { id: string; lloji: string; shteti: Country }[],
+) {
+  if (batch.lloji === 'Transfer') {
+    return inserted.find((r) => r.lloji === 'Dalje' && r.shteti === batch.shteti)
+  }
+  return inserted.find((r) => r.lloji === batch.lloji && r.shteti === batch.shteti)
+}
+
+async function touchBatchUpdatedAt(supabase: SupabaseClient, batchId: string) {
+  await supabase
+    .from('veprim_batch')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', batchId)
 }
 
 export function registerActionBatchRoutes(app: FastifyInstance, supabase: SupabaseClient) {
@@ -220,16 +276,20 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     const body = ActionBatchPatchSchema.parse(req.body ?? {})
 
-    if (isLegacyBatchId(params.id)) {
-      const result = await updateLegacyBatch(supabase, params.id, body)
-      if ('error' in result && result.error) {
-        reply.code(result.error.includes('nuk u gjet') ? 404 : 400)
-        return { error: result.error }
-      }
-      return { ok: true }
+    const ensured = await ensureRealBatchId(supabase, params.id, {
+      data: body.data,
+      shteti: body.shteti,
+      destination_shteti: body.destination_shteti,
+      ora: body.ora,
+      pershkrimi: body.pershkrimi,
+    })
+    if ('error' in ensured) {
+      reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
+      return { error: ensured.error }
     }
+    const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, params.id)
+    const loaded = await loadBatchRows(supabase, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -272,7 +332,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const { error: batchError } = await supabase
       .from('veprim_batch')
       .update(batchPatch)
-      .eq('id', params.id)
+      .eq('id', batchId)
 
     if (batchError) {
       reply.code(400)
@@ -302,7 +362,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
     }
 
-    return { ok: true }
+    return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
   })
 
   app.patch('/api/action-batches/:id/items/:itemId', async (req, reply) => {
@@ -322,16 +382,14 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       return { error: ERR_NO_UPDATE_FIELDS }
     }
 
-    if (isLegacyBatchId(params.id)) {
-      const result = await updateLegacyBatchItem(supabase, params.id, params.itemId, body)
-      if ('error' in result && result.error) {
-        reply.code(result.error.includes('nuk u gjet') ? 404 : 400)
-        return { error: result.error }
-      }
-      return { ok: true }
+    const ensured = await ensureRealBatchId(supabase, params.id)
+    if ('error' in ensured) {
+      reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
+      return { error: ensured.error }
     }
+    const batchId = ensured.id
 
-    const loaded = await loadBatchRows(supabase, params.id)
+    const loaded = await loadBatchRows(supabase, batchId)
     if ('error' in loaded) {
       reply.code(404)
       return { error: loaded.error }
@@ -372,7 +430,117 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
     }
 
-    return { ok: true }
+    await touchBatchUpdatedAt(supabase, batchId)
+    return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
+  })
+
+  const batchItemBodySchema = z.object({
+    kodi_produktit: z.string().min(1),
+    cmimi_njesi: z.number().nonnegative(),
+    sasia: z.number().int().positive(),
+  })
+
+  app.post('/api/action-batches/:id/items', async (req, reply) => {
+    const params = z.object({ id: z.string().min(1) }).parse(req.params)
+    const body = batchItemBodySchema.parse(req.body ?? {})
+
+    const ensured = await ensureRealBatchId(supabase, params.id)
+    if ('error' in ensured) {
+      reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
+      return { error: ensured.error }
+    }
+    const batchId = ensured.id
+
+    const loaded = await loadBatchRows(supabase, batchId)
+    if ('error' in loaded) {
+      reply.code(404)
+      return { error: loaded.error }
+    }
+
+    const { batch, rows } = loaded
+    const displayRows = rows.filter((r) => isDisplayRow(batch, r))
+    const duplicate = displayRows.some((r) => r.kodi_produktit === body.kodi_produktit)
+    if (duplicate) {
+      reply.code(400)
+      return { error: ERR_DUPLICATE_PRODUCT_IN_ACTION }
+    }
+
+    if (batch.lloji === 'Dalje' || batch.lloji === 'Transfer') {
+      try {
+        await validateStock(supabase, [body], batch.shteti)
+      } catch (e) {
+        reply.code(e instanceof AppError ? e.statusCode : 400)
+        return { error: e instanceof AppError ? e.message : 'Gabim gjate validimit.' }
+      }
+    }
+
+    let insertRows: Record<string, unknown>[]
+    try {
+      insertRows = buildBatchItemInsertRows(batch, rows, body)
+    } catch (e) {
+      reply.code(e instanceof AppError ? e.statusCode : 400)
+      return { error: e instanceof AppError ? e.message : 'Gabim gjate krijimit.' }
+    }
+
+    const { data, error } = await supabase.from('veprimi').insert(insertRows).select('id, lloji, shteti')
+    if (error) {
+      reply.code(400)
+      return { error: error.message }
+    }
+
+    const displayRow = displayRowFromInserted(batch, (data ?? []) as { id: string; lloji: string; shteti: Country }[])
+    if (!displayRow) {
+      reply.code(400)
+      return { error: ERR_PRODUCT_LINE_NOT_FOUND }
+    }
+
+    await touchBatchUpdatedAt(supabase, batchId)
+    return ensured.migrated
+      ? { ok: true, item_id: displayRow.id, batch_id: batchId }
+      : { ok: true, item_id: displayRow.id }
+  })
+
+  app.delete('/api/action-batches/:id/items/:itemId', async (req, reply) => {
+    const params = z
+      .object({ id: z.string().min(1), itemId: z.string().uuid() })
+      .parse(req.params)
+
+    const ensured = await ensureRealBatchId(supabase, params.id)
+    if ('error' in ensured) {
+      reply.code(ensured.error.includes('nuk u gjet') ? 404 : 400)
+      return { error: ensured.error }
+    }
+    const batchId = ensured.id
+
+    const loaded = await loadBatchRows(supabase, batchId)
+    if ('error' in loaded) {
+      reply.code(404)
+      return { error: loaded.error }
+    }
+
+    const { batch, rows } = loaded
+    const displayRows = rows.filter((r) => isDisplayRow(batch, r))
+    if (displayRows.length <= 1) {
+      reply.code(400)
+      return { error: ERR_LAST_PRODUCT_LINE }
+    }
+
+    const primary = rows.find((r) => r.id === params.itemId)
+    if (!primary || !isDisplayRow(batch, primary)) {
+      reply.code(404)
+      return { error: ERR_PRODUCT_LINE_NOT_FOUND }
+    }
+
+    const targets = [primary, ...findSiblingRows(batch, rows, primary)]
+    const ids = targets.map((r) => r.id)
+    const { error } = await supabase.from('veprimi').delete().in('id', ids)
+    if (error) {
+      reply.code(400)
+      return { error: error.message }
+    }
+
+    await touchBatchUpdatedAt(supabase, batchId)
+    return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
   })
 
   app.delete('/api/action-batches/:id', async (req, reply) => {

@@ -209,11 +209,15 @@ export async function updateActionBatch(
     ora?: string | null
     pershkrimi?: string | null
   },
-): Promise<void> {
-  await http<{ ok: true }>(`/action-batches/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
+): Promise<{ batch_id?: string }> {
+  const res = await http<{ ok: true; batch_id?: string }>(
+    `/action-batches/${encodeURIComponent(id)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  )
+  return { batch_id: res.batch_id }
 }
 
 export async function updateActionBatchItem(
@@ -230,6 +234,33 @@ export async function updateActionBatchItem(
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    },
+  )
+}
+
+export async function createActionBatchItem(
+  batchId: string,
+  payload: {
+    kodi_produktit: string
+    cmimi_njesi: number
+    sasia: number
+  },
+): Promise<{ item_id: string }> {
+  const res = await http<{ ok: true; item_id: string }>(
+    `/action-batches/${encodeURIComponent(batchId)}/items`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  )
+  return { item_id: res.item_id }
+}
+
+export async function deleteActionBatchItem(batchId: string, itemId: string): Promise<void> {
+  await http<{ ok: true }>(
+    `/action-batches/${encodeURIComponent(batchId)}/items/${itemId}`,
+    {
+      method: 'DELETE',
     },
   )
 }

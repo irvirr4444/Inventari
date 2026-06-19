@@ -167,6 +167,7 @@ function legacyBatchMeta(batch: LegacyBatch) {
     (max, r) => (r.created_at > max ? r.created_at : max),
     batch.rows[0]?.created_at ?? new Date().toISOString(),
   )
+  const timeMatch = /T(\d{2}):(\d{2})/.exec(created_at)
 
   return {
     id: batch.id,
@@ -174,7 +175,7 @@ function legacyBatchMeta(batch: LegacyBatch) {
     shteti: batch.key.shteti,
     destination_shteti: batch.key.destination_shteti,
     data: batch.key.data,
-    ora: null,
+    ora: timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : null,
     pershkrimi: null,
     totali,
     created_at,
@@ -475,4 +476,183 @@ export async function updateLegacyBatchItem(
   }
 
   return { ok: true as const }
+}
+
+type LegacyItemInput = {
+  kodi_produktit: string
+  cmimi_njesi: number
+  sasia: number
+}
+
+function buildLegacyItemInsertRows(
+  batch: LegacyBatch,
+  bucketRows: VeprimRow[],
+  item: LegacyItemInput,
+): Record<string, unknown>[] {
+  const base = {
+    batch_id: null,
+    data: batch.key.data,
+    kodi_produktit: item.kodi_produktit,
+    cmimi_njesi: item.cmimi_njesi,
+    sasia: item.sasia,
+    created_at: batch.rows[0]?.created_at ?? new Date().toISOString(),
+  }
+
+  if (batch.key.lloji === 'Transfer') {
+    const dest = batch.key.destination_shteti
+    if (!dest) throw new Error('Transfer kerkon destinacion.')
+    return [
+      { ...base, lloji: 'Dalje', shteti: batch.key.shteti },
+      { ...base, lloji: 'Hyrje', shteti: dest },
+    ]
+  }
+
+  const mirrored =
+    batch.key.lloji === 'Dalje' &&
+    batch.key.shteti === 'XK' &&
+    bucketRows.some((r) => r.lloji === 'Hyrje' && r.shteti === 'AL')
+
+  if (mirrored) {
+    return [
+      { ...base, lloji: 'Dalje', shteti: 'XK' },
+      { ...base, lloji: 'Hyrje', shteti: 'AL' },
+    ]
+  }
+
+  return [{ ...base, lloji: batch.key.lloji, shteti: batch.key.shteti }]
+}
+
+export async function createLegacyBatchItem(
+  supabase: SupabaseClient,
+  batchId: string,
+  item: LegacyItemInput,
+) {
+  const resolved = await resolveLegacyBatch(supabase, batchId)
+  if ('error' in resolved) return resolved
+
+  const { batch, bucketRows } = resolved
+  const displayRows = batch.rows.filter((r) => isLegacyDisplayRow(batch, r))
+  const duplicate = displayRows.some((r) => r.kodi_produktit === item.kodi_produktit)
+  if (duplicate) return { error: 'Produkti ekziston tashme ne kete veprim.' as const }
+
+  let insertRows: Record<string, unknown>[]
+  try {
+    insertRows = buildLegacyItemInsertRows(batch, bucketRows, item)
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Gabim gjate krijimit.' }
+  }
+
+  const { data, error } = await supabase.from('veprimi').insert(insertRows).select('id, lloji, shteti')
+  if (error) return { error: error.message }
+
+  const inserted = (data ?? []) as { id: string; lloji: string; shteti: Country }[]
+  const displayRow =
+    batch.key.lloji === 'Transfer'
+      ? inserted.find((r) => r.lloji === 'Dalje' && r.shteti === batch.key.shteti)
+      : inserted.find((r) => r.lloji === batch.key.lloji && r.shteti === batch.key.shteti)
+
+  if (!displayRow) return { error: 'Rreshti i produktit nuk u krijua.' as const }
+  return { ok: true as const, item_id: displayRow.id }
+}
+
+export async function deleteLegacyBatchItem(
+  supabase: SupabaseClient,
+  batchId: string,
+  itemId: string,
+) {
+  const resolved = await resolveLegacyBatch(supabase, batchId)
+  if ('error' in resolved) return resolved
+
+  const { batch, bucketRows } = resolved
+  const displayRows = batch.rows.filter((r) => isLegacyDisplayRow(batch, r))
+  if (displayRows.length <= 1) {
+    return { error: 'Duhet te mbetet te pakten nje produkt ne veprim.' as const }
+  }
+
+  const primary = batch.rows.find((r) => r.id === itemId)
+  if (!primary || !isLegacyDisplayRow(batch, primary)) {
+    return { error: 'Rreshti i produktit nuk u gjet.' as const }
+  }
+
+  const targets = [primary, ...findLegacySiblingRows(batch, bucketRows, primary)]
+  const ids = targets.map((r) => r.id)
+  const { error } = await supabase.from('veprimi').delete().in('id', ids)
+  if (error) return { error: error.message }
+
+  return { ok: true as const }
+}
+
+export type LegacyMigrationMeta = {
+  data?: string
+  shteti?: Country
+  destination_shteti?: Country
+  ora?: string | null
+  pershkrimi?: string | null
+}
+
+function allLegacyBatchRowIds(batch: LegacyBatch, bucketRows: VeprimRow[]) {
+  const ids = new Set<string>()
+  for (const row of batch.rows) {
+    ids.add(row.id)
+    for (const sibling of findLegacySiblingRows(batch, bucketRows, row)) {
+      ids.add(sibling.id)
+    }
+  }
+  return [...ids]
+}
+
+export async function migrateLegacyBatchToRecord(
+  supabase: SupabaseClient,
+  legacyId: string,
+  meta?: LegacyMigrationMeta,
+) {
+  const resolved = await resolveLegacyBatch(supabase, legacyId)
+  if ('error' in resolved) return { error: resolved.error }
+
+  const { batch, bucketRows } = resolved
+  const rowIds = allLegacyBatchRowIds(batch, bucketRows)
+
+  const { data: inserted, error: batchError } = await supabase
+    .from('veprim_batch')
+    .insert({
+      lloji: batch.key.lloji,
+      data: meta?.data ?? batch.key.data,
+      shteti: meta?.shteti ?? batch.key.shteti,
+      destination_shteti:
+        batch.key.lloji === 'Transfer'
+          ? (meta?.destination_shteti ?? batch.key.destination_shteti ?? null)
+          : null,
+      ora: meta?.ora ?? null,
+      pershkrimi: meta?.pershkrimi ?? null,
+    })
+    .select('id')
+    .single()
+
+  if (batchError || !inserted) {
+    return { error: batchError?.message ?? 'Nuk u migrua veprimi.' }
+  }
+
+  const batchId = inserted.id as string
+  const { error: linkError } = await supabase
+    .from('veprimi')
+    .update({ batch_id: batchId })
+    .in('id', rowIds)
+
+  if (linkError) return { error: linkError.message }
+  return { batch_id: batchId }
+}
+
+export type EnsureRealBatchResult =
+  | { id: string; migrated: boolean }
+  | { error: string }
+
+export async function ensureRealBatchId(
+  supabase: SupabaseClient,
+  id: string,
+  meta?: LegacyMigrationMeta,
+): Promise<EnsureRealBatchResult> {
+  if (!isLegacyBatchId(id)) return { id, migrated: false }
+  const result = await migrateLegacyBatchToRecord(supabase, id, meta)
+  if ('error' in result) return { error: result.error ?? 'Nuk u migrua veprimi.' }
+  return { id: result.batch_id, migrated: true }
 }

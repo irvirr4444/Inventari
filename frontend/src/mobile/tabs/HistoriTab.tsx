@@ -85,19 +85,14 @@ export function HistoriTab(props: {
   }, [])
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
+  const { onHeaderChange } = props
 
   React.useEffect(() => {
-    if (screen.mode === 'detail') {
-      props.onHeaderChange({
-        kind: 'sub',
-        title: 'Detajet',
-        onBack: goToList,
-      })
-    } else {
-      props.onHeaderChange({ kind: 'tab' })
+    if (screen.mode === 'list') {
+      onHeaderChange({ kind: 'tab' })
     }
-    return () => props.onHeaderChange({ kind: 'tab' })
-  }, [screen.mode, goToList, props.onHeaderChange])
+    return () => onHeaderChange({ kind: 'tab' })
+  }, [screen.mode, onHeaderChange])
 
   const llojiLabel = history.filters.lloji ?? 'Lloji'
   const shtetiLabel = history.filters.shteti ? countryLabel(history.filters.shteti) : 'Shteti'
@@ -110,6 +105,9 @@ export function HistoriTab(props: {
           products={products}
           onNotify={props.notify}
           onDeleteRequest={(batch) => setDeleteTarget(batch)}
+          onHeaderChange={props.onHeaderChange}
+          onBackToList={goToList}
+          onBatchIdChange={(batchId) => setScreen({ mode: 'detail', batchId })}
         />
       ) : (
         <>

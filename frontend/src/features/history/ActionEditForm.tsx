@@ -9,9 +9,8 @@ import {
   type Produkti,
 } from '../../lib/api'
 import { fmtEuro, productLabel } from '../../lib/format'
-import { invalidateAfterMutation } from '../../lib/invalidateAppData'
-import { isLegacyBatchId } from '../../lib/actionBatch'
 import { formatDisplayTime } from '../../lib/actionMeta'
+import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
@@ -65,11 +64,10 @@ export function ActionEditForm(props: {
   detail: ActionBatchDetail
   products: Produkti[]
   disabled: boolean
-  onSaveComplete: () => void
+  onSaveComplete: (migratedBatchId?: string) => void
   onError: (message: string) => void
 }) {
   const qc = useQueryClient()
-  const isLegacy = isLegacyBatchId(props.detail.id)
   const [data, setData] = React.useState(props.detail.data)
   const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
   const [pershkrimi, setPershkrimi] = React.useState(props.detail.pershkrimi ?? '')
@@ -135,28 +133,29 @@ export function ActionEditForm(props: {
       } else if (!props.detail.mirrored_to_albania) {
         batchPayload.shteti = shteti
       }
-      if (!isLegacy) {
-        batchPayload.ora = ora.trim() ? ora.trim() : null
-        batchPayload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
-      }
+      batchPayload.ora = ora.trim() ? ora.trim() : null
+      batchPayload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
 
-      await updateActionBatch(props.detail.id, batchPayload)
+      const { batch_id: migratedId } = await updateActionBatch(props.detail.id, batchPayload)
+      const batchId = migratedId ?? props.detail.id
 
       const changedItems = localItems.filter((item) => itemChanged(item, itemDrafts[item.id]))
       await Promise.all(
         changedItems.map((item) => {
           const draft = itemDrafts[item.id]
-          return updateActionBatchItem(props.detail.id, item.id, {
+          return updateActionBatchItem(batchId, item.id, {
             kodi_produktit: draft.kodi_produktit,
             cmimi_njesi: Number(draft.cmimi_njesi) || 0,
             sasia: Number(draft.sasia) || 0,
           })
         }),
       )
+
+      return migratedId ? { batch_id: migratedId } : {}
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await invalidateAll()
-      props.onSaveComplete()
+      props.onSaveComplete(result?.batch_id)
     },
     onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
   })
@@ -250,7 +249,7 @@ export function ActionEditForm(props: {
               variant="compact"
               value={ora}
               onChange={setOra}
-              disabled={busy || isLegacy}
+              disabled={busy}
             />
           </div>
           <div className="form-group history-edit-pershkrimi">
@@ -263,7 +262,7 @@ export function ActionEditForm(props: {
               className="input"
               value={pershkrimi}
               onChange={(e) => setPershkrimi(e.target.value)}
-              disabled={busy || isLegacy}
+              disabled={busy}
               maxLength={500}
               placeholder="Opsionale"
             />

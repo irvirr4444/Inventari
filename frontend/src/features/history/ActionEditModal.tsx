@@ -7,7 +7,7 @@ export function ActionEditModal(props: {
   actionId: string
   products: Produkti[]
   onClose: () => void
-  onSaveComplete: () => void
+  onSaveComplete: (migratedBatchId?: string) => void
   onError: (message: string) => void
 }) {
   const detailQuery = useQuery({

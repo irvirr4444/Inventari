@@ -1,16 +1,24 @@
 import type { Country } from './country'
 import {
+  createActionBatchItem,
+  deleteActionBatchItem,
   updateActionBatch,
   updateActionBatchItem,
   type ActionBatchDetail,
   type HistoryActionItem,
 } from './api'
-import { productLabel } from './format'
+import { randomId } from './randomId'
 
 export type HistoryItemDraft = {
   kodi_produktit: string
   cmimi_njesi: string
   sasia: string
+}
+
+export type HistoryEditRow = {
+  key: string
+  isNew: boolean
+  draft: HistoryItemDraft
 }
 
 export type HistoryBatchMetaDraft = {
@@ -21,17 +29,37 @@ export type HistoryBatchMetaDraft = {
   destination: Country | ''
 }
 
-export function draftsFromItems(items: HistoryActionItem[]): Record<string, HistoryItemDraft> {
-  return Object.fromEntries(
-    items.map((item) => [
-      item.id,
-      {
-        kodi_produktit: item.kodi_produktit,
-        cmimi_njesi: String(item.cmimi_njesi),
-        sasia: String(item.sasia),
-      },
-    ]),
-  )
+export type HistoryEditSnapshot = {
+  meta: HistoryBatchMetaDraft
+  rows: HistoryEditRow[]
+}
+
+export function rowsFromDetail(items: HistoryActionItem[]): HistoryEditRow[] {
+  return items.map((item) => ({
+    key: item.id,
+    isNew: false,
+    draft: {
+      kodi_produktit: item.kodi_produktit,
+      cmimi_njesi: String(item.cmimi_njesi),
+      sasia: String(item.sasia),
+    },
+  }))
+}
+
+export function createEmptyEditRow(): HistoryEditRow {
+  return {
+    key: randomId(),
+    isNew: true,
+    draft: { kodi_produktit: '', cmimi_njesi: '', sasia: '1' },
+  }
+}
+
+export function lineTotal(draft: HistoryItemDraft): number {
+  return (Number(draft.cmimi_njesi) || 0) * (Number(draft.sasia) || 0)
+}
+
+export function batchTotal(rows: HistoryEditRow[]): number {
+  return rows.reduce((sum, row) => sum + lineTotal(row.draft), 0)
 }
 
 export function itemChanged(item: HistoryActionItem, draft: HistoryItemDraft): boolean {
@@ -42,33 +70,52 @@ export function itemChanged(item: HistoryActionItem, draft: HistoryItemDraft): b
   )
 }
 
-export function validateHistoryBatchEdits(
-  items: HistoryActionItem[],
-  itemDrafts: Record<string, HistoryItemDraft>,
-): string | null {
-  for (const item of items) {
-    const draft = itemDrafts[item.id]
-    if (!draft?.kodi_produktit) {
+function metaEqual(a: HistoryBatchMetaDraft, b: HistoryBatchMetaDraft): boolean {
+  return (
+    a.data === b.data &&
+    a.ora === b.ora &&
+    a.pershkrimi === b.pershkrimi &&
+    a.shteti === b.shteti &&
+    a.destination === b.destination
+  )
+}
+
+function rowsEqual(a: HistoryEditRow[], b: HistoryEditRow[]): boolean {
+  if (a.length !== b.length) return false
+  return a.every((row, i) => {
+    const other = b[i]
+    if (!other || row.key !== other.key || row.isNew !== other.isNew) return false
+    const d = row.draft
+    const od = other.draft
+    return (
+      d.kodi_produktit === od.kodi_produktit &&
+      d.cmimi_njesi === od.cmimi_njesi &&
+      d.sasia === od.sasia
+    )
+  })
+}
+
+export function isHistoryEditDirty(initial: HistoryEditSnapshot, current: HistoryEditSnapshot): boolean {
+  return !metaEqual(initial.meta, current.meta) || !rowsEqual(initial.rows, current.rows)
+}
+
+export function validateHistoryBatchEdits(rows: HistoryEditRow[]): string | null {
+  for (const row of rows) {
+    if (!row.draft.kodi_produktit) {
       return 'Zgjidh produktin per cdo rresht.'
     }
-    if (Number(draft.sasia) <= 0) {
+    if (Number(row.draft.sasia) <= 0) {
       return 'Sasia duhet te jete > 0.'
     }
-    if (Number(draft.cmimi_njesi) < 0) {
+    if (Number(row.draft.cmimi_njesi) < 0) {
       return 'Cmimi nuk mund te jete negative.'
     }
   }
 
-  const kodis = items.map((item) => itemDrafts[item.id]?.kodi_produktit).filter(Boolean)
+  const kodis = rows.map((row) => row.draft.kodi_produktit).filter(Boolean)
   const duplicate = kodis.find((kodi, i) => kodis.indexOf(kodi) !== i)
   if (duplicate) {
-    const dupItem = items.find((it) => itemDrafts[it.id]?.kodi_produktit === duplicate)
-    return dupItem
-      ? `Ky produkt eshte dy here ne liste: ${productLabel(
-          dupItem.emri_produktit,
-          dupItem.kodi_produktit,
-        )}`
-      : 'Produkti i njejte nuk mund te perseritet ne liste.'
+    return 'Produkti është zgjedhur dy herë.'
   }
 
   return null
@@ -77,11 +124,10 @@ export function validateHistoryBatchEdits(
 export async function saveHistoryBatchEdits(input: {
   detail: ActionBatchDetail
   meta: HistoryBatchMetaDraft
-  itemDrafts: Record<string, HistoryItemDraft>
-  isLegacy: boolean
-}): Promise<void> {
-  const { detail, meta, itemDrafts, isLegacy } = input
-  const validationError = validateHistoryBatchEdits(detail.items, itemDrafts)
+  rows: HistoryEditRow[]
+}): Promise<{ batch_id?: string }> {
+  const { detail, meta, rows } = input
+  const validationError = validateHistoryBatchEdits(rows)
   if (validationError) {
     throw new Error(validationError)
   }
@@ -101,22 +147,53 @@ export async function saveHistoryBatchEdits(input: {
     batchPayload.shteti = meta.shteti
   }
 
-  if (!isLegacy) {
-    batchPayload.ora = meta.ora.trim() ? meta.ora.trim() : null
-    batchPayload.pershkrimi = meta.pershkrimi.trim() ? meta.pershkrimi.trim() : null
+  batchPayload.ora = meta.ora.trim() ? meta.ora.trim() : null
+  batchPayload.pershkrimi = meta.pershkrimi.trim() ? meta.pershkrimi.trim() : null
+
+  const originalIds = new Set(detail.items.map((item) => item.id))
+  const currentExistingIds = new Set(rows.filter((r) => !r.isNew).map((r) => r.key))
+  const deletedIds = [...originalIds].filter((id) => !currentExistingIds.has(id))
+
+  const { batch_id: migratedId } = await updateActionBatch(detail.id, batchPayload)
+  let batchId = migratedId ?? detail.id
+
+  for (const itemId of deletedIds) {
+    await deleteActionBatchItem(batchId, itemId)
   }
 
-  await updateActionBatch(detail.id, batchPayload)
-
-  const changedItems = detail.items.filter((item) => itemChanged(item, itemDrafts[item.id]))
-  await Promise.all(
-    changedItems.map((item) => {
-      const draft = itemDrafts[item.id]
-      return updateActionBatchItem(detail.id, item.id, {
-        kodi_produktit: draft.kodi_produktit,
-        cmimi_njesi: Number(draft.cmimi_njesi) || 0,
-        sasia: Number(draft.sasia) || 0,
+  for (const row of rows) {
+    if (row.isNew) {
+      await createActionBatchItem(batchId, {
+        kodi_produktit: row.draft.kodi_produktit,
+        cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
+        sasia: Number(row.draft.sasia) || 0,
       })
-    }),
+      continue
+    }
+
+    const item = detail.items.find((it) => it.id === row.key)
+    if (item && itemChanged(item, row.draft)) {
+      await updateActionBatchItem(batchId, row.key, {
+        kodi_produktit: row.draft.kodi_produktit,
+        cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
+        sasia: Number(row.draft.sasia) || 0,
+      })
+    }
+  }
+
+  return migratedId ? { batch_id: migratedId } : {}
+}
+
+/** @deprecated use rowsFromDetail */
+export function draftsFromItems(items: HistoryActionItem[]): Record<string, HistoryItemDraft> {
+  return Object.fromEntries(
+    items.map((item) => [
+      item.id,
+      {
+        kodi_produktit: item.kodi_produktit,
+        cmimi_njesi: String(item.cmimi_njesi),
+        sasia: String(item.sasia),
+      },
+    ]),
   )
 }

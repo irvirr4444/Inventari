@@ -6,6 +6,7 @@
 @import './features/dashboard.css';
 @import './features/summary.css';
 @import './components/forms.css';
+@import './components/auth.css';
 @import './components/modals.css';
 @import './features/history.css';
 @import './features/locations.css';

@@ -37,7 +37,13 @@ export async function loginWithPassword(
   await ensureLegacyUserSeeded(supabase, email, password)
 
   const user = await findPerdoruesByEmail(supabase, email)
-  if (!user || !user.aktiv || !user.password_hash) {
+  if (!user || !user.aktiv) {
+    throw new AppError(401, 'Invalid credentials')
+  }
+  if (!user.password_hash && user.google_sub) {
+    throw new AppError(401, 'Account created with Google')
+  }
+  if (!user.password_hash) {
     throw new AppError(401, 'Invalid credentials')
   }
 
@@ -98,8 +104,14 @@ export async function loginWithGoogle(
   clientId: string,
 ): Promise<SessionUser> {
   const client = new OAuth2Client(clientId)
-  const ticket = await client.verifyIdToken({ idToken, audience: clientId })
-  const payload = ticket.getPayload()
+  let payload: { sub?: string; email?: string; name?: string } | undefined
+  try {
+    const ticket = await client.verifyIdToken({ idToken, audience: clientId })
+    payload = ticket.getPayload()
+  } catch {
+    throw new AppError(401, 'Invalid Google token')
+  }
+
   if (!payload?.sub || !payload.email) {
     throw new AppError(401, 'Invalid Google token')
   }

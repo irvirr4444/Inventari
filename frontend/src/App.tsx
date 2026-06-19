@@ -12,7 +12,6 @@ import { useAuth } from './lib/auth/AuthProvider'
 import { useMobileClient } from './hooks/useMobileClient'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
-import { SignupPage } from './features/auth/SignupPage'
 import { LocationsOnboardingPage } from './features/onboarding/LocationsOnboardingPage'
 import { LocationsSettingsPage } from './features/settings/LocationsSettingsPage'
 import { DynamicDashboardPage } from './features/dynamic/DynamicDashboardPage'
@@ -111,13 +110,9 @@ function RequireAuth(props: { children: React.ReactNode }) {
 }
 
 function LoginRoute() {
-  const { refreshSession } = useAuth()
   return (
     <main className="container auth-container">
-      <LoginPage onSuccess={() => refreshSession()} />
-      <p className="muted" style={{ textAlign: 'center', marginTop: 12 }}>
-        Nuk ke llogari? <Link to="/signup">Regjistrohu</Link>
-      </p>
+      <LoginPage />
     </main>
   )
 }
@@ -150,9 +145,7 @@ export default function App() {
           path="/signup"
           element={
             <PublicOnly>
-              <main className="container auth-container">
-                <SignupPage />
-              </main>
+              <Navigate to="/login?mode=signup" replace />
             </PublicOnly>
           }
         />

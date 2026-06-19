@@ -1,0 +1,130 @@
+.auth-mode-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.auth-google-section {
+  margin-top: 4px;
+}
+
+.auth-google-section .auth-divider {
+  margin-top: 20px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e2e8f0);
+}
+
+.auth-google-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.auth-google-facade {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.auth-google-wrap:not(.is-disabled):hover .auth-google-facade {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.auth-google-wrap.is-disabled .auth-google-facade {
+  opacity: 0.65;
+}
+
+.auth-google-wrap.is-disabled .auth-google-native {
+  pointer-events: none;
+}
+
+.auth-google-native {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.01;
+  overflow: hidden;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-google-native iframe {
+  margin: 0 !important;
+  width: 100% !important;
+  min-height: 44px !important;
+}
+
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.auth-google-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.auth-google-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.auth-name-field {
+  display: none;
+}
+
+.auth-name-field.visible {
+  display: block;
+}
+
+.auth-error-slot {
+  margin-top: 4px;
+}

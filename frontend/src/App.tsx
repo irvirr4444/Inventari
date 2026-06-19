@@ -1,7 +1,6 @@
 import * as React from 'react'
 import {
   BrowserRouter,
-  Link,
   Navigate,
   Route,
   Routes,
@@ -61,9 +60,6 @@ function DynamicDashboardShell(props: { isMobile: boolean; onLogout: () => void 
   return (
     <div>
       <div className="app-actions">
-        <Link to="/settings/locations" className="btn">
-          Lokacionet
-        </Link>
         <button type="button" className="btn" onClick={props.onLogout}>
           Dil
         </button>

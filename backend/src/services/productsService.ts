@@ -5,13 +5,16 @@ import {
   ProductUpdateSchema,
 } from '@inventari/shared'
 import type { SessionUser } from '../domain/user.js'
+import { AppError } from '../errors.js'
 import {
   deleteProdukti,
+  findProduktiById,
   insertProdukti,
   listGjendjeForProducts,
   listProduktet,
   updateProdukti,
   upsertGjendjeRows,
+  type ProduktiRow,
 } from '../repositories/produktiRepository.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 import {
@@ -104,7 +107,24 @@ export async function updateProduct(
 ) {
   ProductIdParamsSchema.parse({ id })
   const parsed = ProductUpdateSchema.parse(body)
-  const row = await updateProdukti(supabase, user.id, id, parsed)
+  const { stock, kodi, emri, gjendje_kosove, gjendje_shqiperi } = parsed
+
+  const produktiPatch: Partial<
+    Pick<ProduktiRow, 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'>
+  > = {}
+  if (kodi !== undefined) produktiPatch.kodi = kodi
+  if (emri !== undefined) produktiPatch.emri = emri
+  if (gjendje_kosove !== undefined) produktiPatch.gjendje_kosove = gjendje_kosove
+  if (gjendje_shqiperi !== undefined) produktiPatch.gjendje_shqiperi = gjendje_shqiperi
+
+  let row: ProduktiRow
+  if (Object.keys(produktiPatch).length > 0) {
+    row = await updateProdukti(supabase, user.id, id, produktiPatch)
+  } else {
+    const existing = await findProduktiById(supabase, user.id, id)
+    if (!existing) throw new AppError(404, 'Product not found')
+    row = existing
+  }
 
   if (
     parsed.gjendje_kosove !== undefined ||
@@ -122,6 +142,18 @@ export async function updateProduct(
         sasia: parsed.gjendje_shqiperi ?? row.gjendje_shqiperi,
       },
     ])
+  }
+
+  if (!user.isLegacy && stock) {
+    await upsertGjendjeRows(
+      supabase,
+      user.id,
+      stock.map((s) => ({
+        produkti_id: row.id,
+        lokacioni_id: s.lokacioni_id,
+        sasia: s.sasia,
+      })),
+    )
   }
 
   if (user.isLegacy) {

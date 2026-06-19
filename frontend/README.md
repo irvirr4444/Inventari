@@ -2,7 +2,7 @@
 
 React client for the Inventari inventory platform. This README covers local development and **desktop** product behavior (dashboard at `/` on wide screens). Mobile behavior is summarized in the [Mobile web app](#mobile-web-app) section.
 
-**Multi-tenancy:** the shell branches on session `uiLloji`. **Legacy** users (`legacy_fixed`) see the original Kosovo/Albania dashboard and mobile UI unchanged. **Dynamic** users sign up at `/signup`, complete location onboarding, and use the dynamic dashboard (N locations). See [Authentication & routing](#authentication--routing).
+**Multi-tenancy:** the shell branches on session `uiLloji`. **Legacy** users (`legacy_fixed`) see the original Kosovo/Albania dashboard and mobile UI unchanged. **Dynamic** users sign up on `/login` (Regjistrohu tab), complete location onboarding, then use the dynamic dashboard (N locations). See [Authentication & routing](#authentication--routing).
 
 ## Development
 
@@ -27,20 +27,17 @@ From the repository root:
 
 ```bash
 npm install
-cp frontend/.env.example frontend/.env
+cp frontend/.env.example frontend/.env   # or set VITE_* in repo root .env
 npm run dev
 ```
 
-Or run only the frontend workspace:
+Or copy env from the repo root (Vite reads root `.env` via `envDir`):
 
 ```bash
-npm install
-npm -w frontend run dev
+cp .env.example .env   # if present; or use backend/.env + root .env
 ```
 
-Vite serves the app on `http://localhost:5173` and proxies `/api` to the backend.
-
-Log in with legacy credentials from `backend/.env` (`login_email` / `login_password`), or register at `/signup` for a new account.
+Log in with legacy credentials from `.env` (`login_email` / `login_password`), or use **Regjistrohu** on `/login` for a new dynamic account. Google sign-in appears when `VITE_GOOGLE_CLIENT_ID` is set.
 
 ### Scripts
 
@@ -55,13 +52,24 @@ From the repo root: `npm run dev` starts backend and frontend together. `npm run
 
 ### Environment
 
-Copy `frontend/.env.example` to `frontend/.env`:
+Copy `frontend/.env.example` to `frontend/.env`, or put `VITE_*` variables in the **repo root** `.env` (Vite `envDir` points to the repo root).
 
 ```env
 VITE_API_BASE_URL=/api
+
+# Must match backend GOOGLE_CLIENT_ID for the Google button to appear
+VITE_GOOGLE_CLIENT_ID=
 ```
 
 In development, Vite proxies `/api` to `http://localhost:3001`. In production, set `VITE_API_BASE_URL` to the public API base URL if it differs.
+
+#### Google sign-in (optional)
+
+1. Create a **Web application** OAuth client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. **Authorized JavaScript origins:** `http://localhost:5173` (dev), plus your production frontend URL (`https://…`, no trailing slash). `localhost` is allowed for dev; LAN IPs (`192.168.x.x`) are not.
+3. **Authorized redirect URIs:** usually not required for this app’s ID-token flow; if the console requires one, use the frontend root URL (same as origins), not the API URL.
+4. Set the same client ID in backend `GOOGLE_CLIENT_ID` and frontend `VITE_GOOGLE_CLIENT_ID`.
+5. Set backend `CORS_ORIGIN` to your frontend origin (e.g. `http://localhost:5173`).
 
 ### Project structure
 
@@ -70,9 +78,9 @@ frontend/
   src/
     App.tsx                    Routes, auth gate, legacy vs dynamic shell
     main.tsx                   Bootstrap + providers
-    providers/AppProviders.tsx AuthProvider, React Query, LokacioniProvider (dynamic)
+    providers/AppProviders.tsx AuthProvider; CountryProvider (legacy) or LokacioniProvider (dynamic)
     index.css                  Imports styles/index.css hub
-    styles/                    Design tokens, components, features, responsive
+    styles/                    Design tokens, components (auth.css), features, responsive
     components/                Modal, ConfirmModal, DateInput, OraInput, …
     hooks/                     useSnackbar, useActionItems, feature hooks, useMobileClient
     lib/
@@ -81,22 +89,24 @@ frontend/
       api/auth.ts              login, signup, session, Google
       api/lokacionet.ts        Location CRUD
       auth/AuthProvider.tsx    Session state, refreshSession, logout
+      auth/postAuthRedirect.ts Post-login path helper (dashboard vs onboarding)
       auth/types.ts            SessionUser shape
       lokacioni/               Dynamic location types + provider
     features/
-      auth/                    SignupPage, GoogleSignInButton
+      auth/                    GoogleSignInButton (GIS ID token)
       onboarding/              LocationsOnboardingPage (dynamic gate)
       settings/                LocationsSettingsPage
-      dynamic/                 Dynamic dashboard/mobile (N locations)
-      actions/                 ActionEntryPanel, TransferModal, …
+      dynamic/                 DynamicDashboardPage, Dynamic* panels, history, hooks
+      actions/                 Legacy ActionEntryPanel, TransferModal; shared ActionItemsTable, ActionReviewModal
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
       history/                 HistoryModal, filters, edit submodules
     mobile/                    Legacy mobile UI (XK/AL tabs)
     pages/
       DashboardPage.tsx        Legacy desktop dashboard
-      LoginPage.tsx            Email/password login
-      useDashboardPage.ts      Dashboard state, queries, mutations
+      useDashboardPage.ts      Legacy dashboard state hook
+      useDynamicDashboardPage.ts Dynamic dashboard state hook
+      LoginPage.tsx            Combined login + sign-up card
     …
 packages/shared/               Zod schemas, productLabel, summary builders
 ```
@@ -105,24 +115,83 @@ packages/shared/               Zod schemas, productLabel, summary builders
 
 | Route | Access | Purpose |
 | --- | --- | --- |
-| `/login` | Public | Email/password login |
-| `/signup` | Public | New dynamic account |
+| `/login` | Public | Combined **Hyr** / **Regjistrohu** card (email, password, optional Google) |
+| `/signup` | Public | Redirects to `/login?mode=signup` |
 | `/onboarding/locations` | Auth, dynamic | First-time location setup (redirect until `has_locations`) |
 | `/settings/locations` | Auth, dynamic | Edit locations |
 | `/` | Auth | Legacy or dynamic dashboard (desktop/mobile by viewport) |
 | `/mobile/*` | — | Redirects to `/` |
 
-`AuthProvider` loads `GET /api/session` on mount. Session user includes `uiLloji`, `isLegacy`, and `has_locations`. Legacy users skip onboarding and render `DashboardPage` / `MobileApp` unchanged.
+`AuthProvider` loads `GET /api/session` on mount. Session user includes `uiLloji`, `isLegacy`, and `has_locations`.
+
+- **Legacy** users (`uiLloji === legacy_fixed`) skip onboarding and render `DashboardPage` / `MobileApp`.
+- **Dynamic** users must complete `/onboarding/locations` until `has_locations` is true, then render `DynamicDashboardPage` (N-location panels; no `CountryProvider`).
+
+`AppProviders` branches providers: **legacy** and logged-out users get `CountryProvider` only; **dynamic** users get `LokacioniProvider` only. Dynamic code must not call `useCountry()`.
+
+#### Login page (`LoginPage.tsx`)
+
+Single card on `/login`:
+
+1. **Hyr** / **Regjistrohu** toggle (same `toggle-group` pattern as action card).
+2. Email + **Fjalekalimi**; sign-up mode adds optional **Emri**.
+3. Primary button: **Hyr** or **Krijo Llogari**.
+4. **ose** divider + **Vazhdo me Google** when `VITE_GOOGLE_CLIENT_ID` is set (custom label over Google Identity Services button).
+5. Inline `ErrorAlert` for validation and API errors (no snackbar on the auth screen).
+
+Post-auth redirects (`lib/auth/postAuthRedirect.ts`):
+
+| Case | Destination |
+| --- | --- |
+| Legacy login | `/` |
+| Dynamic user with locations | `/` |
+| New sign-up or dynamic user without locations | `/onboarding/locations` |
+
+API client: `lib/api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` (cookie session, `credentials: 'include'`).
+
+Not implemented in v1: forgot-password, social providers other than Google.
 
 ### Desktop UI architecture
 
-On viewports **wider than the mobile breakpoint** (`useMobileClient`), `App.tsx` renders `DashboardPage` — a single-screen dashboard composed from feature modules under `src/features/`.
+On viewports **wider than the mobile breakpoint** (`useMobileClient`):
+
+| Account | Desktop component | Provider |
+| --- | --- | --- |
+| Legacy | `DashboardPage` + `useDashboardPage` | `CountryProvider` |
+| Dynamic | `DynamicDashboardPage` + `useDynamicDashboardPage` | `LokacioniProvider` |
+
+Both dashboards share the same layout pattern (action card, products + summary grid) and reuse shared pieces (`ActionItemsTable`, `ActionMetaFields`, `ActionReviewModal`, `ConfirmModal`, `Snackbar`) without `isLegacy` branches inside legacy feature files — dynamic behavior lives in `features/dynamic/*` siblings.
+
+#### Legacy dashboard (`DashboardPage`)
 
 The screen has three areas:
 
-1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, optional **Ora** (`HH:mm`) and **Pershkrimi** (max 500 chars), product rows, total, and **Finalizo Veprimin**. **Historiku** opens the action history modal.
-2. **Products card** — sortable product table, add/edit/delete, Excel export.
-3. **Summary panel** — per-country totals for a date range and Excel export.
+1. **Action card** — `Hyrje` / `Dalje` with **Shteti** selector (Kosovo / Albania), date, optional **Ora** and **Pershkrimi**, product rows, **Historiku** → `HistoryModal`.
+2. **Products card** — Kosovo + Albania stock columns, sort, search, Excel export.
+3. **Summary panel** — per-country Hyrje/Dalje totals for a date range + Permbledhje Excel.
+
+#### Dynamic dashboard (`DynamicDashboardPage`)
+
+Same three-area layout, keyed by **location** instead of country:
+
+| Area | Component | Notes |
+| --- | --- | --- |
+| Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` (pills ≤4 locations, `<select>` beyond); `createDynamicActionBatch` with `lokacioni_id` |
+| Transfer | `DynamicTransferModal` | `Nga` / `Ne` location pickers with `excludeIds` |
+| Products | `DynamicProductsPanel` | One stock column per active location (by `rradhitja`); `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3 |
+| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, table >3; `analyticsSummary` returns `Record<locationId, totals>` |
+| Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route |
+| Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }` instead of `country` |
+
+**Location settings** (`LocationsEditor` in onboarding/settings): card UI with emoji picker + name only — internal `kodi` is derived server-side on create/rename and is not shown in the UI. Add/deactivate locations; per-row **Shfaq ne Permbledhje** toggle (`patchLokacioni({ show_in_summary })`).
+
+**Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`.
+
+**Styles:** `styles/features/dynamic-dashboard.css` (stock grid/table, summary table, history location checkboxes).
+
+Dynamic **mobile** UI is not implemented yet (`features/dynamic/mobile/` remains a follow-up); small viewports still use legacy `MobileApp` for dynamic users until that ships.
+
+#### Shared desktop behavior (legacy + dynamic)
 
 The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps a fixed height (product rows scroll inside the table after 2 lines), the products table fills its card and scrolls internally, and the summary panel stays compact below.
 
@@ -132,7 +201,7 @@ The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps 
 - Optional **Ora** and **Pershkrimi** sit below the date row (`ActionMetaFields`); **Ora** uses `OraInput` with a portal time picker (`TimePickerPopover`, `HH:mm`). Empty values are omitted from `POST /api/actions`. Both are stored on `veprim_batch` (one set per action/transfer batch).
 - **Finalizo Veprimin** validates line items first; invalid input shows a **red error snackbar** (e.g. `Sasia duhet te jete > 0.`) without growing the action card.
 - On success, validation opens **`ActionReviewModal`** — a large review sheet (`max-width: 960px`, ~10 visible row slots) instead of the small `ConfirmModal` text dialog.
-- Review modal header: title, `LlojiBadge` (Hyrje/Dalje), country flag + label, formatted action date (with Ora when set), product count; **Pershkrimi** shown below when set (`ActionMetaDisplay`).
+- Review modal header: title, `LlojiBadge` (Hyrje/Dalje), **country flag + label** (legacy) or **location name + emoji** (dynamic via `location` prop), formatted action date, product count; **Pershkrimi** shown below when set (`ActionMetaDisplay`).
 - Review body: fixed column headers; scrollable list with **horizontal dividers on every row slot**. When fewer than 10 products, **empty placeholder rows** fill the remaining slots so the table always looks full (Google-picker style). Scroll inside the list only when there are **more than 10** products.
 - Each line shows read-only **`Emri (Kodi)`** plus editable **`NumericInput`** for `Cmimi/Njesi` and `Sasia`; line total and footer total update live. Edits write back to the action card state immediately.
 - Footer: **Totali i veprimit**, **Anulo**, **Finalizo**. Confirm re-validates; errors stay in the modal with a red snackbar. Success closes the modal, shows a green snackbar, and resets the action form.
@@ -149,21 +218,26 @@ Desktop product lines use the same controls everywhere:
 
 #### Historiku (action history)
 
-- Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal` (~**1200px** wide).
-- **Filter bar** (`HistoryFilterBar`) — horizontal grouped row with uppercase labels; wraps to two rows on narrow widths.
-  - **Server-side** (API + page reset): **Veprime** (type), **Shteti**, **Data** (`Nga` / `Deri` date pickers).
-  - **Client-side** (current page only, no extra API calls): **Ora** range (`OraInput`), **Pershkrimi** search (substring, case-insensitive), **Totali (€)** Min/Max, **Produkte** count Min/Max.
-  - **Pershkrimi** input flex-grows to fill the first row; **× Pastro filtrat** appears when any filter is active and resets all fields.
-  - Filter logic lives in `lib/historyClientFilters.ts`; state is split in `HistoryModal` (server vs client filters).
+**Legacy:** `HistoryModal` with **Shteti** server filter and `CountryCell` display.
+
+**Dynamic:** `DynamicHistoryModal` with **Lokacioni** column (`DynamicLocationCell`), `DynamicHistoryFilterBar` (multi-checkbox location filter on the client), and `DynamicActionEditModal` / `lib/dynamicHistoryBatchEdit.ts` for saves with `lokacioni_id`.
+
+- Button on the right of the Hyrje/Dalje toggle row opens the history modal (~**1200px** wide).
+- **Filter bar** — horizontal grouped row; wraps on narrow widths.
+  - **Server-side** (API + page reset): **Veprime** (type), **Data** (`Nga` / `Deri`).
+  - **Legacy** (`HistoryFilterBar`): **Shteti** (XK/AL) server filter.
+  - **Dynamic** (`DynamicHistoryFilterBar`): **Lokacioni** multi-checkbox filter (client-side, `historyClientFilters.locationIds`).
+  - **Client-side** (current page): **Ora** range, **Pershkrimi** search, **Totali** / **Produkte** Min/Max.
+  - **× Pastro filtrat** when any filter is active. Logic in `lib/historyClientFilters.ts`.
 - Paginated table (**8 per page**); pagination total reflects server filters only.
-- List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti**, **Produkte**, **Totali**, **Veprime** (read-only in the list; empty Ora/Pershkrimi show `—`).
-- **Data**, **Ora**, and **Pershkrimi** are left-aligned; **Produkte**, **Totali**, and **Veprime** are right-aligned. Edit/delete icon buttons sit flush right in **Veprime**.
+- List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti** (legacy) or **Lokacioni** (dynamic), **Produkte**, **Totali**, **Veprime**.
+- Empty Ora/Pershkrimi show `—` in the list.
 - **Pershkrimi** gets the widest meta column (~**22%**); long text ellipsizes with the full value in a `title` tooltip.
 - **Produkte** shows the line-item **count only** (e.g. `3`), not `3 produkte`. Column is compact (~**8%**); **Totali** is wider (~**11%**) for euro amounts.
-- **Shteti** for transfers renders inline as `[flag] Kosove → Shqiperi [flag]` — both flags stay next to the route text (not pinned to the column edge). Non-transfer rows show one flag + country label.
-- Batch meta cells (`HistoryBatchMetaDisplay`) and badges (`historyBadges`: `LlojiBadge`, `CountryCell`) keep list markup consistent.
+- **Shteti** (legacy): transfers show `[flag] Kosove → Shqiperi [flag]`. **Lokacioni** (dynamic): `DynamicLocationCell` with emoji + custom names.
+- Batch meta: `HistoryBatchMetaDisplay`; badges: `LlojiBadge`, `CountryCell` (legacy) or location labels (dynamic).
 - Expand a row to view product line items; multiple rows can stay expanded at once.
-- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) to edit batch **Data**, **Ora**, **Pershkrimi**, country/route, and product lines. All batches are editable — pre-batch rows (`legacy:…` ids) **auto-migrate** to a real `veprim_batch` on save and receive a normal UUID.
+- **Ndrysho** opens `ActionEditModal` (legacy) or `DynamicActionEditModal` (dynamic) to edit batch meta and product lines. Pre-batch `legacy:…` ids **auto-migrate** on save.
 - Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njesi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
 - Edit row uses `ProductSearchSelect` + `NumericInput`, matching the main action form.
 - **Fshi** deletes the whole action after confirmation.
@@ -174,29 +248,24 @@ Desktop product lines use the same controls everywhere:
 
 Transfer is separate from the main action form:
 
-- The **Transfero** button opens `TransferModal`.
-- The modal contains route selectors (`Nga` / `Ne`), action date, optional **Ora** (`OraInput`) / **Pershkrimi**, the same `ActionItemsTable` as normal actions, total, and **Finalizo Transfertën**.
-- The country chosen in `Nga` is disabled in `Ne`.
-- Submit opens a **confirmation dialog** stacked above the transfer modal, then sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
-- On success: transfer modal closes, **green snackbar**, products and summary refresh.
-- Insufficient-stock errors show the full product label, e.g. `CONCEPTASE (X 10 ML,STD) (6)`.
+- **Legacy:** `TransferModal` — `Nga` / `Ne` country selectors (`CountrySelect`); `POST /api/actions` with `shteti` + `destination_shteti`.
+- **Dynamic:** `DynamicTransferModal` — `DynamicLocationSelect` for both ends; `createDynamicActionBatch` with `lokacioni_id` + `destination_lokacioni_id`.
+- Shared: action date, optional **Ora** / **Pershkrimi**, `ActionItemsTable`, total, **Finalizo Transfertën**, stacked `ConfirmModal` on finalize.
+- On success: modal closes, green snackbar, products and summary refresh.
 
 #### Products card
 
-- Search field in the header filters the table by **kodi** or **emri** (live, case-insensitive).
-- Product pickers list products sorted by **kodi** (numeric-aware).
-- **Add** / **edit** open `ProductFormModal` with:
-  - Kod + Emri in a two-column row.
-  - **Gjendje** as two side-by-side cards (Kosova / Shqiperia): flag + country label on top, full-width `NumericInput` below (placeholder `0` when stock is zero).
-  - **×** close in the modal header; **Anulo** / **Ruaj** in the footer.
-- On successful **create** or **edit**: modal closes and a **green snackbar** confirms (`Produkti u shtua…` / `Produkti u perditesua…`).
-- **Delete** uses `ConfirmModal` (**Anulo** neutral, confirm button red).
+- Search field filters by **kodi** or **emri** (live, case-insensitive); pickers sorted by **kodi**.
+- **Legacy:** `ProductsPanel` + `ProductFormModal` — Kosovo / Shqiperia stock cards; `updateProduct` with `gjendje_kosove` / `gjendje_shqiperi`.
+- **Dynamic:** `DynamicProductsPanel` + `DynamicProductFormModal` — one column per location; stock grid (≤3 locations) or table (>3); `updateDynamicProduct` with `stock: [{ lokacioni_id, sasia }]`. Create seeds all locations via API; optional PATCH sets initial stock.
+- **Delete:** `ConfirmModal`. Success → green snackbar.
 
 #### Summary panel (Permbledhje)
 
-- One API call returns totals for **both** Kosovo and Albania for the selected date range.
-- **Transfers** are included in the same buckets as normal movements: source country **Dalje**, destination country **Hyrje** (no separate transfer columns).
-- Totals filter by **action date** (`Data e Veprimit`), not created-at — ensure **Deri** includes the transfer date to see it in the summary.
+- **Legacy:** `SummaryPanel` — one API call returns **XK** + **AL** totals; transfers count as Dalje (source) / Hyrje (destination).
+- **Dynamic:** `DynamicSummaryPanel` — totals keyed by `lokacioni_id` for locations with `show_in_summary`; same date-range semantics.
+- Totals use **action date** (`Data e Veprimit`), not `created_at`.
+- Excel: same `exportUrl('xlsx', { from, to })` — backend branches legacy template vs dynamic **Veprime** + **Permbledhje** pivot sheets.
 
 #### Feedback (snackbars)
 
@@ -214,10 +283,12 @@ Transfer is separate from the main action form:
 - `features/actions/ActionReviewModal` — large finalize review for Hyrje/Dalje (desktop).
 - `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
 - `components/ProductSearchSelect`, `components/NumericInput`, `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
-- `hooks/useActionItems` — line-item add/remove/validate (used twice: action + transfer).
-- `hooks/useSnackbar` — toast state + auto-dismiss (dashboard + login).
-- `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
-- `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
+- `hooks/useActionItems` — line-item add/remove/validate (action + transfer).
+- `hooks/useSnackbar` — toast state + auto-dismiss.
+- `pages/useDashboardPage.ts` — legacy dashboard orchestration.
+- `pages/useDynamicDashboardPage.ts` — dynamic dashboard orchestration.
+- `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save path.
+- `lib/queryKeys` + `lib/invalidateAppData` — React Query cache updates.
 
 Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql` then `docs/sql/APPLY_08_through_11.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
@@ -260,10 +331,11 @@ src/mobile/
 
 **Shared libs/hooks** (used by desktop and mobile):
 
-- `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches`
-- `lib/historyClientFilters.ts` — client-side Historiku filters (desktop modal + mobile advanced panel)
-- `lib/historyBatchEdit.ts` — batch edit validation/save orchestration (mobile Histori detail; ordered rows, dirty check, add/update/delete lines)
-- Desktop `useDashboardPage.ts` composes these; mobile tabs call them directly.
+- `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches` — legacy desktop/mobile
+- `useDynamicProductsQuery`, `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud` — dynamic desktop only
+- `lib/historyClientFilters.ts` — client-side Historiku filters (`locationIds` for dynamic)
+- `lib/historyBatchEdit.ts` — legacy history edit save
+- `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save (`lokacioni_id`)
 
 Design reference: [MOBILE_DESIGN_PROMPT.md](../MOBILE_DESIGN_PROMPT.md) at repo root.
 
@@ -277,24 +349,44 @@ Main endpoints used by the UI:
 | --- | --- |
 | `api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` | Authentication |
 | `api/lokacionet.ts` — CRUD | Dynamic user locations |
-| `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Product CRUD |
-| `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
-| `listActionBatches` / `getActionBatch` | Paginated history list and detail |
-| `updateActionBatch` / item routes / `deleteActionBatch` | Edit or delete past actions |
-| `analyticsSummary` | Summary panel numbers |
-| `exportProductsUrl` / `exportUrl` | Excel downloads |
+| `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Legacy product CRUD |
+| `listDynamicProducts` / `updateDynamicProduct` | Dynamic product list + PATCH with `stock[]` |
+| `createActionBatch` | Legacy `Hyrje`, `Dalje`, `Transfer` (`shteti`) |
+| `createDynamicActionBatch` | Dynamic actions (`lokacioni_id`, optional `destination_lokacioni_id`) |
+| `listActionBatches` / `getActionBatch` | History list/detail (`lokacioni_id`, labels for dynamic) |
+| `updateActionBatch` | Meta patch — `shteti` (legacy) or `lokacioni_id` (dynamic) |
+| `analyticsSummary` | `SummaryByCountry` (legacy) or `SummaryByLocation` (dynamic) |
+| `exportProductsUrl` / `exportDynamicProductsUrl` / `exportUrl` | Excel downloads |
 
-Transfer payload shape:
+Transfer payload (legacy):
 
 ```ts
 createActionBatch({
   lloji: 'Transfer',
-  shteti: 'XK',              // source country
-  destination_shteti: 'AL',  // destination country
+  shteti: 'XK',
+  destination_shteti: 'AL',
   data: '2026-06-17',
-  ora: '09:30',              // optional HH:mm
-  pershkrimi: '…',           // optional, max 500 chars
+  ora: '09:30',
+  pershkrimi: '…',
   items: [{ kodi_produktit, cmimi_njesi, sasia }],
+})
+```
+
+Dynamic action / transfer:
+
+```ts
+createDynamicActionBatch({
+  lloji: 'Hyrje',
+  lokacioni_id: '<uuid>',
+  data: '2026-06-17',
+  items: [{ kodi_produktit, cmimi_njesi, sasia }],
+})
+
+createDynamicActionBatch({
+  lloji: 'Transfer',
+  lokacioni_id: '<from-uuid>',
+  destination_lokacioni_id: '<to-uuid>',
+  items: […],
 })
 ```
 
@@ -316,8 +408,10 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `components/stock-badges.css` | Stock badges |
 | `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
 | `features/summary.css` | Permbledhje panel |
-| `features/history.css` | Historiku modal (horizontal filter bar, fixed column widths, alignment, transfer route flags), edit subtable, inline edit row highlight |
-| `responsive.css` | Breakpoints (stock cards stack on narrow desktop widths) |
+| `features/history.css` | Historiku modal filters, columns, edit subtable |
+| `features/locations.css` | Location pills, onboarding/settings cards, emoji picker |
+| `features/dynamic-dashboard.css` | Dynamic stock grid/table, summary table, history location filters |
+| `responsive.css` | Breakpoints |
 
 - Dashboard layout is viewport-locked with internal scrolling in the action table (2 rows), products table, and review modal list (10 row slots; scroll only when >10 products).
 - Historiku filter bar uses `.history-filters-bar` with grouped controls (32px height, vertical separators, labeled fields). Pershkrimi stretches on row 1; Totali/Produkte sit on row 2.
@@ -337,10 +431,10 @@ The goal is not to replace Excel as an output. The goal is to stop running the b
 
 ## What It Does
 
-- Tracks products by code and name.
-- Keeps separate stock quantities for Kosovo and Albania.
-- Records stock entries (`Hyrje`), exits (`Dalje`), and country-to-country transfers via the **Transfero** popup.
-- **Historiku** modal to view, filter (type/country/date + client-side Ora/Pershkrimi/Totali/Produkte), edit, and delete past actions.
+- **Legacy accounts:** track products with separate Kosovo and Albania stock; country-based actions and summary.
+- **Dynamic accounts:** configurable locations (custom names/emojis), per-location stock, N-column products table, location-keyed summary and history.
+- Records stock entries (`Hyrje`), exits (`Dalje`), and transfers via **Transfero** popup.
+- **Historiku** — view, filter, edit, delete past actions (country or location depending on account type).
 - Calculates totals automatically from quantity and unit price.
 - Shows live product stock in a sortable table.
 - Shows summary numbers for each country over a selected date range.
@@ -420,21 +514,24 @@ This section describes the platform from a data and workflow perspective: what t
 
 ### Authentication
 
-The platform starts with a login step (`/login`). New users can register at `/signup` (dynamic accounts with configurable locations).
+The platform starts at `/login` — a single card with **Hyr** (sign in) and **Regjistrohu** (sign up) modes. `/signup` redirects to `/login?mode=signup`.
 
 Input fields:
 
-- `email`
-- `password`
+- **Sign in:** `email`, `password` (`Fjalekalimi`)
+- **Sign up:** optional `emri`, `email`, `password` (min 8 characters)
 
-Optional: Google sign-in when `GOOGLE_CLIENT_ID` is configured on the backend.
+Optional: **Vazhdo me Google** when `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) match the same Google Cloud Web client ID.
 
 Legacy deployment: use `login_email` / `login_password` from `.env` (seeded once via `npm run seed:legacy-user -w backend`).
+
+Google-only accounts (no password hash) receive a distinct API error if password login is attempted; the UI shows a message to use Google sign-in.
 
 Purpose:
 
 - Confirms that the user is allowed to access the inventory system.
 - Keeps inventory data behind a controlled, tenant-scoped session instead of exposing it publicly.
+- New dynamic accounts complete location onboarding before the main dashboard.
 
 ### Product Creation
 
@@ -829,14 +926,15 @@ Purpose:
 
 ## Data Flow
 
-1. User logs in (legacy or signup).
-2. User creates products.
-3. User records stock movements.
-4. The backend validates the input and scopes data by `pronari_id`.
-5. The database stores products and action history.
-6. Stock quantities are updated (legacy columns and/or `gjendje` table).
-7. The frontend refreshes product and summary data.
-8. The user views live numbers or downloads Excel reports.
+1. User signs in or signs up at `/login` (password or Google).
+2. Dynamic new users add locations at `/onboarding/locations`, then reach the dashboard.
+3. User creates products.
+4. User records stock movements.
+5. The backend validates the input and scopes data by `pronari_id`.
+6. The database stores products and action history.
+7. Stock quantities are updated (legacy columns and/or `gjendje` table).
+8. The frontend refreshes product and summary data.
+9. The user views live numbers or downloads Excel reports.
 
 ## System Boundary
 

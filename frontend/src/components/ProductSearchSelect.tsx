@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import type { Produkti } from '../lib/api'
+import type { ProductListItem } from '../lib/api'
 import { productLabel, sortProductsByKodi } from '../lib/format'
 import { filterProductsByQuery } from '../lib/products'
 
@@ -30,7 +30,7 @@ function computeListPosition(trigger: HTMLElement): ListPosition {
 }
 
 export function ProductSearchSelect(props: {
-  products: Produkti[]
+  products: ProductListItem[]
   value: string
   onChange: (kodi: string) => void
   disabledKodis?: string[]

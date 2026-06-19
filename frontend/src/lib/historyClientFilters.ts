@@ -10,6 +10,7 @@ export type HistoryServerFilters = {
 }
 
 export type HistoryClientFilters = {
+  locationIds: string[]
   oraFrom: string
   oraDeri: string
   pershkriminQuery: string
@@ -20,6 +21,7 @@ export type HistoryClientFilters = {
 }
 
 export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
+  locationIds: [],
   oraFrom: '',
   oraDeri: '',
   pershkriminQuery: '',
@@ -31,6 +33,7 @@ export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
 
 export function hasActiveClientFilters(filters: HistoryClientFilters): boolean {
   return (
+    filters.locationIds.length > 0 ||
     filters.oraFrom.trim() !== '' ||
     filters.oraDeri.trim() !== '' ||
     filters.pershkriminQuery.trim() !== '' ||
@@ -72,8 +75,10 @@ export function applyHistoryClientFilters(
   const hasPershkrimiFilter = pershkriminQuery !== ''
   const hasTotaliFilter = totaliMin !== null || totaliMax !== null
   const hasProdukteFilter = produkteMin !== null || produkteMax !== null
+  const locationFilter = filters.locationIds
 
   if (
+    locationFilter.length === 0 &&
     !hasOraFilter &&
     !hasPershkrimiFilter &&
     !hasTotaliFilter &&
@@ -83,6 +88,11 @@ export function applyHistoryClientFilters(
   }
 
   return batches.filter((batch) => {
+    if (locationFilter.length > 0) {
+      const batchLoc = batch.lokacioni_id
+      if (!batchLoc || !locationFilter.includes(batchLoc)) return false
+    }
+
     if (hasOraFilter) {
       const batchOra = normalizeOraInput(batch.ora)
       if (batchOra === undefined) return false

@@ -11,7 +11,6 @@ export async function listLokacionet(opts?: {
 
 export async function createLokacioni(input: {
   emri: string
-  kodi: string
   flag_emoji?: string | null
   rradhitja?: number
 }): Promise<Lokacioni> {
@@ -25,7 +24,7 @@ export async function createLokacioni(input: {
 export async function patchLokacioni(
   id: string,
   patch: Partial<
-    Pick<Lokacioni, 'emri' | 'kodi' | 'flag_emoji' | 'rradhitja' | 'show_in_summary' | 'aktiv'>
+    Pick<Lokacioni, 'emri' | 'flag_emoji' | 'rradhitja' | 'show_in_summary' | 'aktiv'>
   >,
 ): Promise<{ lokacioni: Lokacioni; stock_warning?: string }> {
   return http(`/lokacionet/${id}`, {

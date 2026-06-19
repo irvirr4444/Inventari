@@ -1,0 +1,124 @@
+.dynamic-stock-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.dynamic-stock-table-wrap {
+  margin-top: 8px;
+}
+
+.dynamic-stock-table {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.dynamic-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.dynamic-summary-table-wrap {
+  margin-top: 12px;
+}
+
+.dynamic-history-location-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-width: 420px;
+}
+
+.dynamic-history-location-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dynamic-history-locations {
+  min-width: 200px;
+}
+
+.locations-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.locations-summary-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Dynamic products table — stock column headers (emoji + label + sort arrow) */
+.products-table-dynamic {
+  table-layout: fixed;
+}
+
+.products-table-dynamic col.products-col-kodi {
+  width: 10ch;
+  max-width: 10ch;
+}
+
+.products-table-dynamic .product-kodi-cell {
+  width: 10ch;
+  max-width: 11ch;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+
+.products-table-dynamic .product-kodi-cell .product-text {
+  font-variant-numeric: tabular-nums;
+}
+
+.products-table-dynamic .sort-header-location {
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 6px;
+  min-width: 0;
+}
+
+.products-table-dynamic .sort-header-location-badge {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.products-table-dynamic .sort-header-location-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.products-table-dynamic .sort-header-location-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.products-table-dynamic .sort-header-location:hover .sort-header-location-label {
+  color: var(--text);
+}
+
+.products-table-dynamic .sort-header-location .sort-arrow {
+  flex-shrink: 0;
+  min-width: 12px;
+}
+
+.products-table-dynamic .stock-badge[title] {
+  cursor: help;
+}

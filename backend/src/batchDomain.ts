@@ -3,6 +3,8 @@ import type { BatchLloji, Country } from '@inventari/shared'
 export type VeprimBatchLike = {
   lloji: BatchLloji
   shteti: Country
+  lokacioni_id?: string | null
+  destination_lokacioni_id?: string | null
 }
 
 export type VeprimRowLike = {
@@ -10,9 +12,17 @@ export type VeprimRowLike = {
   lloji: 'Hyrje' | 'Dalje'
   shteti: Country
   kodi_produktit: string
+  lokacioni_id?: string | null
 }
 
 export function isDisplayRow(batch: VeprimBatchLike, row: VeprimRowLike) {
+  if (batch.lokacioni_id) {
+    if (batch.lloji === 'Transfer') {
+      return row.lloji === 'Dalje' && row.lokacioni_id === batch.lokacioni_id
+    }
+    return row.lloji === batch.lloji && row.lokacioni_id === batch.lokacioni_id
+  }
+
   if (batch.lloji === 'Transfer') {
     return row.lloji === 'Dalje' && row.shteti === batch.shteti
   }

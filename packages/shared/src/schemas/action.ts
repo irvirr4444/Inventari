@@ -74,6 +74,8 @@ export const ActionBatchPatchSchema = z.object({
   data: z.string().optional(),
   shteti: CountrySchema.optional(),
   destination_shteti: CountrySchema.optional(),
+  lokacioni_id: z.string().uuid().optional(),
+  destination_lokacioni_id: z.string().uuid().optional(),
   ora: z
     .union([z.string(), z.null()])
     .optional()

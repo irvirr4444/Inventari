@@ -10,5 +10,6 @@
 @import './components/modals.css';
 @import './features/history.css';
 @import './features/locations.css';
+@import './features/dynamic-dashboard.css';
 @import './components/stock-badges.css';
 @import './responsive.css';

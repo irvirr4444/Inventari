@@ -8,15 +8,11 @@ import { useAuth } from '../lib/auth/AuthProvider'
 function ConditionalProviders(props: { children: React.ReactNode }) {
   const { user } = useAuth()
 
-  return (
-    <CountryProvider>
-      {user && !user.isLegacy ? (
-        <LokacioniProvider>{props.children}</LokacioniProvider>
-      ) : (
-        props.children
-      )}
-    </CountryProvider>
-  )
+  if (user && !user.isLegacy) {
+    return <LokacioniProvider>{props.children}</LokacioniProvider>
+  }
+
+  return <CountryProvider>{props.children}</CountryProvider>
 }
 
 const queryClient = new QueryClient()

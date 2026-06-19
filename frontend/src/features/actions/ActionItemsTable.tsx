@@ -1,4 +1,4 @@
-import type { Produkti } from '../../lib/api'
+import type { ProductListItem } from '../../lib/api'
 import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { effectiveSasia } from '../../types/actionItem'
@@ -20,7 +20,7 @@ function ActionTableColgroup(props: { widths: readonly string[] }) {
 
 export function ActionItemsTable(props: {
   items: ActionItemDraft[]
-  products: Produkti[]
+  products: ProductListItem[]
   onUpdate: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onRemove: (key: string) => void
 }) {

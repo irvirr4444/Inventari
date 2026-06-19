@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { CreateLokacioniSchema, PatchLokacioniSchema } from '@inventari/shared'
 import { z } from 'zod'
 import { parseOrThrow, isAppError } from '../errors.js'
 import {
@@ -7,22 +8,6 @@ import {
   listUserLokacionet,
   patchUserLokacioni,
 } from '../services/lokacioniService.js'
-
-const CreateLokacioniSchema = z.object({
-  emri: z.string().min(1),
-  kodi: z.string().min(1).max(8),
-  flag_emoji: z.string().max(8).optional().nullable(),
-  rradhitja: z.number().int().nonnegative().optional(),
-})
-
-const PatchLokacioniSchema = z.object({
-  emri: z.string().min(1).optional(),
-  kodi: z.string().min(1).max(8).optional(),
-  flag_emoji: z.string().max(8).optional().nullable(),
-  rradhitja: z.number().int().nonnegative().optional(),
-  show_in_summary: z.boolean().optional(),
-  aktiv: z.boolean().optional(),
-})
 
 const LokacioniIdParamsSchema = z.object({ id: z.string().uuid() })
 

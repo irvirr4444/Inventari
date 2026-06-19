@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
+import { buildSummaryByLocation, CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
 import { z } from 'zod'
 import { AppError } from '../errors.js'
 import type { SessionUser } from '../domain/user.js'
@@ -18,6 +18,7 @@ import {
   fetchExportLegacyProducts,
   fetchExportVeprimet,
 } from '../repositories/batchRepository.js'
+import { listVeprimetForAnalytics } from '../repositories/veprimiRepository.js'
 
 function csvEscape(value: unknown) {
   const s = String(value ?? '')
@@ -177,6 +178,33 @@ async function exportDynamicInventariXlsx(
   styleHeaderRow(movements)
   applyBordersToDataRows(movements, 2)
   autoSizeColumns(movements, 120)
+
+  const summaryRows = await listVeprimetForAnalytics(supabase, user.id, query)
+  const summary = buildSummaryByLocation(
+    summaryRows.map((r) => ({
+      lloji: r.lloji as 'Hyrje' | 'Dalje',
+      lokacioni_id: r.lokacioni_id ?? '',
+      sasia: r.sasia,
+      totali: r.totali,
+    })),
+    lokacionet.map((l) => l.id),
+  )
+
+  const pivot = workbook.addWorksheet('Permbledhje')
+  pivot.addRow(['Lokacioni', 'Hyrje Sasia', 'Hyrje Vlera', 'Dalje Sasia', 'Dalje Vlera'])
+  for (const loc of lokacionet) {
+    const s = summary[loc.id]
+    pivot.addRow([
+      loc.emri,
+      s?.in_qty ?? 0,
+      s?.in_value ?? 0,
+      s?.out_qty ?? 0,
+      s?.out_value ?? 0,
+    ])
+  }
+  styleHeaderRow(pivot)
+  applyBordersToDataRows(pivot, 2)
+  autoSizeColumns(pivot, 120)
 
   return {
     buffer: await workbook.xlsx.writeBuffer(),

@@ -1,4 +1,4 @@
-import type { Produkti } from '../../lib/api'
+import type { ProductListItem } from '../../lib/api'
 import { COUNTRY_META, type Country } from '../../lib/country'
 import { countryLabel, fmt, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
@@ -21,27 +21,31 @@ function ReviewTableColgroup(props: { widths: readonly string[] }) {
   )
 }
 
-export function ActionReviewModal(props: {
-  lloji: 'Hyrje' | 'Dalje'
-  country: Country
-  actionDate: string
-  actionOra: string
-  actionPershkrimi: string
-  items: ActionItemDraft[]
-  products: Produkti[]
-  total: number
-  loading: boolean
-  onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
-  onCancel: () => void
-  onConfirm: () => void
-}) {
+export function ActionReviewModal(
+  props: {
+    lloji: 'Hyrje' | 'Dalje'
+    actionDate: string
+    actionOra: string
+    actionPershkrimi: string
+    items: ActionItemDraft[]
+    products: ProductListItem[]
+    total: number
+    loading: boolean
+    onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
+    onCancel: () => void
+    onConfirm: () => void
+  } & (
+    | { country: Country; location?: never }
+    | { location: { emri: string; flagEmoji?: string | null }; country?: never }
+  ),
+) {
   const displayItems = props.items.filter((i) => i.kodi_produktit.trim())
   const showScrollHint = displayItems.length > REVIEW_VISIBLE_ROWS
   const placeholderRowCount =
     displayItems.length < REVIEW_VISIBLE_ROWS
       ? REVIEW_VISIBLE_ROWS - displayItems.length
       : 0
-  const countryMeta = COUNTRY_META[props.country]
+  const countryMeta = props.country ? COUNTRY_META[props.country] : null
 
   const productByKodi = new Map(props.products.map((p) => [p.kodi, p]))
 
@@ -67,8 +71,19 @@ export function ActionReviewModal(props: {
         <div className="action-review-meta">
           <LlojiBadge lloji={props.lloji} />
           <span className="action-review-meta-country">
-            <img className="flagIcon" src={countryMeta.flagSrc} alt="" />
-            {countryLabel(props.country)}
+            {props.location ? (
+              <>
+                {props.location.flagEmoji ? (
+                  <span className="flagIcon">{props.location.flagEmoji}</span>
+                ) : null}
+                {props.location.emri}
+              </>
+            ) : countryMeta ? (
+              <>
+                <img className="flagIcon" src={countryMeta.flagSrc} alt="" />
+                {countryLabel(props.country!)}
+              </>
+            ) : null}
           </span>
           <span className="action-review-meta-sep" aria-hidden="true">
             ·

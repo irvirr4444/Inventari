@@ -59,7 +59,7 @@ npm run dev
 - Backend API: `http://localhost:3001`
 - Vite proxies `/api` to the backend during local development
 
-Log in with `login_email` / `login_password` for the legacy account, or use **Regjistrohu** (`/signup`) for a new dynamic account.
+Log in at **`/login`** with legacy `login_email` / `login_password`, or use **Regjistrohu** on the same screen (or `/signup`, which redirects there) for a new dynamic account. Optional **Google sign-in** when `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` are set (see [Environment](#environment)).
 
 ## Workspaces
 
@@ -92,18 +92,23 @@ Log in with `login_email` / `login_password` for the legacy account, or use **Re
 | `login_email` / `LOGIN_EMAIL` | legacy setup | Admin email for existing deployment |
 | `login_password` / `LOGIN_PASSWORD` | legacy setup | Admin password |
 | `SESSION_SECRET` | prod recommended | HMAC session secret (min 32 chars) |
-| `GOOGLE_CLIENT_ID` | no | Enables `POST /api/auth/google` |
+| `GOOGLE_CLIENT_ID` | no | Enables `POST /api/auth/google` (must match frontend `VITE_GOOGLE_CLIENT_ID`) |
 | `DATABASE_URL` | no | Postgres URI for `apply:tenant-migrations` only |
 | `CORS_ORIGIN` | no | Allowed origin (default `http://localhost:5173`) |
 | `PORT` | no | API port (default `3001`) |
 
-### Frontend (`frontend/.env`)
+### Frontend (`frontend/.env` or repo root `.env`)
+
+Vite loads env from the **repository root** (`frontend/vite.config.ts` `envDir`). You can use a single root `.env` or `frontend/.env`.
 
 ```env
 VITE_API_BASE_URL=/api
+
+# Same Web client ID as backend GOOGLE_CLIENT_ID (optional; hides Google button if unset)
+VITE_GOOGLE_CLIENT_ID=
 ```
 
-The browser does not use Supabase keys directly. All data goes through the backend API with cookie-based sessions.
+The browser does not use Supabase keys directly. All data goes through the backend API with cookie-based sessions (`credentials: 'include'`).
 
 ## Documentation
 
@@ -116,11 +121,28 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 ## Features
 
-- Product stock for Kosovo and Albania (legacy) or N configurable locations (dynamic accounts)
-- Email/password login, signup, optional Google sign-in
-- `Hyrje` and `Dalje` actions with automatic totals; optional batch **Ora** (time) and **Pershkrimi** (description)
-- Country-to-country transfers via a dedicated modal (same optional metadata)
-- **Historiku** — view, filter (server + client-side Ora/Pershkrimi/Totali/Produkte), edit (including add/remove product lines on mobile), delete past actions; pre-batch rows auto-migrate on save; success snackbars; product labels `Emri (Kodi)` (requires `docs/sql/05_veprim_batch.sql`; Ora/Pershkrimi require `docs/sql/06_veprim_batch_ora_pershkrimi.sql`)
-- Product search by code or name; product pickers sorted by code
-- Sortable products table and date-range summary panel (transfers count as Hyrje/Dalje per country)
-- Formatted Excel exports: products list + Permbledhje template (**13 columns**, no Përshkrimi, auto-sized columns)
+### Accounts
+
+- **Legacy** (`ui_lloji = legacy_fixed`): Kosovo + Albania UI, `gjendje_kosove` / `gjendje_shqiperi` on products, country-based actions and summary.
+- **Dynamic** (new sign-ups): custom locations (`lokacioni`), `gjendje` stock per location, N-location desktop dashboard (`DynamicDashboardPage`).
+
+### Auth & core flows
+
+- Email/password login and sign-up on one screen (`/login`); optional Google sign-in
+- Dynamic onboarding: add locations at `/onboarding/locations` before the dashboard
+- `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
+- Transfers between countries (legacy) or between any two locations (dynamic)
+- **Historiku** — paginated batches, server filters (type, date) + client filters (location checkboxes for dynamic, Ora, Pershkrimi, Totali, Produkte); edit and delete with stock rollback
+- Product search by code or name; sortable products table; date-range summary panel
+
+### Exports
+
+| Export | Legacy | Dynamic |
+| --- | --- | --- |
+| Products `.xlsx` | Kodi, Emri, Gjendje Kosove, Gjendje Shqiperi | Kodi, Emri, one column per location |
+| Permbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** (movement lines) + **Permbledhje** (per-location Hyrje/Dalje pivot) |
+
+### Desktop vs mobile
+
+- **Legacy:** full desktop + mobile (`MobileApp`) for Kosovo/Albania.
+- **Dynamic:** full **desktop** N-location dashboard; mobile UI for dynamic accounts is still legacy-shaped (follow-up).

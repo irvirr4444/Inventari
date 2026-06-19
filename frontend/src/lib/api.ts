@@ -14,6 +14,22 @@ export type Produkti = {
   updated_at?: string
 }
 
+export type ProductListItem = {
+  id: string
+  kodi: string
+  emri: string
+}
+
+export type DynamicProdukti = ProductListItem & {
+  stock: Array<{ lokacioni_id: string; sasia: number }>
+  created_at?: string
+  updated_at?: string
+}
+
+export function stockRecord(product: DynamicProdukti): Record<string, number> {
+  return Object.fromEntries(product.stock.map((s) => [s.lokacioni_id, s.sasia]))
+}
+
 export type Veprimi = {
   id: string
   lloji: 'Hyrje' | 'Dalje' | 'Transfer'
@@ -41,6 +57,15 @@ export async function listProducts(opts: {
   return res.data
 }
 
+export async function listDynamicProducts(opts: {
+  search?: string
+}): Promise<DynamicProdukti[]> {
+  const qs = new URLSearchParams()
+  if (opts.search) qs.set('search', opts.search)
+  const res = await http<{ data: DynamicProdukti[] }>(`/products?${qs.toString()}`)
+  return res.data
+}
+
 export async function createProduct(input: {
   kodi: string
   emri: string
@@ -64,6 +89,21 @@ export async function updateProduct(
   },
 ): Promise<Produkti> {
   const res = await http<{ data: Produkti }>(`/products/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  })
+  return res.data
+}
+
+export async function updateDynamicProduct(
+  id: string,
+  patch: {
+    kodi?: string
+    emri?: string
+    stock?: Array<{ lokacioni_id: string; sasia: number }>
+  },
+): Promise<DynamicProdukti> {
+  const res = await http<{ data: DynamicProdukti }>(`/products/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
@@ -111,11 +151,44 @@ export async function createActionBatch(input: {
   })
 }
 
+export async function createDynamicActionBatch(input: {
+  lokacioni_id: string
+  destination_lokacioni_id?: string
+  lloji: 'Hyrje' | 'Dalje' | 'Transfer'
+  data?: string
+  ora?: string
+  pershkrimi?: string
+  items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
+}): Promise<{
+  data: Veprimi[]
+  meta?: {
+    transfer?: boolean
+    transfer_count?: number
+  }
+}> {
+  return http<{
+    data: Veprimi[]
+    meta?: {
+      transfer?: boolean
+      transfer_count?: number
+    }
+  }>(`/actions`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
 export type ActionBatch = {
   id: string
   lloji: 'Hyrje' | 'Dalje' | 'Transfer'
   shteti: Country
   destination_shteti?: Country
+  lokacioni_id?: string
+  destination_lokacioni_id?: string
+  lokacioni_emri?: string
+  destination_lokacioni_emri?: string
+  flag_emoji?: string
+  destination_flag_emoji?: string
   data: string
   ora?: string | null
   pershkrimi?: string | null
@@ -166,6 +239,8 @@ export async function updateActionBatch(
     data?: string
     shteti?: Country
     destination_shteti?: Country
+    lokacioni_id?: string
+    destination_lokacioni_id?: string
     ora?: string | null
     pershkrimi?: string | null
   },
@@ -239,7 +314,9 @@ export async function analyticsSummary(opts: {
   to: string
 }): Promise<SummaryByCountry | SummaryByLocation> {
   const qs = new URLSearchParams(opts)
-  const res = await http<{ data: SummaryByCountry }>(`/analytics/summary?${qs.toString()}`)
+  const res = await http<{ data: SummaryByCountry | SummaryByLocation }>(
+    `/analytics/summary?${qs.toString()}`,
+  )
   return res.data
 }
 
@@ -264,5 +341,9 @@ export function exportProductsUrl(opts: {
     sortDirection: opts.sortDirection,
   })
   return `${API_BASE}/exports/products.xlsx?${qs.toString()}`
+}
+
+export function exportDynamicProductsUrl(): string {
+  return `${API_BASE}/exports/products.xlsx?sortKey=kodi&sortDirection=asc`
 }
 

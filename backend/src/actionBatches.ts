@@ -33,6 +33,8 @@ import {
   touchVeprimBatchUpdatedAt,
 } from './repositories/batchRepository.js'
 import { validateStock } from './services/actionsService.js'
+import { listLokacionetByOwner } from './repositories/lokacioniRepository.js'
+import type { LokacioniRow } from './domain/lokacioni.js'
 import {
   deleteLegacyBatch,
   ensureRealBatchId,
@@ -48,6 +50,8 @@ type VeprimBatchRow = {
   data: string
   shteti: Country
   destination_shteti: Country | null
+  lokacioni_id: string | null
+  destination_lokacioni_id: string | null
   ora: string | null
   pershkrimi: string | null
   created_at: string
@@ -60,6 +64,7 @@ type VeprimRow = {
   lloji: 'Hyrje' | 'Dalje'
   data: string
   shteti: Country
+  lokacioni_id: string | null
   kodi_produktit: string
   cmimi_njesi: number | string
   sasia: number
@@ -80,14 +85,20 @@ async function loadBatchRows(supabase: SupabaseClient, tenantId: string, batchId
   }
 }
 
-function aggregateBatch(batch: VeprimBatchRow, rows: VeprimRow[]) {
+function aggregateBatch(
+  batch: VeprimBatchRow,
+  rows: VeprimRow[],
+  lokacioniById?: Map<string, LokacioniRow>,
+) {
   const displayRows = rows.filter((r) => isDisplayRow(batch, r))
   const totali = displayRows.reduce((sum, r) => sum + Number(r.totali ?? 0), 0)
-  return {
+  const base = {
     id: batch.id,
     lloji: batch.lloji,
     shteti: batch.shteti,
     destination_shteti: batch.destination_shteti ?? undefined,
+    lokacioni_id: batch.lokacioni_id ?? undefined,
+    destination_lokacioni_id: batch.destination_lokacioni_id ?? undefined,
     data: batch.data,
     ora: batch.ora ? formatOraDisplay(batch.ora) : null,
     pershkrimi: batch.pershkrimi ?? null,
@@ -95,6 +106,26 @@ function aggregateBatch(batch: VeprimBatchRow, rows: VeprimRow[]) {
     created_at: batch.created_at,
     item_count: displayRows.length,
   }
+
+  if (!lokacioniById) return base
+
+  const loc = batch.lokacioni_id ? lokacioniById.get(batch.lokacioni_id) : undefined
+  const dest = batch.destination_lokacioni_id
+    ? lokacioniById.get(batch.destination_lokacioni_id)
+    : undefined
+
+  return {
+    ...base,
+    lokacioni_emri: loc?.emri,
+    destination_lokacioni_emri: dest?.emri,
+    flag_emoji: loc?.flag_emoji ?? undefined,
+    destination_flag_emoji: dest?.flag_emoji ?? undefined,
+  }
+}
+
+function lokacioniToCountry(lokacionet: LokacioniRow[], lokacioniId: string): Country {
+  const match = lokacionet.find((l) => l.id === lokacioniId)
+  return match?.kodi === 'AL' ? 'AL' : 'XK'
 }
 
 type BatchItemInput = {
@@ -153,6 +184,7 @@ async function touchBatchUpdatedAt(supabase: SupabaseClient, tenantId: string, b
 export function registerActionBatchRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/action-batches', async (req) => {
     const tenantId = req.user.id
+    const isLegacy = req.user.isLegacy
     const query = z
       .object({
         page: z.coerce.number().int().positive().optional().default(1),
@@ -163,6 +195,12 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         dateTo: z.string().optional(),
       })
       .parse((req.query ?? {}) as Record<string, unknown>)
+
+    let lokacioniById: Map<string, LokacioniRow> | undefined
+    if (!isLegacy) {
+      const lokacionet = await listLokacionetByOwner(supabase, tenantId)
+      lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+    }
 
     let batchedActions: ReturnType<typeof aggregateBatch>[] = []
     try {
@@ -191,7 +229,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
 
       batchedActions = batchList.map((batch) =>
-        aggregateBatch(batch, rowsByBatch.get(batch.id) ?? []),
+        aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById),
       )
     } catch (error) {
       const err = error as { message?: string; code?: string }
@@ -256,7 +294,13 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       totali: Number(row.totali),
     }))
 
-    const base = aggregateBatch(batch, rows)
+    let lokacioniById: Map<string, LokacioniRow> | undefined
+    if (!req.user.isLegacy) {
+      const lokacionet = await listLokacionetByOwner(supabase, tenantId)
+      lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+    }
+
+    const base = aggregateBatch(batch, rows, lokacioniById)
     return {
       ...base,
       items,
@@ -296,6 +340,111 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       return { error: ERR_MIRROR_COUNTRY_CHANGE }
     }
 
+    const dataChanged = Boolean(body.data && body.data !== batch.data)
+    const oraChanged = body.ora !== undefined && body.ora !== batch.ora
+    const pershkrimiChanged =
+      body.pershkrimi !== undefined && (body.pershkrimi ?? null) !== (batch.pershkrimi ?? null)
+
+    const batchPatch: Record<string, unknown> = {}
+    if (dataChanged) batchPatch.data = body.data
+    if (oraChanged) batchPatch.ora = body.ora
+    if (pershkrimiChanged) batchPatch.pershkrimi = body.pershkrimi ?? null
+
+    let routeChanged = false
+
+    if (
+      !req.user.isLegacy &&
+      (body.lokacioni_id !== undefined || body.destination_lokacioni_id !== undefined)
+    ) {
+      const lokacionet = await listLokacionetByOwner(supabase, tenantId)
+      const nextLokacioniId = body.lokacioni_id ?? batch.lokacioni_id
+      const nextDestLokacioniId =
+        batch.lloji === 'Transfer'
+          ? body.destination_lokacioni_id ?? batch.destination_lokacioni_id
+          : batch.destination_lokacioni_id
+
+      if (batch.lloji === 'Transfer') {
+        if (!nextDestLokacioniId) {
+          reply.code(400)
+          return { error: ERR_TRANSFER_NEEDS_DESTINATION }
+        }
+        if (nextDestLokacioniId === nextLokacioniId) {
+          reply.code(400)
+          return { error: ERR_TRANSFER_SAME_COUNTRY }
+        }
+      }
+
+      const lokacioniChanged = Boolean(
+        body.lokacioni_id && body.lokacioni_id !== batch.lokacioni_id,
+      )
+      const destLokacioniChanged = Boolean(
+        batch.lloji === 'Transfer' &&
+          body.destination_lokacioni_id &&
+          body.destination_lokacioni_id !== batch.destination_lokacioni_id,
+      )
+
+      if (lokacioniChanged && body.lokacioni_id) {
+        batchPatch.lokacioni_id = body.lokacioni_id
+        batchPatch.shteti = lokacioniToCountry(lokacionet, body.lokacioni_id)
+      }
+      if (destLokacioniChanged && body.destination_lokacioni_id) {
+        batchPatch.destination_lokacioni_id = body.destination_lokacioni_id
+        batchPatch.destination_shteti = lokacioniToCountry(
+          lokacionet,
+          body.destination_lokacioni_id,
+        )
+      }
+
+      routeChanged = lokacioniChanged || destLokacioniChanged
+
+      if (Object.keys(batchPatch).length > 0) {
+        batchPatch.updated_at = new Date().toISOString()
+        await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
+      }
+
+      for (const row of rows) {
+        const patch: Record<string, unknown> = {}
+        if (dataChanged && row.data !== body.data) {
+          patch.data = body.data
+        }
+
+        if (batch.lloji === 'Transfer' && routeChanged) {
+          if (row.lloji === 'Dalje' && row.lokacioni_id !== nextLokacioniId) {
+            if (nextLokacioniId) {
+              patch.lokacioni_id = nextLokacioniId
+              patch.shteti = lokacioniToCountry(lokacionet, nextLokacioniId)
+            }
+          } else if (
+            row.lloji === 'Hyrje' &&
+            row.lokacioni_id !== nextDestLokacioniId &&
+            nextDestLokacioniId
+          ) {
+            patch.lokacioni_id = nextDestLokacioniId
+            patch.shteti = lokacioniToCountry(lokacionet, nextDestLokacioniId)
+          }
+        } else if (
+          lokacioniChanged &&
+          batch.lloji !== 'Transfer' &&
+          nextLokacioniId &&
+          row.lokacioni_id !== nextLokacioniId
+        ) {
+          patch.lokacioni_id = nextLokacioniId
+          patch.shteti = lokacioniToCountry(lokacionet, nextLokacioniId)
+        }
+
+        if (Object.keys(patch).length === 0) continue
+
+        try {
+          await patchVeprimi(supabase, tenantId, row.id, patch)
+        } catch (rowError) {
+          reply.code(400)
+          return { error: rowError instanceof Error ? rowError.message : 'Update failed' }
+        }
+      }
+
+      return ensured.migrated ? { ok: true, batch_id: batchId } : { ok: true }
+    }
+
     const nextShteti = body.shteti ?? batch.shteti
     const nextDest =
       batch.lloji === 'Transfer'
@@ -313,30 +462,22 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
     }
 
-    const dataChanged = Boolean(body.data && body.data !== batch.data)
     const shtetiChanged = Boolean(body.shteti && body.shteti !== batch.shteti)
     const destinationChanged = Boolean(
       batch.lloji === 'Transfer' &&
         body.destination_shteti &&
         body.destination_shteti !== batch.destination_shteti,
     )
-    const oraChanged = body.ora !== undefined && body.ora !== batch.ora
-    const pershkrimiChanged =
-      body.pershkrimi !== undefined && (body.pershkrimi ?? null) !== (batch.pershkrimi ?? null)
 
-    const batchPatch: Record<string, unknown> = {}
-    if (dataChanged) batchPatch.data = body.data
     if (shtetiChanged) batchPatch.shteti = body.shteti
     if (destinationChanged) batchPatch.destination_shteti = body.destination_shteti
-    if (oraChanged) batchPatch.ora = body.ora
-    if (pershkrimiChanged) batchPatch.pershkrimi = body.pershkrimi ?? null
 
     if (Object.keys(batchPatch).length > 0) {
       batchPatch.updated_at = new Date().toISOString()
       await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
     }
 
-    const routeChanged = shtetiChanged || destinationChanged
+    routeChanged = shtetiChanged || destinationChanged
 
     for (const row of rows) {
       const patch: Record<string, unknown> = {}

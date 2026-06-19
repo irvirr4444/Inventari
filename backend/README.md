@@ -70,7 +70,7 @@ Copy `backend/.env.example` to `backend/.env` (repo root `.env` is also loaded b
 | `login_email` / `LOGIN_EMAIL` | legacy | Admin email (seed + first login) |
 | `login_password` / `LOGIN_PASSWORD` | legacy | Admin password |
 | `SESSION_SECRET` | prod recommended | HMAC secret (min 32 chars); defaults to service key if unset |
-| `GOOGLE_CLIENT_ID` | no | Enables Google sign-in route |
+| `GOOGLE_CLIENT_ID` | no | Enables Google sign-in; must match frontend `VITE_GOOGLE_CLIENT_ID` |
 | `DATABASE_URL` | no | Postgres URI for CLI migration script only |
 | `CORS_ORIGIN` | no | Allowed origin in production |
 | `PORT` / `HOST` | no | Listen address (default `3001` / `0.0.0.0`) |
@@ -124,21 +124,33 @@ backend/scripts/
 | GET | `/api/health` | Health check |
 | POST | `/api/login` | Email/password login → session cookie (rate-limited) |
 | POST | `/api/auth/signup` | Create dynamic account |
-| POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`) |
+| POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`; body `{ id_token }`) |
 | POST | `/api/logout` | Clear session |
 | GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations` |
-| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD (tenant-scoped) |
-| POST/GET | `/api/actions` | Create action batch or list raw `veprimi` rows |
-| GET/PATCH/DELETE | `/api/action-batches/*` | Historiku batches (native + legacy IDs) |
+| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]`. List returns legacy columns or `stock[]`. |
+| POST/GET | `/api/actions` | Create batch or list raw `veprimi`. Legacy body: `shteti`. Dynamic body: `lokacioni_id` (+ `destination_lokacioni_id` for Transfer). |
+| GET/PATCH/DELETE | `/api/action-batches/*` | Historiku. Responses include `lokacioni_id`, optional `lokacioni_emri` / emoji (dynamic). PATCH accepts `lokacioni_id` for dynamic users. |
 | POST/PATCH/DELETE | `/api/action-batches/:id/items/*` | Add, update, or remove product lines on a batch |
 | GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic accounts) |
-| GET | `/api/analytics/summary` | Hyrje/Dalje totals for date range (by country or location) |
+| GET | `/api/analytics/summary` | Hyrje/Dalje totals — `SummaryByCountry` (legacy) or `SummaryByLocation` keyed by `lokacioni_id` (dynamic, `show_in_summary` locations) |
 | GET | `/api/analytics/stock` | Stock list filtered by country (legacy) |
 | GET | `/api/exports/products.xlsx` | Product export |
 | GET | `/api/exports/actions.xlsx` | Permbledhje export |
 | GET | `/api/exports/actions.csv` | Raw actions CSV |
 
 Protected routes require the `inventari_session` cookie except login, signup, google, logout, session, and health.
+
+### Auth errors (login / signup / Google)
+
+| Status | Message | When |
+| --- | --- | --- |
+| 401 | `Invalid credentials` | Wrong email/password |
+| 401 | `Account created with Google` | Password login for a Google-only account |
+| 401 | `Invalid Google token` | Bad or expired Google ID token |
+| 409 | `Email already registered` | Sign-up with existing email |
+| 503 | `Google sign-in is not configured` | `GOOGLE_CLIENT_ID` unset |
+
+Password login calls `ensureLegacyUserSeeded` once when the legacy user still has a placeholder email or no password hash. Google login links `google_sub` on an existing email match or creates a new dynamic user.
 
 ## Multi-tenancy
 
@@ -153,23 +165,26 @@ Session payload includes `uiLloji`, `isLegacy`, and `has_locations` so the front
 ### Actions (`POST /api/actions`)
 
 - Accepts a batch (`items[]`) or single-product body (normalized in `@inventari/shared`).
-- **Transfer:** creates `Dalje` rows for source + `Hyrje` for destination; validates stock in one query.
-- **Kosovo Dalje (legacy):** optionally mirrors `Hyrje` into Albania.
+- **Legacy:** `shteti` / `destination_shteti`; Kosovo `Dalje` can mirror `Hyrje` into Albania.
+- **Dynamic:** `lokacioni_id` / `destination_lokacioni_id`; stock validation uses `gjendje` for the source location.
+- **Transfer:** `Dalje` at source + `Hyrje` at destination (one stock check on source).
 - Assigns `batch_id` via `veprim_batch` (requires `docs/sql/05_veprim_batch.sql`).
 
 ### Historiku (`/api/action-batches`)
 
-- Lists grouped batches with pagination and filters.
-- Supports **legacy** batch IDs (`legacy:…`) for rows created before `batch_id` (read-only grouping until first edit).
-- Any PATCH/POST/DELETE on a legacy batch **migrates** it to `veprim_batch` and returns `batch_id` when applicable.
-- Edit/delete updates sibling rows for transfers and mirrored Kosovo Dalje; item POST/DELETE handle add/remove product lines.
+- Lists grouped batches with pagination and filters (type, date; legacy also filters `shteti`).
+- Batch payloads include `lokacioni_id`, `destination_lokacioni_id`, and resolved location labels for dynamic tenants.
+- Supports **legacy** batch IDs (`legacy:…`) until first edit migrates to `veprim_batch`.
+- PATCH meta: `shteti` (legacy) or `lokacioni_id` / `destination_lokacioni_id` (dynamic); updates sibling `veprimi` rows for transfers.
+- Item POST/PATCH/DELETE for add/remove/edit product lines.
 
 ### Permbledhje Excel
 
-- Template: `docs/excel/Inventari Excel Template.xlsx`
-- **Legacy:** 13 columns — Kodi, Produkti, Kosova (5 cols), spacer, Shqiperi (5 cols)
-- **Dynamic:** N-location export (see `exportsService.ts`)
-- Stock replay derives opening balances from current stock + full history
+- **Legacy:** template `docs/excel/Inventari Excel Template.xlsx` — 13 columns (Kosova + Shqiperi blocks); stock replay from history.
+- **Dynamic:** generated workbook with:
+  - **Veprime** — movement lines (Data, Lloji, Lokacioni, Kodi, Cmimi, Sasia, Totali)
+  - **Permbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`)
+- Products export: legacy two stock columns vs dynamic N location columns.
 
 ## Database
 

@@ -4,21 +4,273 @@
   gap: 8px;
 }
 
+.location-picker-dropdown {
+  position: relative;
+}
+
+.location-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.location-picker-chevron {
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+
+.location-picker-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--card, #fff);
+  border: 1px solid rgba(201, 216, 234, 0.85);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(15, 23, 42, 0.14));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.location-picker-menu-portal {
+  position: fixed;
+  z-index: 45;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.location-picker-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.location-picker-menu-item:hover {
+  background: #e8f1fb;
+}
+
+.location-picker-menu-item.active {
+  border-color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 8%, #e8f1fb);
+}
+
+.location-picker-menu-add {
+  border-style: dashed;
+  border-color: rgba(201, 216, 234, 0.9);
+  color: var(--text-muted);
+  justify-content: center;
+  font-weight: 500;
+}
+
+.location-picker-menu-add:hover {
+  border-color: var(--accent, #2563eb);
+  color: var(--text);
+}
+
 .location-pill.active {
   border-color: var(--accent, #2563eb);
 }
 
-.locations-list {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0;
+.locations-editor h1 {
+  margin-bottom: 8px;
+}
+
+.locations-editor .muted {
+  margin-bottom: 20px;
+}
+
+.location-card-grid {
   display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.location-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  isolation: isolate;
+}
+
+.location-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.location-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.location-card-emoji-readonly {
+  font-size: 1.5rem;
+  line-height: 1;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.location-card-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.location-card-name .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.location-card-name-text {
+  font-weight: 500;
+}
+
+.location-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  flex-shrink: 0;
+}
+
+.location-card-footer {
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-.locations-list li {
+.location-emoji-picker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 180px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.location-emoji-picker-wide {
+  width: 100%;
+  max-width: none;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.location-emoji-option {
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  position: relative;
+  z-index: 1;
+}
+
+.location-emoji-picker-wide .location-emoji-option {
+  border-color: transparent;
+  background: transparent;
+  padding: 8px 4px;
+  font-size: 1.2rem;
+  border-radius: 10px;
+}
+
+.location-emoji-option:hover:not(:disabled) {
+  border-color: var(--accent, #2563eb);
+}
+
+.location-emoji-picker-wide .location-emoji-option:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(232, 241, 251, 0.65);
+}
+
+.location-emoji-option.active {
+  border-color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+}
+
+.location-emoji-picker-wide .location-emoji-option.active {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: #dbeaff;
+}
+
+.location-emoji-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-reorder-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.locations-summary-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.location-add-btn {
+  margin-bottom: 16px;
+}
+
+.location-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.locations-inactive-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.locations-inactive-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.locations-continue-btn {
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .location-card-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .location-card-actions {
+    justify-content: flex-start;
+  }
+
+  .location-emoji-picker {
+    max-width: none;
+  }
 }

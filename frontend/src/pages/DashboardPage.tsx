@@ -108,7 +108,7 @@ export function DashboardPage() {
           tone="danger"
           loading={d.deleteProductMut.isPending}
           onCancel={() => d.setDeletingProduct(null)}
-          onConfirm={() => d.deleteProductMut.mutate(d.deletingProduct!.id)}
+          onConfirm={d.confirmDeleteProduct}
         />
       )}
 
@@ -138,14 +138,7 @@ export function DashboardPage() {
           mode="edit"
           product={d.editing}
           onClose={() => d.setEditing(null)}
-          onSave={(p) =>
-            d.updateProductMut.mutate(p, {
-              onSuccess: () => {
-                d.setEditing(null)
-                d.notify('Produkti u perditesua me sukses.', 'success')
-              },
-            })
-          }
+          onSave={d.scheduleProductUpdateSuccess}
           saving={d.updateProductMut.isPending}
         />
       )}

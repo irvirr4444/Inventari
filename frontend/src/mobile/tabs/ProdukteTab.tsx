@@ -1,8 +1,14 @@
 import * as React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useProductCrud } from '../../hooks/useProductCrud'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import type { Produkti } from '../../lib/api'
 import { productLabel, sortProductsByKodi } from '../../lib/format'
+import {
+  scheduleInvalidate,
+  scheduleProductDeleteInvalidation,
+} from '../../lib/invalidateAppData'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { NumericInput } from '../../components/NumericInput'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter, SheetEditButton, SheetFooterRow, SheetConfirmButton } from '../components/SheetActions'
@@ -65,7 +71,9 @@ function ProductFormFields(props: {
 
 export function ProdukteTab(props: { notify: (message: string, variant?: 'success' | 'default') => void }) {
   const productsQuery = useProductsQuery()
-  const crud = useProductCrud({ notify: props.notify })
+  const qc = useQueryClient()
+  const { user } = useAuth()
+  const crud = useProductCrud()
   const [search, setSearch] = React.useState('')
   const [detailProduct, setDetailProduct] = React.useState<Produkti | null>(null)
   const [addOpen, setAddOpen] = React.useState(false)
@@ -114,6 +122,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
           resetAddForm()
           setAddOpen(false)
           props.notify('Produkti u shtua me sukses.', 'success')
+          scheduleInvalidate(qc, 'products', { userId: user?.id })
         },
       },
     )
@@ -132,6 +141,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
         setEditOpen(false)
         setEditDraft(null)
         props.notify('Produkti u perditesua me sukses.', 'success')
+        scheduleInvalidate(qc, 'products', { userId: user?.id })
       },
     })
   }
@@ -293,6 +303,8 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
                 onSuccess: () => {
                   setDeleteOpen(false)
                   setDetailProduct(null)
+                  props.notify('Produkti u fshi me sukses.', 'success')
+                  scheduleProductDeleteInvalidation(qc, user?.id)
                 },
               })
             }}

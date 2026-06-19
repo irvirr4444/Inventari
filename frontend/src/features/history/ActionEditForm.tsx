@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import type { Country } from '../../lib/country'
 import {
   updateActionBatch,
@@ -10,12 +10,15 @@ import {
 } from '../../lib/api'
 import { fmtEuro, productLabel } from '../../lib/format'
 import { formatDisplayTime } from '../../lib/actionMeta'
-import { invalidateAfterMutation } from '../../lib/invalidateAppData'
-import { useAuth } from '../../lib/auth/AuthProvider'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
+import {
+  batchMetaChanged,
+  historyItemsChanged,
+  type HistoryEditSaveResult,
+} from './historyEditSave'
 
 type ItemDraft = {
   kodi_produktit: string
@@ -40,14 +43,6 @@ function lineTotal(draft: ItemDraft): number {
   return (Number(draft.cmimi_njesi) || 0) * (Number(draft.sasia) || 0)
 }
 
-function itemChanged(item: HistoryActionItem, draft: ItemDraft): boolean {
-  return (
-    draft.kodi_produktit !== item.kodi_produktit ||
-    Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
-    Number(draft.sasia) !== item.sasia
-  )
-}
-
 const HISTORY_EDIT_COL_WIDTHS = ['40%', '22%', '15%', '23%'] as const
 const ACTION_VISIBLE_ROWS = 2
 
@@ -65,11 +60,9 @@ export function ActionEditForm(props: {
   detail: ActionBatchDetail
   products: Produkti[]
   disabled: boolean
-  onSaveComplete: (migratedBatchId?: string) => void
+  onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
 }) {
-  const qc = useQueryClient()
-  const { user } = useAuth()
   const [data, setData] = React.useState(props.detail.data)
   const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
   const [pershkrimi, setPershkrimi] = React.useState(props.detail.pershkrimi ?? '')
@@ -92,12 +85,8 @@ export function ActionEditForm(props: {
     setItemDrafts(draftsFromItems(props.detail.items))
   }, [props.detail])
 
-  const invalidateAll = React.useCallback(async () => {
-    await invalidateAfterMutation(qc, 'all', { actionBatchId: props.detail.id, userId: user?.id })
-  }, [qc, props.detail.id, user?.id])
-
   const saveAllMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<HistoryEditSaveResult> => {
       for (const item of localItems) {
         const draft = itemDrafts[item.id]
         if (!draft?.kodi_produktit) {
@@ -122,42 +111,72 @@ export function ActionEditForm(props: {
         )
       }
 
-      const batchPayload: {
-        data: string
-        shteti?: Country
-        destination_shteti?: Country
-        ora?: string | null
-        pershkrimi?: string | null
-      } = { data }
-      if (props.detail.lloji === 'Transfer') {
-        batchPayload.shteti = shteti
-        if (destination) batchPayload.destination_shteti = destination as Country
-      } else if (!props.detail.mirrored_to_albania) {
-        batchPayload.shteti = shteti
+      const meta = { data, ora, pershkrimi, shteti, destination }
+      const metaChanged = batchMetaChanged(props.detail, meta)
+      const itemsChanged = historyItemsChanged(localItems, itemDrafts)
+
+      if (!metaChanged && !itemsChanged) {
+        return { metaChanged: false, itemsChanged: false }
       }
-      batchPayload.ora = ora.trim() ? ora.trim() : null
-      batchPayload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
 
-      const { batch_id: migratedId } = await updateActionBatch(props.detail.id, batchPayload)
-      const batchId = migratedId ?? props.detail.id
+      let batchId = props.detail.id
+      let migratedId: string | undefined
 
-      const changedItems = localItems.filter((item) => itemChanged(item, itemDrafts[item.id]))
-      await Promise.all(
-        changedItems.map((item) => {
+      if (metaChanged) {
+        const batchPayload: {
+          data: string
+          shteti?: Country
+          destination_shteti?: Country
+          ora?: string | null
+          pershkrimi?: string | null
+        } = { data }
+        if (props.detail.lloji === 'Transfer') {
+          batchPayload.shteti = shteti
+          if (destination) batchPayload.destination_shteti = destination as Country
+        } else if (!props.detail.mirrored_to_albania) {
+          batchPayload.shteti = shteti
+        }
+        batchPayload.ora = ora.trim() ? ora.trim() : null
+        batchPayload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
+
+        const { batch_id } = await updateActionBatch(props.detail.id, batchPayload)
+        migratedId = batch_id
+        batchId = batch_id ?? props.detail.id
+      }
+
+      if (itemsChanged) {
+        const changedItems = localItems.filter((item) => {
           const draft = itemDrafts[item.id]
-          return updateActionBatchItem(batchId, item.id, {
+          if (!draft) return false
+          return (
+            draft.kodi_produktit !== item.kodi_produktit ||
+            Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
+            Number(draft.sasia) !== item.sasia
+          )
+        })
+
+        for (const item of changedItems) {
+          const draft = itemDrafts[item.id]
+          const { batch_id } = await updateActionBatchItem(batchId, item.id, {
             kodi_produktit: draft.kodi_produktit,
             cmimi_njesi: Number(draft.cmimi_njesi) || 0,
             sasia: Number(draft.sasia) || 0,
           })
-        }),
-      )
+          if (batch_id) {
+            migratedId = batch_id
+            batchId = batch_id
+          }
+        }
+      }
 
-      return migratedId ? { batch_id: migratedId } : {}
+      return {
+        batch_id: migratedId,
+        metaChanged,
+        itemsChanged,
+      }
     },
-    onSuccess: async (result) => {
-      await invalidateAll()
-      props.onSaveComplete(result?.batch_id)
+    onSuccess: (result) => {
+      props.onSaveComplete(result)
     },
     onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
   })
@@ -370,3 +389,5 @@ export function ActionEditForm(props: {
     </>
   )
 }
+
+export type { HistoryEditSaveResult }

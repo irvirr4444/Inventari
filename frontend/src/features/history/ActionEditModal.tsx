@@ -2,13 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { getActionBatch, type Produkti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
-import { ActionEditForm } from './ActionEditForm'
+import { ActionEditForm, type HistoryEditSaveResult } from './ActionEditForm'
 
 export function ActionEditModal(props: {
   actionId: string
   products: Produkti[]
   onClose: () => void
-  onSaveComplete: (migratedBatchId?: string) => void
+  onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
 }) {
   const { user } = useAuth()

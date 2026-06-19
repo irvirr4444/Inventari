@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useActionEntry } from '../hooks/useActionEntry'
 import { useProductCrud } from '../hooks/useProductCrud'
 import { useProductsQuery } from '../hooks/useProductsQuery'
@@ -8,11 +9,18 @@ import { useTransferEntry } from '../hooks/useTransferEntry'
 import type { Produkti } from '../lib/api'
 import { useCountry } from '../lib/country'
 import { todayISODate } from '../lib/dates'
+import {
+  scheduleInvalidate,
+  scheduleProductDeleteInvalidation,
+} from '../lib/invalidateAppData'
+import { useAuth } from '../lib/auth/AuthProvider'
 import type { ProductSortKey } from '../features/products/ProductsPanel'
 
 export function useDashboardPage() {
   const { country } = useCountry()
   const { snackbar, notify } = useSnackbar()
+  const qc = useQueryClient()
+  const { user } = useAuth()
 
   const productsQuery = useProductsQuery()
   const products = productsQuery.data ?? []
@@ -29,7 +37,7 @@ export function useDashboardPage() {
     onSuccess: () => setTransferDialogOpen(false),
   })
 
-  const productCrud = useProductCrud({ notify })
+  const productCrud = useProductCrud()
 
   const [historyOpen, setHistoryOpen] = React.useState(false)
 
@@ -89,6 +97,7 @@ export function useDashboardPage() {
           setNewGjendjeShqiperi(0)
           setShowAddProduct(false)
           notify('Produkti u shtua me sukses.', 'success')
+          scheduleInvalidate(qc, 'products', { userId: user?.id })
         },
       },
     )
@@ -99,6 +108,17 @@ export function useDashboardPage() {
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }))
+  }
+
+  const confirmDeleteProduct = () => {
+    if (!deletingProduct) return
+    productCrud.deleteMut.mutate(deletingProduct.id, {
+      onSuccess: () => {
+        setDeletingProduct(null)
+        notify('Produkti u fshi me sukses.', 'success')
+        scheduleProductDeleteInvalidation(qc, user?.id)
+      },
+    })
   }
 
   return {
@@ -171,5 +191,15 @@ export function useDashboardPage() {
     submitTransfer,
     submitNewProduct,
     changeProductSort,
+    confirmDeleteProduct,
+    scheduleProductUpdateSuccess: (p: Produkti) => {
+      productCrud.updateMut.mutate(p, {
+        onSuccess: () => {
+          setEditing(null)
+          notify('Produkti u perditesua me sukses.', 'success')
+          scheduleInvalidate(qc, 'products', { userId: user?.id })
+        },
+      })
+    },
   }
 }

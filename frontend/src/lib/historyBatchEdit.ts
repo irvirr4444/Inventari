@@ -1,5 +1,9 @@
 import type { Country } from './country'
 import {
+  batchMetaChanged,
+  type HistoryEditSaveResult,
+} from '../features/history/historyEditSave'
+import {
   createActionBatchItem,
   deleteActionBatchItem,
   updateActionBatch,
@@ -8,6 +12,8 @@ import {
   type HistoryActionItem,
 } from './api'
 import { randomId } from './randomId'
+
+export type { HistoryEditSaveResult }
 
 export type HistoryItemDraft = {
   kodi_produktit: string
@@ -121,41 +127,69 @@ export function validateHistoryBatchEdits(rows: HistoryEditRow[]): string | null
   return null
 }
 
+function rowsItemsChanged(detail: ActionBatchDetail, rows: HistoryEditRow[]): boolean {
+  const originalIds = new Set(detail.items.map((item) => item.id))
+  const currentExistingIds = new Set(rows.filter((r) => !r.isNew).map((r) => r.key))
+  const deletedIds = [...originalIds].filter((id) => !currentExistingIds.has(id))
+
+  if (deletedIds.length > 0) return true
+  if (rows.some((row) => row.isNew)) return true
+
+  return rows.some((row) => {
+    if (row.isNew) return false
+    const item = detail.items.find((it) => it.id === row.key)
+    return item ? itemChanged(item, row.draft) : false
+  })
+}
+
 export async function saveHistoryBatchEdits(input: {
   detail: ActionBatchDetail
   meta: HistoryBatchMetaDraft
   rows: HistoryEditRow[]
-}): Promise<{ batch_id?: string }> {
+}): Promise<HistoryEditSaveResult> {
   const { detail, meta, rows } = input
   const validationError = validateHistoryBatchEdits(rows)
   if (validationError) {
     throw new Error(validationError)
   }
 
-  const batchPayload: {
-    data: string
-    shteti?: Country
-    destination_shteti?: Country
-    ora?: string | null
-    pershkrimi?: string | null
-  } = { data: meta.data }
+  const metaChanged = batchMetaChanged(detail, meta)
+  const itemsChanged = rowsItemsChanged(detail, rows)
 
-  if (detail.lloji === 'Transfer') {
-    batchPayload.shteti = meta.shteti
-    if (meta.destination) batchPayload.destination_shteti = meta.destination as Country
-  } else if (!detail.mirrored_to_albania) {
-    batchPayload.shteti = meta.shteti
+  if (!metaChanged && !itemsChanged) {
+    return { metaChanged: false, itemsChanged: false }
   }
 
-  batchPayload.ora = meta.ora.trim() ? meta.ora.trim() : null
-  batchPayload.pershkrimi = meta.pershkrimi.trim() ? meta.pershkrimi.trim() : null
+  let batchId = detail.id
+  let migratedId: string | undefined
+
+  if (metaChanged) {
+    const batchPayload: {
+      data: string
+      shteti?: Country
+      destination_shteti?: Country
+      ora?: string | null
+      pershkrimi?: string | null
+    } = { data: meta.data }
+
+    if (detail.lloji === 'Transfer') {
+      batchPayload.shteti = meta.shteti
+      if (meta.destination) batchPayload.destination_shteti = meta.destination as Country
+    } else if (!detail.mirrored_to_albania) {
+      batchPayload.shteti = meta.shteti
+    }
+
+    batchPayload.ora = meta.ora.trim() ? meta.ora.trim() : null
+    batchPayload.pershkrimi = meta.pershkrimi.trim() ? meta.pershkrimi.trim() : null
+
+    const { batch_id } = await updateActionBatch(detail.id, batchPayload)
+    migratedId = batch_id
+    batchId = batch_id ?? detail.id
+  }
 
   const originalIds = new Set(detail.items.map((item) => item.id))
   const currentExistingIds = new Set(rows.filter((r) => !r.isNew).map((r) => r.key))
   const deletedIds = [...originalIds].filter((id) => !currentExistingIds.has(id))
-
-  const { batch_id: migratedId } = await updateActionBatch(detail.id, batchPayload)
-  let batchId = migratedId ?? detail.id
 
   for (const itemId of deletedIds) {
     await deleteActionBatchItem(batchId, itemId)
@@ -168,20 +202,39 @@ export async function saveHistoryBatchEdits(input: {
         cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
         sasia: Number(row.draft.sasia) || 0,
       })
-      continue
-    }
-
-    const item = detail.items.find((it) => it.id === row.key)
-    if (item && itemChanged(item, row.draft)) {
-      await updateActionBatchItem(batchId, row.key, {
-        kodi_produktit: row.draft.kodi_produktit,
-        cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
-        sasia: Number(row.draft.sasia) || 0,
-      })
     }
   }
 
-  return migratedId ? { batch_id: migratedId } : {}
+  const updateTasks: Array<Promise<{ batch_id?: string }>> = []
+  for (const row of rows) {
+    if (row.isNew) continue
+    const item = detail.items.find((it) => it.id === row.key)
+    if (item && itemChanged(item, row.draft)) {
+      updateTasks.push(
+        updateActionBatchItem(batchId, row.key, {
+          kodi_produktit: row.draft.kodi_produktit,
+          cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
+          sasia: Number(row.draft.sasia) || 0,
+        }),
+      )
+    }
+  }
+
+  if (updateTasks.length > 0) {
+    const results = await Promise.all(updateTasks)
+    for (const result of results) {
+      if (result.batch_id) {
+        migratedId = result.batch_id
+        batchId = result.batch_id
+      }
+    }
+  }
+
+  return {
+    batch_id: migratedId,
+    metaChanged,
+    itemsChanged,
+  }
 }
 
 /** @deprecated use rowsFromDetail */

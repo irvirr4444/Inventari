@@ -188,14 +188,15 @@ export async function updateActionBatchItem(
     cmimi_njesi?: number
     sasia?: number
   },
-): Promise<void> {
-  await http<{ ok: true }>(
+): Promise<{ batch_id?: string }> {
+  const res = await http<{ ok: true; batch_id?: string }>(
     `/action-batches/${encodeURIComponent(batchId)}/items/${itemId}`,
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
     },
   )
+  return { batch_id: res.batch_id }
 }
 
 export async function createActionBatchItem(

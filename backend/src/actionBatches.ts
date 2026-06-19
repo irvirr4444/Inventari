@@ -313,28 +313,44 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
     }
 
-    const batchPatch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (body.data) batchPatch.data = body.data
-    if (body.shteti) batchPatch.shteti = body.shteti
-    if (batch.lloji === 'Transfer' && body.destination_shteti) {
-      batchPatch.destination_shteti = body.destination_shteti
-    }
-    if (body.ora !== undefined) batchPatch.ora = body.ora
-    if (body.pershkrimi !== undefined) batchPatch.pershkrimi = body.pershkrimi ?? null
+    const dataChanged = Boolean(body.data && body.data !== batch.data)
+    const shtetiChanged = Boolean(body.shteti && body.shteti !== batch.shteti)
+    const destinationChanged = Boolean(
+      batch.lloji === 'Transfer' &&
+        body.destination_shteti &&
+        body.destination_shteti !== batch.destination_shteti,
+    )
+    const oraChanged = body.ora !== undefined && body.ora !== batch.ora
+    const pershkrimiChanged =
+      body.pershkrimi !== undefined && (body.pershkrimi ?? null) !== (batch.pershkrimi ?? null)
 
-    await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
+    const batchPatch: Record<string, unknown> = {}
+    if (dataChanged) batchPatch.data = body.data
+    if (shtetiChanged) batchPatch.shteti = body.shteti
+    if (destinationChanged) batchPatch.destination_shteti = body.destination_shteti
+    if (oraChanged) batchPatch.ora = body.ora
+    if (pershkrimiChanged) batchPatch.pershkrimi = body.pershkrimi ?? null
+
+    if (Object.keys(batchPatch).length > 0) {
+      batchPatch.updated_at = new Date().toISOString()
+      await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
+    }
+
+    const routeChanged = shtetiChanged || destinationChanged
 
     for (const row of rows) {
       const patch: Record<string, unknown> = {}
-      if (body.data) patch.data = body.data
+      if (dataChanged && row.data !== body.data) {
+        patch.data = body.data
+      }
 
-      if (batch.lloji === 'Transfer' && (body.shteti || body.destination_shteti)) {
-        if (row.lloji === 'Dalje') {
+      if (batch.lloji === 'Transfer' && routeChanged) {
+        if (row.lloji === 'Dalje' && row.shteti !== nextShteti) {
           patch.shteti = nextShteti
-        } else if (row.lloji === 'Hyrje') {
+        } else if (row.lloji === 'Hyrje' && row.shteti !== nextDest) {
           patch.shteti = nextDest
         }
-      } else if (body.shteti && batch.lloji !== 'Transfer') {
+      } else if (shtetiChanged && batch.lloji !== 'Transfer' && row.shteti !== nextShteti) {
         patch.shteti = nextShteti
       }
 

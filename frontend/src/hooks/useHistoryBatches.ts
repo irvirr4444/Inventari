@@ -5,7 +5,7 @@ import {
   deleteActionBatch,
   listActionBatches,
 } from '../lib/api'
-import { invalidateAfterMutation } from '../lib/invalidateAppData'
+import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { queryKeys } from '../lib/queryKeys'
 import { useAuth } from '../lib/auth/AuthProvider'
 
@@ -58,11 +58,10 @@ export function useHistoryBatches(options?: {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteActionBatch(id),
-    onSuccess: async () => {
+    onSuccess: () => {
       setError(null)
-      await invalidateAfterMutation(qc, 'all', { userId: user?.id })
-      await listQuery.refetch()
       options?.onNotify?.('Veprimi u fshi me sukses.', 'success')
+      scheduleInvalidate(qc, 'all', { userId: user?.id })
     },
     onError: (e) => {
       setError(e instanceof Error ? e.message : 'Gabim gjate fshirjes.')

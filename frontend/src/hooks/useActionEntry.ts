@@ -5,7 +5,7 @@ import { effectiveSasia } from '../types/actionItem'
 import { createActionBatch } from '../lib/api'
 import { useCountry } from '../lib/country'
 import { todayISODate } from '../lib/dates'
-import { invalidateAfterMutation } from '../lib/invalidateAppData'
+import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
 import { productLabel } from '../lib/format'
 import type { Produkti } from '../lib/api'
@@ -51,7 +51,7 @@ export function useActionEntry(options: {
             sasia: effectiveSasia(i.sasia),
           })),
       }),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       setConfirmOpen(false)
       options.notify(
         result.meta?.mirrored_to_albania
@@ -62,7 +62,7 @@ export function useActionEntry(options: {
       itemsState.reset()
       setActionOra('')
       setActionPershkrimi('')
-      await invalidateAfterMutation(qc, 'all', { refetchSummary: true, userId: user?.id })
+      scheduleInvalidate(qc, 'all', { userId: user?.id })
     },
     onError: (e) => {
       options.notify(e instanceof Error ? e.message : 'Error', 'error')

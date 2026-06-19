@@ -1,14 +1,8 @@
 import * as React from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { createProduct, deleteProduct, updateProduct, type Produkti } from '../lib/api'
-import { invalidateAfterMutation } from '../lib/invalidateAppData'
-import { useAuth } from '../lib/auth/AuthProvider'
 
-export function useProductCrud(options: {
-  notify: (message: string, variant?: 'success' | 'default') => void
-}) {
-  const qc = useQueryClient()
-  const { user } = useAuth()
+export function useProductCrud() {
   const [productError, setProductError] = React.useState<string | null>(null)
 
   const createMut = useMutation({
@@ -18,10 +12,7 @@ export function useProductCrud(options: {
       gjendje_kosove: number
       gjendje_shqiperi: number
     }) => createProduct(input),
-    onSuccess: async () => {
-      setProductError(null)
-      await invalidateAfterMutation(qc, 'products', { userId: user?.id })
-    },
+    onSuccess: () => setProductError(null),
     onError: (e) => setProductError(e instanceof Error ? e.message : 'Error'),
   })
 
@@ -33,20 +24,13 @@ export function useProductCrud(options: {
         gjendje_kosove: p.gjendje_kosove,
         gjendje_shqiperi: p.gjendje_shqiperi,
       }),
-    onSuccess: async () => {
-      setProductError(null)
-      await invalidateAfterMutation(qc, 'products', { userId: user?.id })
-    },
+    onSuccess: () => setProductError(null),
     onError: (e) => setProductError(e instanceof Error ? e.message : 'Error'),
   })
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteProduct(id),
-    onSuccess: async () => {
-      setProductError(null)
-      options.notify('Produkti u fshi me sukses.', 'success')
-      await invalidateAfterMutation(qc, 'all', { userId: user?.id })
-    },
+    onSuccess: () => setProductError(null),
     onError: (e) => setProductError(e instanceof Error ? e.message : 'Error'),
   })
 

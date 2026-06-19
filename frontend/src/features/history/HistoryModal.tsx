@@ -19,11 +19,12 @@ import {
   type HistoryClientFilters,
   type HistoryServerFilters,
 } from '../../lib/historyClientFilters'
-import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { ActionEditModal } from './ActionEditModal'
+import type { HistoryEditSaveResult } from './historyEditSave'
 import { ExpandedActionDetail } from './ExpandedActionDetail'
 import { CountryCell, EditIcon, DeleteIcon, LlojiBadge } from './historyBadges'
 import { HistoryBatchMetaDisplay } from './HistoryBatchMetaDisplay'
@@ -113,8 +114,8 @@ export function HistoryModal(props: {
   )
 
   const handleEditSaveComplete = React.useCallback(
-    async (actionId: string, migratedBatchId?: string) => {
-      const resolvedId = migratedBatchId ?? actionId
+    (actionId: string, result: HistoryEditSaveResult) => {
+      const resolvedId = result.batch_id ?? actionId
       setEditActionId(null)
       setExpandedIds((prev) => {
         const next = new Set(prev)
@@ -122,16 +123,20 @@ export function HistoryModal(props: {
         next.add(resolvedId)
         return next
       })
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: resolvedId, userId: user?.id })
-      await listQuery.refetch()
       onNotify?.('Ndryshimet u ruajtuan me sukses.', 'success')
+
+      const scope: InvalidateScope = result.itemsChanged ? 'all' : 'history'
+      scheduleInvalidate(qc, scope, {
+        actionBatchId: resolvedId,
+        userId: user?.id,
+      })
     },
-    [qc, listQuery, onNotify],
+    [qc, onNotify, user?.id],
   )
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteActionBatch(id),
-    onSuccess: async (_data, deletedId) => {
+    onSuccess: (_data, deletedId) => {
       setDeleteTarget(null)
       setExpandedIds((prev) => {
         const next = new Set(prev)
@@ -139,9 +144,8 @@ export function HistoryModal(props: {
         return next
       })
       setEditActionId((id) => (id === deletedId ? null : id))
-      await invalidateAfterMutation(qc, 'all', { userId: user?.id })
-      await listQuery.refetch()
       onNotify?.('Veprimi u fshi me sukses.', 'success')
+      scheduleInvalidate(qc, 'all', { userId: user?.id })
     },
     onError: (e) => {
       setDeleteTarget(null)
@@ -399,7 +403,7 @@ export function HistoryModal(props: {
           actionId={editActionId}
           products={products}
           onClose={() => setEditActionId(null)}
-          onSaveComplete={(migratedId) => void handleEditSaveComplete(editActionId, migratedId)}
+          onSaveComplete={(result) => handleEditSaveComplete(editActionId, result)}
           onError={setError}
         />
       )}

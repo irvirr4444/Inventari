@@ -6,7 +6,7 @@ export type InvalidateScope = 'products' | 'summary' | 'history' | 'all'
 export async function invalidateAfterMutation(
   qc: QueryClient,
   scope: InvalidateScope,
-  options?: { actionBatchId?: string; refetchSummary?: boolean; userId?: string },
+  options?: { actionBatchId?: string; userId?: string },
 ) {
   const tasks: Promise<void>[] = []
   const userId = options?.userId
@@ -17,9 +17,6 @@ export async function invalidateAfterMutation(
 
   if (scope === 'summary' || scope === 'all') {
     tasks.push(qc.invalidateQueries({ queryKey: ['analytics-summary', userId] }))
-    if (options?.refetchSummary) {
-      tasks.push(qc.refetchQueries({ queryKey: ['analytics-summary', userId], type: 'active' }))
-    }
   }
 
   if (scope === 'history' || scope === 'all') {
@@ -32,4 +29,18 @@ export async function invalidateAfterMutation(
   }
 
   await Promise.all(tasks)
+}
+
+/** Fire-and-forget cache invalidation after UI has already closed / notified. */
+export function scheduleInvalidate(
+  qc: QueryClient,
+  scope: InvalidateScope,
+  options?: { actionBatchId?: string; userId?: string },
+) {
+  void invalidateAfterMutation(qc, scope, options)
+}
+
+export function scheduleProductDeleteInvalidation(qc: QueryClient, userId?: string) {
+  scheduleInvalidate(qc, 'products', { userId })
+  scheduleInvalidate(qc, 'summary', { userId })
 }

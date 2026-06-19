@@ -20,7 +20,7 @@ import {
   type HistoryEditRow,
   type HistoryEditSnapshot,
 } from '../../lib/historyBatchEdit'
-import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAppData'
 import { DeleteIcon } from '../../components/icons'
 import { NumericInput } from '../../components/NumericInput'
 import { queryKeys } from '../../lib/queryKeys'
@@ -415,22 +415,15 @@ export function HistoriBatchDetail(props: {
         rows: editRows,
       })
     },
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       const nextBatchId = result.batch_id ?? props.batchId
       if (result.batch_id) {
         props.onBatchIdChange(result.batch_id)
       }
       cancelEditing()
-      await invalidateAfterMutation(qc, 'all', { actionBatchId: nextBatchId, userId: user?.id })
-      if (result.batch_id) {
-        await qc.fetchQuery({
-          queryKey: queryKeys.actionBatch(user?.id, nextBatchId),
-          queryFn: () => getActionBatch(nextBatchId),
-        })
-      } else {
-        await detailQuery.refetch()
-      }
       props.onNotify('Veprimi u përditësua me sukses.', 'success')
+      const scope: InvalidateScope = result.itemsChanged ? 'all' : 'history'
+      scheduleInvalidate(qc, scope, { actionBatchId: nextBatchId, userId: user?.id })
     },
     onError: (e) => {
       const message = e instanceof Error ? e.message : 'Gabim gjate ruajtjes.'

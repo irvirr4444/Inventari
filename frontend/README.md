@@ -76,7 +76,7 @@ frontend/
       tabs/                    Veprime, Transfer, Produkte, Histori, Permbledhje
       styles/                  Mobile-only CSS (imports tokens.css only)
     features/
-      actions/                 ActionEntryPanel, ActionItemsTable, TransferModal
+      actions/                 ActionEntryPanel, ActionItemsTable, ActionReviewModal, TransferModal
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
       history/                 HistoryModal and edit/list submodules
@@ -105,9 +105,22 @@ On viewports **wider than the mobile breakpoint** (`useMobileClient`), `App.tsx`
 
 The screen has three areas:
 
-1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and finalize. **Historiku** opens the action history modal.
+1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and **Finalizo Veprimin**. **Historiku** opens the action history modal.
 2. **Products card** — sortable product table, add/edit/delete, Excel export.
 3. **Summary panel** — per-country totals for a date range and Excel export.
+
+The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps a fixed height (product rows scroll inside the table after 2 lines), the products table fills its card and scrolls internally, and the summary panel stays compact below.
+
+#### Action card and finalize review
+
+- **Product rows** use `ActionItemsTable` with a **fixed 2-row** scroll area (`--action-visible-rows: 2`, `--action-row-height: 62px`). Row 3+ scroll inside the card; a reserved hint slot shows `↕ N produkte — scroll për të parë të gjitha` when needed (no layout jump when the hint appears).
+- **Finalizo Veprimin** validates line items first; invalid input shows a **red error snackbar** (e.g. `Sasia duhet te jete > 0.`) without growing the action card.
+- On success, validation opens **`ActionReviewModal`** — a large review sheet (`max-width: 960px`, ~10 visible row slots) instead of the small `ConfirmModal` text dialog.
+- Review modal header: title, `LlojiBadge` (Hyrje/Dalje), country flag + label, formatted action date, product count.
+- Review body: fixed column headers; scrollable list with **horizontal dividers on every row slot**. When fewer than 10 products, **empty placeholder rows** fill the remaining slots so the table always looks full (Google-picker style). Scroll inside the list only when there are **more than 10** products.
+- Each line shows read-only **`Emri (Kodi)`** plus editable **`NumericInput`** for `Cmimi/Njesi` and `Sasia`; line total and footer total update live. Edits write back to the action card state immediately.
+- Footer: **Totali i veprimit**, **Anulo**, **Finalizo**. Confirm re-validates; errors stay in the modal with a red snackbar. Success closes the modal, shows a green snackbar, and resets the action form.
+- **Transfer** finalize still uses the stacked `ConfirmModal` (review modal is Hyrje/Dalje only on desktop for now).
 
 #### Product entry rows (actions + transfer + history edit)
 
@@ -116,7 +129,7 @@ Desktop product lines use the same controls everywhere:
 - **`ProductSearchSelect`** — searchable combobox (`Kerko sipas kodit ose emrit…`) with portal dropdown; shows `Emri (Kodi)`, sorted by code. Used in the action table, transfer modal, and history edit popup (not a native `<select>`).
 - **`NumericInput`** — shared number field: when the value is `0`, the input stays empty and shows a muted placeholder (`0`, `0.00`, or `1` depending on field). Focus does not fight a prefilled zero; negative input is blocked.
 
-`ActionItemsTable` column layout: **35% / 20% / 15% / 18% / 12%** with horizontal scroll (`min-width: 760px`) so long product names and large quantities stay readable.
+`ActionItemsTable` column layout: **35% / 20% / 15% / 18% / 12%** with horizontal scroll (`min-width: 760px`) so long product names and large quantities stay readable. The review modal uses a slimmer 4-column layout (**42% / 22% / 16% / 20%**) with read-only product names.
 
 #### Historiku (action history)
 
@@ -160,12 +173,14 @@ Transfer is separate from the main action form:
 
 #### Feedback (snackbars)
 
-- Green success snackbar for: registered actions/transfers, successful history edits/deletes, product create/edit/delete.
-- Dark default snackbar for validation messages (e.g. duplicate product in a row).
+- Green success snackbar (`.snackbar.success`) for: registered actions/transfers, successful history edits/deletes, product create/edit/delete.
+- Red error snackbar (`.snackbar.error`) for: action/transfer finalize validation failures, API errors on submit, invalid edits in the review modal.
+- Dark default snackbar for other messages (e.g. duplicate product in a row).
 
 #### Shared desktop UI and hooks
 
 - `features/actions/ActionItemsTable` — product rows for action form and transfer modal.
+- `features/actions/ActionReviewModal` — large finalize review for Hyrje/Dalje (desktop).
 - `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
 - `components/ProductSearchSelect`, `components/NumericInput`, `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
 - `hooks/useActionItems` — line-item add/remove/validate (used twice: action + transfer).
@@ -192,7 +207,7 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 
 **Interaction model:**
 
-- Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete).
+- Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete). Desktop Hyrje/Dalje uses **`ActionReviewModal`** for finalize; mobile still uses a compact **BottomSheet** confirm.
 - Card lists instead of tables; touch targets ≥48px.
 - Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
 - Histori detail is an in-tab stack (back button), not a URL route in v1.
@@ -255,18 +270,18 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `base.css` | Links, cursor states |
 | `components/date-input.css` | Date picker |
 | `components/forms.css` | Form layout, stock field cards (`stock-fields-grid`) |
-| `components/modals.css` | Modals, snackbar, stacked overlay |
+| `components/modals.css` | Modals, snackbar, stacked overlay, `action-review-modal` |
 | `components/product-search-select.css` | Searchable product combobox + portal list |
 | `components/stock-badges.css` | Stock badges |
-| `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll |
+| `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
 | `features/summary.css` | Permbledhje panel |
 | `features/history.css` | Historiku modal, edit subtable, inline edit row highlight |
 | `responsive.css` | Breakpoints (stock cards stack on narrow desktop widths) |
 
-- Dashboard layout is viewport-locked with internal scrolling in the products table.
+- Dashboard layout is viewport-locked with internal scrolling in the action table (2 rows), products table, and review modal list (10 row slots; scroll only when >10 products).
 - Action and history-edit product tables scroll horizontally when columns need more space.
-- Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals.
-- Success snackbars use `.snackbar.success` (green); modals use `.modal-close-btn` (×).
+- Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals (product delete, transfer finalize).
+- Success snackbars use `.snackbar.success` (green); errors use `.snackbar.error` (red); modals use `.modal-close-btn` (×).
 - Editing a history line item highlights the row (`.item-row-editing`, amber background).
 
 ---
@@ -538,6 +553,10 @@ Rules:
 - Unit price must be zero or higher.
 - The same product cannot be selected twice in the same action.
 
+Finalize (Hyrje / Dalje on desktop):
+
+- **Finalizo Veprimin** opens `ActionReviewModal` for a last check; user can edit `Cmimi/Njesi` and `Sasia` there before **Finalizo** submits the batch.
+
 Calculated per row:
 
 - `Totali = Cmimi/Njesi * Sasia`
@@ -618,9 +637,9 @@ Purpose:
 
 - Gives the user a live overview of all products and their current quantities.
 
-### Action Entry Total
+### Action Entry Total and Finalize (Hyrje / Dalje)
 
-Before finalizing an action, the platform shows the action total.
+Before finalizing an action, the platform shows the action total on the action card.
 
 Displayed value:
 
@@ -630,9 +649,17 @@ Formula:
 
 - `Total = sum(Cmimi/Njesi * Sasia)`
 
+Workflow:
+
+1. User clicks **Finalizo Veprimin** on the action card.
+2. Client validates rows (at least one product, quantity > 0, price ≥ 0). Failures show a **red snackbar**; the card height stays fixed.
+3. **`ActionReviewModal`** opens: large table with up to 10 visible row slots, horizontal dividers, inline price/qty edits, and footer total.
+4. User confirms with **Finalizo** (or **Anulo** / × / overlay to close without submitting). Confirm runs validation again.
+5. On API success: modal closes, green snackbar, action form resets, products and summary refresh.
+
 Purpose:
 
-- Lets the user verify the financial value of the action before saving.
+- Lets the user verify and correct every line before saving, without returning to the cramped action card.
 
 ### Confirmation Messages
 
@@ -641,7 +668,8 @@ The platform shows feedback after important actions.
 Examples:
 
 - Green snackbar: successful inventory action, transfer, history edit/delete, product create/edit/delete.
-- Validation errors when required fields are missing (inline in forms or snackbar for duplicate product in a row).
+- Red snackbar: finalize validation errors (`Sasia duhet te jete > 0.`, etc.), API errors on submit.
+- Validation when adding rows (e.g. duplicate product in the same action) via default dark snackbar.
 - Stock errors with full product name and code, e.g. insufficient stock on transfer or `Dalje`.
 
 Purpose:

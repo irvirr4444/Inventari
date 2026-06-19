@@ -1,11 +1,13 @@
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Snackbar } from '../components/Snackbar'
 import { ActionEntryPanel } from '../features/actions/ActionEntryPanel'
+import { ActionReviewModal } from '../features/actions/ActionReviewModal'
 import { TransferModal } from '../features/actions/TransferModal'
 import { HistoryModal } from '../features/history/HistoryModal'
 import { ProductFormModal } from '../features/products/ProductFormModal'
 import { ProductsPanel } from '../features/products/ProductsPanel'
 import { SummaryPanel } from '../features/summary/SummaryPanel'
+import { validateActionItems } from '../hooks/useActionItems'
 import { countryLabel, fmt, productLabel } from '../lib/format'
 import { useDashboardPage } from './useDashboardPage'
 
@@ -141,22 +143,24 @@ export function DashboardPage() {
       )}
 
       {d.confirmActionOpen && (
-        <ConfirmModal
-          title="Finalizo veprimin?"
-          message={
-            <span>
-              {d.lloji} ne {countryLabel(d.country)} me total{' '}
-              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                {fmt(d.actionItemsState.total)}
-              </strong>
-              .
-            </span>
-          }
-          confirmLabel={d.actionMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
-          tone="primary"
+        <ActionReviewModal
+          lloji={d.lloji}
+          country={d.country}
+          actionDate={d.actionDate}
+          items={d.actionItemsState.items}
+          products={d.products}
+          total={d.actionItemsState.total}
           loading={d.actionMutation.isPending}
+          onUpdateItem={d.actionItemsState.updateItem}
           onCancel={() => d.setConfirmActionOpen(false)}
-          onConfirm={() => d.actionMutation.mutate()}
+          onConfirm={() => {
+            const result = validateActionItems(d.actionItemsState.items)
+            if (result.ok === false) {
+              d.notify(result.error, 'error')
+              return
+            }
+            d.actionMutation.mutate()
+          }}
         />
       )}
 

@@ -91,6 +91,7 @@ packages/shared/        Zod schemas, productLabel, buildSummaryByCountry, ERR_* 
 | GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD |
 | POST/GET | `/api/actions` | Create action batch or list raw `veprimi` rows |
 | GET/PATCH/DELETE | `/api/action-batches/*` | Historiku batches (native + legacy IDs) |
+| POST/PATCH/DELETE | `/api/action-batches/:id/items/*` | Add, update, or remove product lines on a batch |
 | GET | `/api/analytics/summary` | Hyrje/Dalje totals by country for date range |
 | GET | `/api/analytics/stock` | Stock list filtered by country |
 | GET | `/api/exports/products.xlsx` | Product export |
@@ -111,8 +112,9 @@ Protected routes require the `inventari_session` cookie except login, logout, se
 ### Historiku (`/api/action-batches`)
 
 - Lists grouped batches with pagination and filters.
-- Supports **legacy** batch IDs (`legacy:…`) for rows created before `batch_id`.
-- Edit/delete updates sibling rows for transfers and mirrored Kosovo Dalje.
+- Supports **legacy** batch IDs (`legacy:…`) for rows created before `batch_id` (read-only grouping until first edit).
+- Any PATCH/POST/DELETE on a legacy batch **migrates** it to `veprim_batch` and returns `batch_id` when applicable.
+- Edit/delete updates sibling rows for transfers and mirrored Kosovo Dalje; item POST/DELETE handle add/remove product lines.
 
 ### Permbledhje Excel
 

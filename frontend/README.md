@@ -89,8 +89,9 @@ frontend/
       country.tsx              Country context + selector (XK / AL)
       format.ts                Re-exports shared formatters + UI helpers
       actionMeta.ts            Ora display/format helpers for batch metadata
-      actionBatch.ts           Legacy batch id detection
+      actionBatch.ts           Legacy batch id helper (`legacy:…` ids in list until first save migrates them)
       historyClientFilters.ts  Client-side Historiku filter logic (Ora, Pershkrimi, Totali, Produkte)
+      historyBatchEdit.ts      Batch edit validation/save (metadata + add/update/delete product lines)
       numericInput.ts          Helpers for zero-as-placeholder numeric fields
       queryKeys.ts             React Query key factories
       invalidateAppData.ts     Cache invalidation helper
@@ -151,7 +152,7 @@ Desktop product lines use the same controls everywhere:
 - **Shteti** for transfers renders inline as `[flag] Kosove → Shqiperi [flag]` — both flags stay next to the route text (not pinned to the column edge). Non-transfer rows show one flag + country label.
 - Batch meta cells (`HistoryBatchMetaDisplay`) and badges (`historyBadges`: `LlojiBadge`, `CountryCell`) keep list markup consistent.
 - Expand a row to view product line items; multiple rows can stay expanded at once.
-- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) to edit batch **Data**, **Ora**, **Pershkrimi**, country/route, and product lines. Legacy batches (`legacy:…`) disable Ora/Pershkrimi edits.
+- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) to edit batch **Data**, **Ora**, **Pershkrimi**, country/route, and product lines. All batches are editable — pre-batch rows (`legacy:…` ids) **auto-migrate** to a real `veprim_batch` on save and receive a normal UUID.
 - Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njesi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
 - Edit row uses `ProductSearchSelect` + `NumericInput`, matching the main action form.
 - **Fshi** deletes the whole action after confirmation.
@@ -207,7 +208,7 @@ Transfer is separate from the main action form:
 - `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
 - `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` to add optional **Ora** and **Pershkrimi** on `veprim_batch` (batch-level metadata, not on individual `veprimi` line rows). New actions get a `batch_id`; history lists grouped batches only.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` to add optional **Ora** and **Pershkrimi** on `veprim_batch` (batch-level metadata, not on individual `veprimi` line rows). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
 ### Mobile web app
 
@@ -218,7 +219,7 @@ On **phones and small touch devices**, the app opens the mobile UI automatically
 | `/` | Dashboard | Mobile app (bottom tabs) |
 | `/mobile` | Redirects to `/` | Redirects to `/` |
 
-For manual testing on desktop, resize the browser below 768px or use DevTools device mode.
+For manual testing on desktop, resize the browser below 768px, use DevTools device mode, or open **`http://localhost:5173/?mobile=1`** to force the mobile UI.
 
 Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
 
@@ -231,7 +232,7 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 - Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
 - Veprime and Transfer tabs include optional **Ora** (`OraInput`) / **Pershkrimi** fields; Histori list cards and detail show them when set (date · ora on one line; Pershkrimi as a muted truncated second line with `title` tooltip).
 - **Histori tab filters:** type/country chips + date row (server-side, via `useHistoryBatches`); **Filtrat e avancuara ▾** pill opens a collapsible panel for client-side **Ora**, **Pershkrimi**, **Totali**, and **Produkte** filters (reuses `lib/historyClientFilters.ts`; **Apliko** / **Pastro**; active dot on pill when advanced filters are on).
-- **Histori batch edit** (`HistoriBatchDetail`): tap **Ndrysho** to enter inline edit mode — metadata (date, country/route, Ora, Pershkrimi for non-legacy batches) and **all product rows** editable at once via `ProductPickerSheet` + `NumericInput`; sticky **Ruaj** / **Anulo** footer saves via `lib/historyBatchEdit.ts` (no per-row **Ndrysho Produktin**).
+- **Histori batch edit** (`HistoriBatchDetail`): tap **Ndrysho** for a **full-screen edit form** (read view hidden). Header shows **Ndrysho** with back → cancel (unsaved-changes `BottomSheet` when dirty). Sections **DETAJET** (date, country/route, Ora, Pershkrimi) and **PRODUKTET** (all rows editable via `ProductPickerSheet` + `NumericInput`, live line totals, **+ Shto Produkt**, row remove). Sticky footer: **Totali i veprimit** + **Ruaj Ndryshimet**. Saves via `lib/historyBatchEdit.ts` (`updateActionBatch`, `createActionBatchItem`, `deleteActionBatchItem`). Pre-batch actions migrate on first save like desktop.
 - Histori detail is an in-tab stack (back button), not a URL route in v1.
 - Same API payloads, Albanian strings, and business rules as desktop.
 
@@ -250,7 +251,7 @@ src/mobile/
 
 - `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches`
 - `lib/historyClientFilters.ts` — client-side Historiku filters (desktop modal + mobile advanced panel)
-- `lib/historyBatchEdit.ts` — batch edit validation/save orchestration (mobile Histori detail)
+- `lib/historyBatchEdit.ts` — batch edit validation/save orchestration (mobile Histori detail; ordered rows, dirty check, add/update/delete lines)
 - Desktop `useDashboardPage.ts` composes these; mobile tabs call them directly.
 
 Design reference: [MOBILE_DESIGN_PROMPT.md](../MOBILE_DESIGN_PROMPT.md) at repo root.
@@ -267,7 +268,7 @@ Main endpoints used by the UI:
 | `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Product CRUD |
 | `createActionBatch` | Register `Hyrje`, `Dalje`, or `Transfer` |
 | `listActionBatches` / `getActionBatch` | Paginated history list and detail |
-| `updateActionBatch` / `updateActionBatchItem` / `deleteActionBatch` | Edit or delete past actions |
+| `updateActionBatch` / `updateActionBatchItem` / `createActionBatchItem` / `deleteActionBatchItem` / `deleteActionBatch` | Edit or delete past actions (PATCH may return `batch_id` when a legacy batch migrates) |
 | `analyticsSummary` | Summary panel numbers (both countries, one request) |
 | `exportProductsUrl` | Products `.xlsx` download |
 | `exportUrl` | Summary `.xlsx` download |
@@ -627,10 +628,10 @@ List behavior:
 
 Edit (`Ndrysho`):
 
-- `ActionEditModal` to change batch date, optional Ora/Pershkrimi (`OraInput`), country (or transfer route), and individual line items.
+- `ActionEditModal` to change batch date, optional Ora/Pershkrimi (`OraInput`), country (or transfer route), and individual line items — **all batches**, including pre-batch `legacy:…` rows (migrated on save).
 - Click **Ndrysho Produktin** on a line; the row switches to `ProductSearchSelect` + `NumericInput` fields aligned under the table headers.
 - **Ruaj** / **Anulo** in the actions column; money columns stay right-aligned.
-- On success: edit popup closes, row stays expanded, list refreshes, green snackbar.
+- On success: edit popup closes, row stays expanded, list refreshes, green snackbar (migrated batches may get a new UUID).
 
 Delete (`Fshi`):
 

@@ -131,6 +131,7 @@ SQL migrations live in `docs/sql/`:
 | `03_migrate_produkti_two_stocks.sql` | Two-country stock columns |
 | `04_drop_produkti_pershkrimi.sql` | Remove Përshkrimi column |
 | `05_veprim_batch.sql` | `veprim_batch` + batch triggers (required for Historiku) |
+| `06_veprim_batch_ora_pershkrimi.sql` | Optional `ora` + `pershkrimi` on `veprim_batch` |
 
 ## Tests
 

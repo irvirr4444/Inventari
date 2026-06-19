@@ -8,11 +8,14 @@ import type { Produkti } from '../../lib/api'
 import { countryLabel, fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { ActionItemsTable } from './ActionItemsTable'
+import { ActionMetaFields } from './ActionMetaFields'
 
 export function TransferModal(props: {
   from: Country
   to: Country
   date: string
+  ora: string
+  pershkrimi: string
   items: ActionItemDraft[]
   products: Produkti[]
   error: string | null
@@ -21,6 +24,8 @@ export function TransferModal(props: {
   onFromChange: (country: Country) => void
   onToChange: (country: Country) => void
   onDateChange: (date: string) => void
+  onOraChange: (value: string) => void
+  onPershkrimiChange: (value: string) => void
   onAddItem: () => void
   onRemoveItem: (key: string) => void
   onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
@@ -61,10 +66,19 @@ export function TransferModal(props: {
           </div>
         </div>
 
-        <div className="row transfer-date-row" style={{ gap: 8, margin: '16px 0 20px' }}>
+        <div className="row transfer-date-row" style={{ gap: 8, margin: '16px 0 12px' }}>
           <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
           <DateInput value={props.date} onChange={props.onDateChange} style={{ width: 150 }} />
         </div>
+
+        <ActionMetaFields
+          ora={props.ora}
+          pershkrimi={props.pershkrimi}
+          onOraChange={props.onOraChange}
+          onPershkrimiChange={props.onPershkrimiChange}
+          disabled={props.saving}
+          className="transfer-meta-fields"
+        />
 
         <ActionItemsTable
           items={props.items}

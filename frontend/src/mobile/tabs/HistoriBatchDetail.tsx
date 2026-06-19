@@ -10,7 +10,9 @@ import {
   type HistoryActionItem,
   type Produkti,
 } from '../../lib/api'
-import { countryLabel, fmtEuro, formatDisplayDate, productLabel, sortProductsByKodi } from '../../lib/format'
+import { countryLabel, fmtEuro, productLabel, sortProductsByKodi } from '../../lib/format'
+import { formatActionDateTime, formatDisplayTime } from '../../lib/actionMeta'
+import { isLegacyBatchId } from '../../lib/actionBatch'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { NumericInput } from '../../components/NumericInput'
 import { queryKeys } from '../../lib/queryKeys'
@@ -24,6 +26,7 @@ import {
 import { MobileDateInput } from '../components/MobileDateInput'
 import { MobileCountryField } from '../components/MobileCountryField'
 import { SkeletonRow } from '../components/SkeletonRow'
+import { OraInput } from '../../components/OraInput'
 
 function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   const cls =
@@ -75,8 +78,13 @@ export function HistoriBatchDetail(props: {
         <div className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           <MobileLlojiBadge lloji={detail.lloji} />
           <div className="mobile-card-meta" style={{ marginTop: 8 }}>
-            {formatDisplayDate(detail.data)}
+            {formatActionDateTime(detail.data, detail.ora)}
           </div>
+          {detail.pershkrimi?.trim() ? (
+            <div className="mobile-card-meta" style={{ marginTop: 4 }}>
+              {detail.pershkrimi.trim()}
+            </div>
+          ) : null}
           {detail.lloji === 'Transfer' && detail.destination_shteti ? (
             <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
               <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
@@ -185,6 +193,9 @@ function MobileBatchEditForm(props: {
   onInvalidate: () => Promise<void>
 }) {
   const [data, setData] = React.useState(props.detail.data)
+  const isLegacy = isLegacyBatchId(props.detail.id)
+  const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
+  const [pershkrimi, setPershkrimi] = React.useState(props.detail.pershkrimi ?? '')
   const [shteti, setShteti] = React.useState<Country>(props.detail.shteti)
   const [destination, setDestination] = React.useState<Country | ''>(
     props.detail.destination_shteti ?? '',
@@ -202,12 +213,22 @@ function MobileBatchEditForm(props: {
 
   const updateBatchMut = useMutation({
     mutationFn: () => {
-      const payload: { data?: string; shteti?: Country; destination_shteti?: Country } = { data }
+      const payload: {
+        data?: string
+        shteti?: Country
+        destination_shteti?: Country
+        ora?: string | null
+        pershkrimi?: string | null
+      } = { data }
       if (props.detail.lloji === 'Transfer') {
         payload.shteti = shteti
         if (destination) payload.destination_shteti = destination as Country
       } else if (!props.detail.mirrored_to_albania) {
         payload.shteti = shteti
+      }
+      if (!isLegacy) {
+        payload.ora = ora.trim() ? ora.trim() : null
+        payload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
       }
       return updateActionBatch(props.detail.id, payload)
     },
@@ -285,6 +306,38 @@ function MobileBatchEditForm(props: {
           <label className="mobile-label">Data</label>
           <MobileDateInput value={data} onChange={setData} disabled={busy} aria-label="Data" placeholder="Data" />
         </div>
+
+        {!isLegacy ? (
+          <>
+            <div>
+              <label className="mobile-label" htmlFor="batch-edit-ora">
+                Ora
+              </label>
+              <OraInput
+                id="batch-edit-ora"
+                className="mobile-input"
+                value={ora}
+                onChange={setOra}
+                disabled={busy}
+              />
+            </div>
+            <div>
+              <label className="mobile-label" htmlFor="batch-edit-pershkrimi">
+                Pershkrimi
+              </label>
+              <input
+                id="batch-edit-pershkrimi"
+                type="text"
+                className="mobile-input"
+                value={pershkrimi}
+                onChange={(e) => setPershkrimi(e.target.value)}
+                disabled={busy}
+                maxLength={500}
+                placeholder="Opsionale"
+              />
+            </div>
+          </>
+        ) : null}
 
         {props.detail.lloji === 'Transfer' ? (
           <>

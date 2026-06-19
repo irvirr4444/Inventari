@@ -121,6 +121,8 @@ export async function createActionBatch(input: {
   destination_shteti?: Country
   lloji: 'Hyrje' | 'Dalje' | 'Transfer'
   data?: string
+  ora?: string
+  pershkrimi?: string
   items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
 }): Promise<{
   data: Veprimi[]
@@ -155,6 +157,8 @@ export type ActionBatch = {
   shteti: Country
   destination_shteti?: Country
   data: string
+  ora?: string | null
+  pershkrimi?: string | null
   totali: number
   created_at: string
   item_count: number
@@ -202,6 +206,8 @@ export async function updateActionBatch(
     data?: string
     shteti?: Country
     destination_shteti?: Country
+    ora?: string | null
+    pershkrimi?: string | null
   },
 ): Promise<void> {
   await http<{ ok: true }>(`/action-batches/${encodeURIComponent(id)}`, {

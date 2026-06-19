@@ -67,8 +67,8 @@ frontend/
     main.tsx                   App bootstrap + React Query provider
     index.css                  Imports styles/index.css hub
     styles/                    Design tokens, components, features, responsive
-    components/                Modal, ConfirmModal, DateInput, Snackbar, NumericInput,
-                               ProductSearchSelect, icons, …
+    components/                Modal, ConfirmModal, DateInput, OraInput, TimePickerPopover,
+                               Snackbar, NumericInput, ProductSearchSelect, icons, …
     hooks/                     useSnackbar, useActionItems, feature hooks (products, actions, history, summary)
     mobile/                    Purpose-built mobile UI at /mobile (see Mobile section below)
       MobileApp.tsx            Shell, tab state, header with Dil
@@ -79,7 +79,7 @@ frontend/
       actions/                 ActionEntryPanel, ActionItemsTable, ActionReviewModal, TransferModal
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
-      history/                 HistoryModal and edit/list submodules
+      history/                 HistoryModal, HistoryBatchMetaDisplay, historyBadges, edit/list submodules
     pages/
       DashboardPage.tsx        Composes feature panels (~180 lines)
       LoginPage.tsx            Login form
@@ -88,6 +88,8 @@ frontend/
       api.ts                   Backend API client
       country.tsx              Country context + selector (XK / AL)
       format.ts                Re-exports shared formatters + UI helpers
+      actionMeta.ts            Ora display/format helpers for batch metadata
+      actionBatch.ts           Legacy batch id detection
       numericInput.ts          Helpers for zero-as-placeholder numeric fields
       queryKeys.ts             React Query key factories
       invalidateAppData.ts     Cache invalidation helper
@@ -105,7 +107,7 @@ On viewports **wider than the mobile breakpoint** (`useMobileClient`), `App.tsx`
 
 The screen has three areas:
 
-1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, product rows, total, and **Finalizo Veprimin**. **Historiku** opens the action history modal.
+1. **Action card** — `Hyrje` / `Dalje` entry with country selector, date, optional **Ora** (`HH:mm`) and **Pershkrimi** (max 500 chars), product rows, total, and **Finalizo Veprimin**. **Historiku** opens the action history modal.
 2. **Products card** — sortable product table, add/edit/delete, Excel export.
 3. **Summary panel** — per-country totals for a date range and Excel export.
 
@@ -114,9 +116,10 @@ The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps 
 #### Action card and finalize review
 
 - **Product rows** use `ActionItemsTable` with a **fixed 2-row** scroll area (`--action-visible-rows: 2`, `--action-row-height: 62px`). Row 3+ scroll inside the card; a reserved hint slot shows `↕ N produkte — scroll për të parë të gjitha` when needed (no layout jump when the hint appears).
+- Optional **Ora** and **Pershkrimi** sit below the date row (`ActionMetaFields`); **Ora** uses `OraInput` with a portal time picker (`TimePickerPopover`, `HH:mm`). Empty values are omitted from `POST /api/actions`. Both are stored on `veprim_batch` (one set per action/transfer batch).
 - **Finalizo Veprimin** validates line items first; invalid input shows a **red error snackbar** (e.g. `Sasia duhet te jete > 0.`) without growing the action card.
 - On success, validation opens **`ActionReviewModal`** — a large review sheet (`max-width: 960px`, ~10 visible row slots) instead of the small `ConfirmModal` text dialog.
-- Review modal header: title, `LlojiBadge` (Hyrje/Dalje), country flag + label, formatted action date, product count.
+- Review modal header: title, `LlojiBadge` (Hyrje/Dalje), country flag + label, formatted action date (with Ora when set), product count; **Pershkrimi** shown below when set (`ActionMetaDisplay`).
 - Review body: fixed column headers; scrollable list with **horizontal dividers on every row slot**. When fewer than 10 products, **empty placeholder rows** fill the remaining slots so the table always looks full (Google-picker style). Scroll inside the list only when there are **more than 10** products.
 - Each line shows read-only **`Emri (Kodi)`** plus editable **`NumericInput`** for `Cmimi/Njesi` and `Sasia`; line total and footer total update live. Edits write back to the action card state immediately.
 - Footer: **Totali i veprimit**, **Anulo**, **Finalizo**. Confirm re-validates; errors stay in the modal with a red snackbar. Success closes the modal, shows a green snackbar, and resets the action form.
@@ -133,10 +136,16 @@ Desktop product lines use the same controls everywhere:
 
 #### Historiku (action history)
 
-- Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal`.
-- Filter by type, country, and date range; paginated table (**5 per page**).
+- Button on the right of the Hyrje/Dalje toggle row opens `HistoryModal` (~**1200px** wide).
+- Filter by type, country, and date range; paginated table (**8 per page**).
+- List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti**, **Produkte**, **Totali**, **Veprime** (read-only in the list; empty Ora/Pershkrimi show `—`).
+- **Data**, **Ora**, and **Pershkrimi** are left-aligned; **Produkte**, **Totali**, and **Veprime** are right-aligned. Edit/delete icon buttons sit flush right in **Veprime**.
+- **Pershkrimi** gets the widest meta column (~**22%**); long text ellipsizes with the full value in a `title` tooltip.
+- **Produkte** shows the line-item **count only** (e.g. `3`), not `3 produkte`. Column is compact (~**8%**); **Totali** is wider (~**11%**) for euro amounts.
+- **Shteti** for transfers renders inline as `[flag] Kosove → Shqiperi [flag]` — both flags stay next to the route text (not pinned to the column edge). Non-transfer rows show one flag + country label.
+- Batch meta cells (`HistoryBatchMetaDisplay`) and badges (`historyBadges`: `LlojiBadge`, `CountryCell`) keep list markup consistent.
 - Expand a row to view product line items; multiple rows can stay expanded at once.
-- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) for batch metadata (date, country/route) and inline product line edits.
+- **Ndrysho** opens `ActionEditModal` (`max-width: 860px`) to edit batch **Data**, **Ora**, **Pershkrimi**, country/route, and product lines. Legacy batches (`legacy:…`) disable Ora/Pershkrimi edits.
 - Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njesi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
 - Edit row uses `ProductSearchSelect` + `NumericInput`, matching the main action form.
 - **Fshi** deletes the whole action after confirmation.
@@ -148,7 +157,7 @@ Desktop product lines use the same controls everywhere:
 Transfer is separate from the main action form:
 
 - The **Transfero** button opens `TransferModal`.
-- The modal contains route selectors (`Nga` / `Ne`), action date, the same `ActionItemsTable` as normal actions, total, and **Finalizo Transfertën**.
+- The modal contains route selectors (`Nga` / `Ne`), action date, optional **Ora** (`OraInput`) / **Pershkrimi**, the same `ActionItemsTable` as normal actions, total, and **Finalizo Transfertën**.
 - The country chosen in `Nga` is disabled in `Ne`.
 - Submit opens a **confirmation dialog** stacked above the transfer modal, then sends `POST /api/actions` with `lloji: 'Transfer'`, `shteti`, and `destination_shteti`.
 - On success: transfer modal closes, **green snackbar**, products and summary refresh.
@@ -180,6 +189,9 @@ Transfer is separate from the main action form:
 #### Shared desktop UI and hooks
 
 - `features/actions/ActionItemsTable` — product rows for action form and transfer modal.
+- `features/actions/ActionMetaFields` / `ActionMetaDisplay` — optional Ora + Pershkrimi entry and read-only display (`OraInput` + text field).
+- `features/history/HistoryBatchMetaDisplay`, `features/history/historyBadges` — history list meta columns and type/country badges.
+- `components/OraInput`, `components/TimePickerPopover` — shared time entry (`HH:mm`) for actions, transfers, and history edit.
 - `features/actions/ActionReviewModal` — large finalize review for Hyrje/Dalje (desktop).
 - `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
 - `components/ProductSearchSelect`, `components/NumericInput`, `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
@@ -188,7 +200,7 @@ Transfer is separate from the main action form:
 - `pages/useDashboardPage.ts` — queries, mutations, and modal state for the dashboard.
 - `lib/queryKeys` + `lib/invalidateAppData` — centralized React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. New actions get a `batch_id`; history lists grouped batches only.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` to add optional **Ora** and **Pershkrimi** on `veprim_batch` (batch-level metadata, not on individual `veprimi` line rows). New actions get a `batch_id`; history lists grouped batches only.
 
 ### Mobile web app
 
@@ -210,6 +222,8 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 - Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete). Desktop Hyrje/Dalje uses **`ActionReviewModal`** for finalize; mobile still uses a compact **BottomSheet** confirm.
 - Card lists instead of tables; touch targets ≥48px.
 - Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
+- Veprime and Transfer tabs include optional **Ora** (`OraInput`) / **Pershkrimi** fields; Histori list cards and detail show them when set (date + time on one line; Pershkrimi truncates with tooltip on cards).
+- Histori batch edit (`HistoriBatchDetail`) can change **Ora** and **Pershkrimi** for non-legacy batches.
 - Histori detail is an in-tab stack (back button), not a URL route in v1.
 - Same API payloads, Albanian strings, and business rules as desktop.
 
@@ -256,9 +270,13 @@ createActionBatch({
   shteti: 'XK',              // source country
   destination_shteti: 'AL',  // destination country
   data: '2026-06-17',
+  ora: '09:30',              // optional HH:mm
+  pershkrimi: '…',           // optional, max 500 chars
   items: [{ kodi_produktit, cmimi_njesi, sasia }],
 })
 ```
+
+`updateActionBatch` accepts `ora` and `pershkrimi` as `string | null` (send `null` to clear). List/detail responses include `ora` and `pershkrimi` on each batch.
 
 ### Styling notes
 
@@ -269,16 +287,18 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `tokens.css` | CSS variables (`:root`) |
 | `base.css` | Links, cursor states |
 | `components/date-input.css` | Date picker |
+| `components/time-input.css` | Ora field + time picker popover |
 | `components/forms.css` | Form layout, stock field cards (`stock-fields-grid`) |
 | `components/modals.css` | Modals, snackbar, stacked overlay, `action-review-modal` |
 | `components/product-search-select.css` | Searchable product combobox + portal list |
 | `components/stock-badges.css` | Stock badges |
 | `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
 | `features/summary.css` | Permbledhje panel |
-| `features/history.css` | Historiku modal, edit subtable, inline edit row highlight |
+| `features/history.css` | Historiku modal (fixed column widths, alignment, transfer route flags), edit subtable, inline edit row highlight |
 | `responsive.css` | Breakpoints (stock cards stack on narrow desktop widths) |
 
 - Dashboard layout is viewport-locked with internal scrolling in the action table (2 rows), products table, and review modal list (10 row slots; scroll only when >10 products).
+- Historiku list uses `table-layout: fixed` with percentage column widths (expand 3%, Data 12%, Ora 8%, Pershkrimi 22%, Lloji 9%, Shteti 17%, Produkte 8%, Totali 11%, Veprime 10%). Lloji/Shteti keep `min-width` so badges and transfer routes do not wrap awkwardly.
 - Action and history-edit product tables scroll horizontally when columns need more space.
 - Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals (product delete, transfer finalize).
 - Success snackbars use `.snackbar.success` (green); errors use `.snackbar.error` (red); modals use `.modal-close-btn` (×).
@@ -579,13 +599,16 @@ Input / filters:
 
 List behavior:
 
-- Paginated (**5** rows per page).
+- Paginated (**8** rows per page) in a wide modal (~**1200px**).
+- Separate read-only **Data**, **Ora**, and **Pershkrimi** columns in the list (`—` when empty). **Produkte** shows the item count as a number only.
+- **Data** / **Ora** / **Pershkrimi** left-aligned; **Produkte** / **Totali** / **Veprime** right-aligned (including edit/delete buttons).
+- Transfer **Shteti** shows both flags inline with the route label; Pershkrimi ellipsizes with a hover tooltip when long.
 - Expand a batch to see line items (product, unit price, quantity, line total).
 - Multiple batches can stay expanded at once.
 
 Edit (`Ndrysho`):
 
-- `ActionEditModal` to change batch date, country (or transfer route), and individual line items.
+- `ActionEditModal` to change batch date, optional Ora/Pershkrimi (`OraInput`), country (or transfer route), and individual line items.
 - Click **Ndrysho Produktin** on a line; the row switches to `ProductSearchSelect` + `NumericInput` fields aligned under the table headers.
 - **Ruaj** / **Anulo** in the actions column; money columns stay right-aligned.
 - On success: edit popup closes, row stays expanded, list refreshes, green snackbar.

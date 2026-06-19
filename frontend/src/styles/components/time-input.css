@@ -1,0 +1,325 @@
+.time-input {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  width: 100%;
+}
+
+.time-input.ora-compact-input {
+  width: auto;
+}
+
+.ora-compact-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ora-compact-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.ora-digit-box {
+  width: 30px;
+  height: 45px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.time-input.open .ora-digit-box {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 125, 246, 0.14);
+}
+
+.ora-compact-sep {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+  padding: 0 1px;
+  user-select: none;
+}
+
+.time-input-trigger {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  padding-right: 12px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  white-space: nowrap;
+  line-height: 1.25;
+  box-sizing: border-box;
+}
+
+.time-input-trigger.input {
+  padding: 10px 12px;
+  min-height: 0;
+}
+
+.time-input-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.time-input-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  font-weight: 500;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-input-placeholder {
+  color: var(--text-muted);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-input-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.time-input.open .time-input-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 125, 246, 0.14);
+}
+
+.time-picker-popover {
+  width: fit-content;
+  min-width: 228px;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+}
+
+.time-picker {
+  width: max-content;
+  min-width: 200px;
+}
+
+.time-picker-popover-portal {
+  position: fixed;
+  z-index: 100;
+}
+
+.time-picker-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(47, 125, 246, 0.08) 0%, rgba(47, 125, 246, 0.02) 100%);
+}
+
+.time-picker-preview-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.time-picker-preview-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.time-picker-quick {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.time-picker-quick-btn {
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.time-picker-quick-btn:hover {
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.08);
+}
+
+.time-picker-quick-btn.active {
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.12);
+  color: var(--primary);
+}
+
+.time-picker-columns {
+  display: grid;
+  grid-template-columns: 68px auto 68px;
+  align-items: end;
+  gap: 6px;
+  justify-content: center;
+}
+
+.time-picker-column-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.time-picker-column-viewport {
+  position: relative;
+}
+
+.time-picker-column-band {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(47, 125, 246, 0.22);
+  background: rgba(47, 125, 246, 0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.time-picker-column-scroll {
+  position: relative;
+  z-index: 2;
+  height: 168px;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: thin;
+  padding: 66px 0;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    #000 18%,
+    #000 82%,
+    transparent 100%
+  );
+}
+
+.time-picker-column-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  cursor: pointer;
+  scroll-snap-align: center;
+  padding: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.time-picker-column-item:hover {
+  color: var(--text);
+}
+
+.time-picker-column-item.selected {
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.time-picker-colon {
+  align-self: center;
+  padding-bottom: 78px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.time-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.time-picker-footer-btn {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.time-picker-footer-btn:hover {
+  background: rgba(47, 125, 246, 0.08);
+}
+
+.time-picker-footer-btn.muted {
+  color: var(--text-muted);
+}
+
+.time-picker-confirm {
+  min-width: 96px;
+}
+
+.action-meta-ora-input {
+  width: 132px;
+}
+
+.action-meta-ora-input.time-input {
+  width: 132px;
+}

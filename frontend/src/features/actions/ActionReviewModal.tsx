@@ -1,9 +1,12 @@
 import type { Produkti } from '../../lib/api'
 import { COUNTRY_META, type Country } from '../../lib/country'
-import { countryLabel, fmt, formatDisplayDate, productLabel } from '../../lib/format'
+import { countryLabel, fmt, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
+import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
 import { LlojiBadge } from '../history/historyBadges'
+import { ActionMetaDisplay } from './ActionMetaDisplay'
+import { formatActionDateTime } from '../../lib/actionMeta'
 
 const REVIEW_TABLE_COL_WIDTHS = ['42%', '22%', '16%', '20%'] as const
 const REVIEW_VISIBLE_ROWS = 10
@@ -22,6 +25,8 @@ export function ActionReviewModal(props: {
   lloji: 'Hyrje' | 'Dalje'
   country: Country
   actionDate: string
+  actionOra: string
+  actionPershkrimi: string
   items: ActionItemDraft[]
   products: Produkti[]
   total: number
@@ -68,11 +73,18 @@ export function ActionReviewModal(props: {
           <span className="action-review-meta-sep" aria-hidden="true">
             ·
           </span>
-          <span className="muted">{formatDisplayDate(props.actionDate)}</span>
+          <span className="muted">{formatActionDateTime(props.actionDate, props.actionOra)}</span>
           <span className="action-review-meta-count muted">
             {displayItems.length === 1 ? '1 produkt' : `${displayItems.length} produkte`}
           </span>
         </div>
+        <ActionMetaDisplay
+          data={props.actionDate}
+          ora={props.actionOra}
+          pershkrimi={props.actionPershkrimi}
+          showDate={false}
+          className="action-review-meta-extra"
+        />
 
         <div className="action-review-body">
           <table className="table table-fixed action-review-table action-review-table-head">
@@ -98,7 +110,7 @@ export function ActionReviewModal(props: {
                     ? productLabel(product.emri, product.kodi)
                     : it.kodi_produktit
                   const lineTotal =
-                    (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
+                    (Number(it.cmimi_njesi) || 0) * effectiveSasia(it.sasia)
 
                   return (
                     <tr key={it.key}>

@@ -10,13 +10,45 @@ import {
 } from '../../lib/api'
 import { fmtEuro, productLabel } from '../../lib/format'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
+import { isLegacyBatchId } from '../../lib/actionBatch'
+import { formatDisplayTime } from '../../lib/actionMeta'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
+import { OraInput } from '../../components/OraInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
-export type EditSaveKind = 'action' | 'product'
+type ItemDraft = {
+  kodi_produktit: string
+  cmimi_njesi: string
+  sasia: string
+}
 
-const HISTORY_EDIT_COL_WIDTHS = ['35%', '20%', '15%', '13%', '17%'] as const
+function draftsFromItems(items: HistoryActionItem[]): Record<string, ItemDraft> {
+  return Object.fromEntries(
+    items.map((item) => [
+      item.id,
+      {
+        kodi_produktit: item.kodi_produktit,
+        cmimi_njesi: String(item.cmimi_njesi),
+        sasia: String(item.sasia),
+      },
+    ]),
+  )
+}
+
+function lineTotal(draft: ItemDraft): number {
+  return (Number(draft.cmimi_njesi) || 0) * (Number(draft.sasia) || 0)
+}
+
+function itemChanged(item: HistoryActionItem, draft: ItemDraft): boolean {
+  return (
+    draft.kodi_produktit !== item.kodi_produktit ||
+    Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
+    Number(draft.sasia) !== item.sasia
+  )
+}
+
+const HISTORY_EDIT_COL_WIDTHS = ['40%', '22%', '15%', '23%'] as const
 const ACTION_VISIBLE_ROWS = 2
 
 function HistoryEditColgroup() {
@@ -33,100 +65,101 @@ export function ActionEditForm(props: {
   detail: ActionBatchDetail
   products: Produkti[]
   disabled: boolean
-  onSaveComplete: (kind: EditSaveKind) => void
+  onSaveComplete: () => void
   onError: (message: string) => void
 }) {
   const qc = useQueryClient()
+  const isLegacy = isLegacyBatchId(props.detail.id)
   const [data, setData] = React.useState(props.detail.data)
+  const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
+  const [pershkrimi, setPershkrimi] = React.useState(props.detail.pershkrimi ?? '')
   const [shteti, setShteti] = React.useState<Country>(props.detail.shteti)
   const [destination, setDestination] = React.useState<Country | ''>(
     props.detail.destination_shteti ?? '',
   )
-  const [editingItemId, setEditingItemId] = React.useState<string | null>(null)
-  const [editDraft, setEditDraft] = React.useState<{
-    kodi_produktit: string
-    cmimi_njesi: string
-    sasia: string
-  } | null>(null)
+  const [itemDrafts, setItemDrafts] = React.useState<Record<string, ItemDraft>>(() =>
+    draftsFromItems(props.detail.items),
+  )
+
   const localItems = props.detail.items
+
+  React.useEffect(() => {
+    setData(props.detail.data)
+    setOra(formatDisplayTime(props.detail.ora))
+    setPershkrimi(props.detail.pershkrimi ?? '')
+    setShteti(props.detail.shteti)
+    setDestination(props.detail.destination_shteti ?? '')
+    setItemDrafts(draftsFromItems(props.detail.items))
+  }, [props.detail])
 
   const invalidateAll = React.useCallback(async () => {
     await invalidateAfterMutation(qc, 'all', { actionBatchId: props.detail.id })
   }, [qc, props.detail.id])
 
-  const updateBatchMut = useMutation({
-    mutationFn: () => {
-      const payload: {
-        data?: string
+  const saveAllMut = useMutation({
+    mutationFn: async () => {
+      for (const item of localItems) {
+        const draft = itemDrafts[item.id]
+        if (!draft?.kodi_produktit) {
+          throw new Error('Zgjidh produktin per cdo rresht.')
+        }
+        if (Number(draft.sasia) <= 0) {
+          throw new Error('Sasia duhet te jete > 0.')
+        }
+      }
+
+      const kodis = localItems.map((item) => itemDrafts[item.id]?.kodi_produktit).filter(Boolean)
+      const duplicate = kodis.find((kodi, i) => kodis.indexOf(kodi) !== i)
+      if (duplicate) {
+        const dupItem = localItems.find((it) => itemDrafts[it.id]?.kodi_produktit === duplicate)
+        throw new Error(
+          dupItem
+            ? `Ky produkt eshte dy here ne liste: ${productLabel(
+                dupItem.emri_produktit,
+                dupItem.kodi_produktit,
+              )}`
+            : 'Produkti i njejte nuk mund te perseritet ne liste.',
+        )
+      }
+
+      const batchPayload: {
+        data: string
         shteti?: Country
         destination_shteti?: Country
+        ora?: string | null
+        pershkrimi?: string | null
       } = { data }
       if (props.detail.lloji === 'Transfer') {
-        payload.shteti = shteti
-        if (destination) payload.destination_shteti = destination as Country
+        batchPayload.shteti = shteti
+        if (destination) batchPayload.destination_shteti = destination as Country
       } else if (!props.detail.mirrored_to_albania) {
-        payload.shteti = shteti
+        batchPayload.shteti = shteti
       }
-      return updateActionBatch(props.detail.id, payload)
-    },
-    onSuccess: async () => {
-      await invalidateAll()
-      props.onSaveComplete('action')
-    },
-    onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
-  })
+      if (!isLegacy) {
+        batchPayload.ora = ora.trim() ? ora.trim() : null
+        batchPayload.pershkrimi = pershkrimi.trim() ? pershkrimi.trim() : null
+      }
 
-  const updateItemMut = useMutation({
-    mutationFn: (itemId: string) => {
-      if (!editDraft) throw new Error('Missing draft')
-      return updateActionBatchItem(props.detail.id, itemId, {
-        kodi_produktit: editDraft.kodi_produktit,
-        cmimi_njesi: Number(editDraft.cmimi_njesi) || 0,
-        sasia: Number(editDraft.sasia) || 0,
-      })
-    },
-    onSuccess: async () => {
-      setEditingItemId(null)
-      setEditDraft(null)
-      await invalidateAll()
-      props.onSaveComplete('product')
-    },
-    onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
-  })
+      await updateActionBatch(props.detail.id, batchPayload)
 
-  const startEditItem = (item: HistoryActionItem) => {
-    setEditingItemId(item.id)
-    setEditDraft({
-      kodi_produktit: item.kodi_produktit,
-      cmimi_njesi: String(item.cmimi_njesi),
-      sasia: String(item.sasia),
-    })
-  }
-
-  const saveEditItem = (itemId: string) => {
-    if (!editDraft) return
-    if (!editDraft.kodi_produktit) {
-      props.onError('Zgjidh produktin.')
-      return
-    }
-    if (Number(editDraft.sasia) <= 0) {
-      props.onError('Sasia duhet te jete > 0.')
-      return
-    }
-    const duplicateProduct = localItems.find(
-      (it) => it.id !== itemId && it.kodi_produktit === editDraft.kodi_produktit,
-    )
-    if (duplicateProduct) {
-      props.onError(
-        `Ky produkt eshte tashme ne liste: ${productLabel(
-          duplicateProduct.emri_produktit,
-          duplicateProduct.kodi_produktit,
-        )}`,
+      const changedItems = localItems.filter((item) => itemChanged(item, itemDrafts[item.id]))
+      await Promise.all(
+        changedItems.map((item) => {
+          const draft = itemDrafts[item.id]
+          return updateActionBatchItem(props.detail.id, item.id, {
+            kodi_produktit: draft.kodi_produktit,
+            cmimi_njesi: Number(draft.cmimi_njesi) || 0,
+            sasia: Number(draft.sasia) || 0,
+          })
+        }),
       )
-      return
-    }
-    updateItemMut.mutate(itemId)
-  }
+    },
+    onSuccess: async () => {
+      await invalidateAll()
+      props.onSaveComplete()
+    },
+    onError: (e) => props.onError(e instanceof Error ? e.message : 'Error'),
+  })
 
   const updateFrom = (next: Country) => {
     setShteti(next)
@@ -135,92 +168,106 @@ export function ActionEditForm(props: {
     }
   }
 
-  const displayItems =
-    editingItemId && editDraft
-      ? localItems.map((it) =>
-          it.id === editingItemId
-            ? {
-                ...it,
-                kodi_produktit: editDraft.kodi_produktit,
-                cmimi_njesi: Number(editDraft.cmimi_njesi) || 0,
-                sasia: Number(editDraft.sasia) || 0,
-                totali:
-                  (Number(editDraft.cmimi_njesi) || 0) * (Number(editDraft.sasia) || 0),
-              }
-            : it,
-        )
-      : localItems
+  const updateDraft = (itemId: string, patch: Partial<ItemDraft>) => {
+    setItemDrafts((prev) => {
+      const current = prev[itemId]
+      if (!current) return prev
+      return { ...prev, [itemId]: { ...current, ...patch } }
+    })
+  }
 
-  const actionTotal = displayItems.reduce((sum, it) => sum + it.totali, 0)
-  const busy = props.disabled || updateBatchMut.isPending || updateItemMut.isPending
-  const showScrollHint = displayItems.length > ACTION_VISIBLE_ROWS
+  const actionTotal = localItems.reduce((sum, item) => {
+    const draft = itemDrafts[item.id]
+    return sum + (draft ? lineTotal(draft) : item.totali)
+  }, 0)
+
+  const busy = props.disabled || saveAllMut.isPending
+  const showScrollHint = localItems.length > ACTION_VISIBLE_ROWS
 
   return (
     <>
       <div className="history-detail-meta">
-        <div className="form-group">
-          <label className="label">Data</label>
-          <DateInput value={data} onChange={setData} disabled={busy} />
-        </div>
+        <div className="history-detail-meta-row">
+          <div className="form-group">
+            <label className="label">Data</label>
+            <DateInput value={data} onChange={setData} disabled={busy} />
+          </div>
 
-        {props.detail.lloji === 'Transfer' ? (
-          <>
+          {props.detail.lloji === 'Transfer' ? (
+            <>
+              <div className="form-group">
+                <label className="label">Nga</label>
+                <select
+                  className="select"
+                  value={shteti}
+                  disabled={busy}
+                  onChange={(e) => updateFrom(e.target.value as Country)}
+                >
+                  <option value="XK">Kosove</option>
+                  <option value="AL">Shqiperi</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="label">Ne</label>
+                <select
+                  className="select"
+                  value={destination}
+                  disabled={busy}
+                  onChange={(e) => setDestination(e.target.value as Country)}
+                >
+                  <option value="XK" disabled={shteti === 'XK'}>
+                    Kosove
+                  </option>
+                  <option value="AL" disabled={shteti === 'AL'}>
+                    Shqiperi
+                  </option>
+                </select>
+              </div>
+            </>
+          ) : (
             <div className="form-group">
-              <label className="label">Nga</label>
+              <label className="label">Shteti</label>
               <select
                 className="select"
                 value={shteti}
-                disabled={busy}
-                onChange={(e) => updateFrom(e.target.value as Country)}
+                disabled={busy || props.detail.mirrored_to_albania}
+                onChange={(e) => setShteti(e.target.value as Country)}
               >
                 <option value="XK">Kosove</option>
                 <option value="AL">Shqiperi</option>
               </select>
             </div>
-            <div className="form-group">
-              <label className="label">Ne</label>
-              <select
-                className="select"
-                value={destination}
-                disabled={busy}
-                onChange={(e) => setDestination(e.target.value as Country)}
-              >
-                <option value="XK" disabled={shteti === 'XK'}>
-                  Kosove
-                </option>
-                <option value="AL" disabled={shteti === 'AL'}>
-                  Shqiperi
-                </option>
-              </select>
-            </div>
-          </>
-        ) : (
-          <div className="form-group">
-            <label className="label">Shteti</label>
-            <select
-              className="select"
-              value={shteti}
-              disabled={busy || props.detail.mirrored_to_albania}
-              onChange={(e) => setShteti(e.target.value as Country)}
-            >
-              <option value="XK">Kosove</option>
-              <option value="AL">Shqiperi</option>
-            </select>
-          </div>
-        )}
+          )}
+        </div>
 
-        <div className="form-group history-meta-save">
-          <label className="label" aria-hidden="true">
-            &nbsp;
-          </label>
-          <button
-            type="button"
-            className="btn sm primary"
-            disabled={busy}
-            onClick={() => updateBatchMut.mutate()}
-          >
-            {updateBatchMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
-          </button>
+        <div className="history-detail-meta-row history-detail-meta-row-secondary">
+          <div className="form-group">
+            <label className="label" htmlFor="history-edit-ora">
+              Ora
+            </label>
+            <OraInput
+              id="history-edit-ora"
+              variant="compact"
+              value={ora}
+              onChange={setOra}
+              disabled={busy || isLegacy}
+            />
+          </div>
+          <div className="form-group history-edit-pershkrimi">
+            <label className="label" htmlFor="history-edit-pershkrimi">
+              Pershkrimi
+            </label>
+            <input
+              id="history-edit-pershkrimi"
+              type="text"
+              className="input"
+              value={pershkrimi}
+              onChange={(e) => setPershkrimi(e.target.value)}
+              disabled={busy || isLegacy}
+              maxLength={500}
+              placeholder="Opsionale"
+            />
+          </div>
         </div>
       </div>
 
@@ -235,7 +282,6 @@ export function ActionEditForm(props: {
                   <th className="history-subtable-money">Cmimi/Njesi</th>
                   <th className="history-subtable-qty">Sasia</th>
                   <th className="history-subtable-money">Totali</th>
-                  <th />
                 </tr>
               </thead>
             </table>
@@ -243,104 +289,50 @@ export function ActionEditForm(props: {
               <table className="table table-fixed history-subtable action-table action-table-body">
                 <HistoryEditColgroup />
                 <tbody>
-                  {displayItems.map((item) => {
-                    const isEditing = editingItemId === item.id
-                    if (isEditing && editDraft) {
-                      return (
-                        <tr key={item.id} className="item-row-editing">
-                          <td>
-                            <ProductSearchSelect
-                              products={props.products}
-                              value={editDraft.kodi_produktit}
-                              disabled={busy}
-                              onChange={(kodi) =>
-                                setEditDraft((d) => d && { ...d, kodi_produktit: kodi })
-                              }
-                              disabledKodis={localItems
-                                .filter((x) => x.id !== item.id && x.kodi_produktit)
-                                .map((x) => x.kodi_produktit)}
-                              placeholder="Kerko sipas kodit ose emrit…"
-                            />
-                          </td>
-                          <td>
-                            <NumericInput
-                              className="input"
-                              step="0.01"
-                              min={0}
-                              disabled={busy}
-                              value={editDraft.cmimi_njesi}
-                              onChange={(v) =>
-                                setEditDraft((d) => d && { ...d, cmimi_njesi: v })
-                              }
-                              placeholder="0.00"
-                              style={{ width: '100%' }}
-                            />
-                          </td>
-                          <td>
-                            <NumericInput
-                              className="input"
-                              min={1}
-                              disabled={busy}
-                              value={editDraft.sasia}
-                              onChange={(v) => setEditDraft((d) => d && { ...d, sasia: v })}
-                              placeholder="1"
-                              style={{ width: '100%' }}
-                            />
-                          </td>
-                          <td className="history-subtable-money">
-                            <span className="num">{fmtEuro(item.totali)}</span>
-                          </td>
-                          <td className="history-subtable-actions">
-                            <div className="history-subtable-action-group">
-                              <button
-                                type="button"
-                                className="btn sm primary"
-                                disabled={busy}
-                                onClick={() => saveEditItem(item.id)}
-                              >
-                                Ruaj
-                              </button>
-                              <button
-                                type="button"
-                                className="btn sm"
-                                disabled={busy}
-                                onClick={() => {
-                                  setEditingItemId(null)
-                                  setEditDraft(null)
-                                }}
-                              >
-                                Anulo
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    }
+                  {localItems.map((item) => {
+                    const draft = itemDrafts[item.id]
+                    if (!draft) return null
 
                     return (
                       <tr key={item.id}>
                         <td>
-                          <span className="history-product-cell">
-                            {productLabel(item.emri_produktit, item.kodi_produktit)}
-                          </span>
-                        </td>
-                        <td className="history-subtable-money">
-                          <span className="num">{fmtEuro(item.cmimi_njesi)}</span>
-                        </td>
-                        <td className="history-subtable-qty">{item.sasia}</td>
-                        <td className="history-subtable-money">
-                          <span className="num">{fmtEuro(item.totali)}</span>
-                        </td>
-                        <td className="history-subtable-actions">
-                          <button
-                            type="button"
-                            className="btn sm ghost history-edit-product-btn"
+                          <ProductSearchSelect
+                            products={props.products}
+                            value={draft.kodi_produktit}
                             disabled={busy}
-                            aria-label="Ndrysho produktin"
-                            onClick={() => startEditItem(item)}
-                          >
-                            <span aria-hidden="true">✎</span> Ndrysho Produktin
-                          </button>
+                            onChange={(kodi) => updateDraft(item.id, { kodi_produktit: kodi })}
+                            disabledKodis={localItems
+                              .filter((x) => x.id !== item.id)
+                              .map((x) => itemDrafts[x.id]?.kodi_produktit)
+                              .filter((k): k is string => Boolean(k))}
+                            placeholder="Kerko sipas kodit ose emrit…"
+                          />
+                        </td>
+                        <td>
+                          <NumericInput
+                            className="input"
+                            step="0.01"
+                            min={0}
+                            disabled={busy}
+                            value={draft.cmimi_njesi}
+                            onChange={(v) => updateDraft(item.id, { cmimi_njesi: v })}
+                            placeholder="0.00"
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                        <td>
+                          <NumericInput
+                            className="input"
+                            min={1}
+                            disabled={busy}
+                            value={draft.sasia}
+                            onChange={(v) => updateDraft(item.id, { sasia: v })}
+                            placeholder="1"
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                        <td className="history-subtable-money">
+                          <span className="num">{fmtEuro(lineTotal(draft))}</span>
                         </td>
                       </tr>
                     )
@@ -354,7 +346,7 @@ export function ActionEditForm(props: {
               aria-hidden={!showScrollHint}
             >
               {showScrollHint
-                ? `↕ ${displayItems.length} produkte — scroll për të parë të gjitha`
+                ? `↕ ${localItems.length} produkte — scroll për të parë të gjitha`
                 : null}
             </p>
           </div>
@@ -365,6 +357,14 @@ export function ActionEditForm(props: {
         <div className="history-expanded-total">
           Totali i veprimit: <strong>{fmtEuro(actionTotal)}</strong>
         </div>
+        <button
+          type="button"
+          className="btn primary history-edit-save-btn"
+          disabled={busy}
+          onClick={() => saveAllMut.mutate()}
+        >
+          {saveAllMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
+        </button>
       </div>
     </>
   )

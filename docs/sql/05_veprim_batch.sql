@@ -37,6 +37,8 @@ create table if not exists public.veprim_batch (
   data date not null default current_date,
   shteti shteti_enum not null,
   destination_shteti shteti_enum,
+  ora time without time zone null,
+  pershkrimi text null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint veprim_batch_transfer_dest_check

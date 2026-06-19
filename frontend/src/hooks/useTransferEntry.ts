@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useActionItems, validateActionItems } from './useActionItems'
+import { effectiveSasia } from '../types/actionItem'
 import { createActionBatch } from '../lib/api'
 import type { Country } from '../lib/country'
 import { todayISODate } from '../lib/dates'
@@ -20,6 +21,8 @@ export function useTransferEntry(options: {
     (options.initialFrom ?? 'XK') === 'XK' ? 'AL' : 'XK',
   )
   const [transferDate, setTransferDate] = React.useState(todayISODate())
+  const [transferOra, setTransferOra] = React.useState('')
+  const [transferPershkrimi, setTransferPershkrimi] = React.useState('')
   const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
@@ -47,12 +50,14 @@ export function useTransferEntry(options: {
         destination_shteti: transferTo,
         lloji: 'Transfer',
         data: transferDate,
+        ora: transferOra.trim() || undefined,
+        pershkrimi: transferPershkrimi.trim() || undefined,
         items: itemsState.items
           .filter((i) => i.kodi_produktit.trim())
           .map((i) => ({
             kodi_produktit: i.kodi_produktit.trim(),
             cmimi_njesi: Number(i.cmimi_njesi) || 0,
-            sasia: Number(i.sasia) || 0,
+            sasia: effectiveSasia(i.sasia),
           })),
       }),
     onSuccess: async (result) => {
@@ -65,6 +70,8 @@ export function useTransferEntry(options: {
         'success',
       )
       itemsState.reset()
+      setTransferOra('')
+      setTransferPershkrimi('')
       await invalidateAfterMutation(qc, 'all', { refetchSummary: true })
       options.onSuccess?.()
     },
@@ -97,6 +104,10 @@ export function useTransferEntry(options: {
     setTransferTo,
     transferDate,
     setTransferDate,
+    transferOra,
+    setTransferOra,
+    transferPershkrimi,
+    setTransferPershkrimi,
     transferError,
     setTransferError,
     confirmOpen,

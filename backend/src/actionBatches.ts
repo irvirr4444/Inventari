@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import {
   BatchLlojiSchema,
   CountrySchema,
+  ActionBatchPatchSchema,
   ERR_BATCH_NOT_FOUND,
   ERR_DUPLICATE_PRODUCT_IN_ACTION,
   ERR_MIRROR_COUNTRY_CHANGE,
@@ -10,6 +11,7 @@ import {
   ERR_PRODUCT_LINE_NOT_FOUND,
   ERR_TRANSFER_NEEDS_DESTINATION,
   ERR_TRANSFER_SAME_COUNTRY,
+  formatOraDisplay,
   type BatchLloji,
   type Country,
 } from '@inventari/shared'
@@ -31,6 +33,8 @@ type VeprimBatchRow = {
   data: string
   shteti: Country
   destination_shteti: Country | null
+  ora: string | null
+  pershkrimi: string | null
   created_at: string
   updated_at: string
 }
@@ -80,6 +84,8 @@ function aggregateBatch(batch: VeprimBatchRow, rows: VeprimRow[]) {
     shteti: batch.shteti,
     destination_shteti: batch.destination_shteti ?? undefined,
     data: batch.data,
+    ora: batch.ora ? formatOraDisplay(batch.ora) : null,
+    pershkrimi: batch.pershkrimi ?? null,
     totali,
     created_at: batch.created_at,
     item_count: displayRows.length,
@@ -212,13 +218,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
   app.patch('/api/action-batches/:id', async (req, reply) => {
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
-    const body = z
-      .object({
-        data: z.string().optional(),
-        shteti: CountrySchema.optional(),
-        destination_shteti: CountrySchema.optional(),
-      })
-      .parse(req.body ?? {})
+    const body = ActionBatchPatchSchema.parse(req.body ?? {})
 
     if (isLegacyBatchId(params.id)) {
       const result = await updateLegacyBatch(supabase, params.id, body)
@@ -266,6 +266,8 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     if (batch.lloji === 'Transfer' && body.destination_shteti) {
       batchPatch.destination_shteti = body.destination_shteti
     }
+    if (body.ora !== undefined) batchPatch.ora = body.ora
+    if (body.pershkrimi !== undefined) batchPatch.pershkrimi = body.pershkrimi ?? null
 
     const { error: batchError } = await supabase
       .from('veprim_batch')
@@ -401,6 +403,8 @@ export async function createActionBatchRecord(
     data?: string
     shteti: Country
     destination_shteti?: Country
+    ora?: string
+    pershkrimi?: string
   },
 ) {
   const { data, error } = await supabase
@@ -410,6 +414,8 @@ export async function createActionBatchRecord(
       data: input.data ?? new Date().toISOString().slice(0, 10),
       shteti: input.shteti,
       destination_shteti: input.destination_shteti ?? null,
+      ora: input.ora ?? null,
+      pershkrimi: input.pershkrimi ?? null,
     })
     .select('id')
     .single()

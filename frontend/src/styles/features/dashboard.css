@@ -64,12 +64,98 @@
   margin-bottom: 20px;
 }
 
-.transfer-mode-btn {
-  margin-left: 4px;
+.action-header-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.action-header-title {
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .action-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 16px;
+  margin-left: auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.action-header-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  --action-header-control-height: 32px;
+}
+
+.action-header-control-country .btn {
+  height: var(--action-header-control-height);
+  padding: 6px 12px;
+  box-sizing: border-box;
+}
+
+.action-header-control-country {
+  white-space: nowrap;
+}
+
+.action-header-control-date .action-header-date-input {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.action-header-control-ora .action-meta-ora-input {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.action-header-control-pershkrimi .action-meta-pershkrimi-input {
+  width: 294px;
+  max-width: 294px;
+  flex: 0 0 294px;
+  height: var(--action-header-control-height);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.action-header-control-label {
+  font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.transfer-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-header-control .time-input-trigger.input,
+.action-header-control .date-input-trigger {
+  height: var(--action-header-control-height);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
+
+.action-header-control .ora-digit-box {
+  height: var(--action-header-control-height);
+  width: 22px;
+  font-size: 14px;
+}
+
+.action-meta-pershkrimi-input {
+  min-width: 0;
+}
+
+.action-meta-ora-input {
+  width: 132px;
 }
 
 .dashboard-grid {

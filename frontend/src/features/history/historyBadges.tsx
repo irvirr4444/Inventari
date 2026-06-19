@@ -30,22 +30,26 @@ export function CountryCell(props: { action: ActionBatch }) {
   if (props.action.lloji === 'Transfer' && props.action.destination_shteti) {
     const from = COUNTRY_META[props.action.shteti]
     const to = COUNTRY_META[props.action.destination_shteti]
+    const fromLabel = countryHistoryLabel(props.action.shteti)
+    const toLabel = countryHistoryLabel(props.action.destination_shteti)
+    const title = `${fromLabel} → ${toLabel}`
     return (
-      <span className="history-country">
+      <span className="history-country history-country-transfer" title={title}>
         <img className="flagIcon" src={from.flagSrc} alt="" />
-        <span>{countryHistoryLabel(props.action.shteti)}</span>
-        <span className="history-country-arrow">→</span>
-        <span>{countryHistoryLabel(props.action.destination_shteti)}</span>
+        <span className="history-country-route">
+          {fromLabel} → {toLabel}
+        </span>
         <img className="flagIcon" src={to.flagSrc} alt="" />
       </span>
     )
   }
 
   const meta = COUNTRY_META[props.action.shteti]
+  const label = countryHistoryLabel(props.action.shteti)
   return (
-    <span className="history-country">
+    <span className="history-country" title={label}>
       <img className="flagIcon" src={meta.flagSrc} alt="" />
-      <span>{countryHistoryLabel(props.action.shteti)}</span>
+      <span className="history-country-text">{label}</span>
     </span>
   )
 }

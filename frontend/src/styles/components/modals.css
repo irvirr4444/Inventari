@@ -269,6 +269,17 @@
   margin-left: auto;
 }
 
+.action-review-meta-extra {
+  margin-top: -8px;
+  margin-bottom: 16px;
+  padding-left: 2px;
+}
+
+.action-review-meta-extra .action-meta-display-desc {
+  flex: 1 1 100%;
+  color: var(--text-muted);
+}
+
 .action-review-body {
   flex: 0 0 auto;
   min-height: 0;

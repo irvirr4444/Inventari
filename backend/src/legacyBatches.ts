@@ -174,6 +174,8 @@ function legacyBatchMeta(batch: LegacyBatch) {
     shteti: batch.key.shteti,
     destination_shteti: batch.key.destination_shteti,
     data: batch.key.data,
+    ora: null,
+    pershkrimi: null,
     totali,
     created_at,
     item_count: displayRows.length,

@@ -130,6 +130,8 @@ export async function createAction(
       data: body.data,
       shteti: body.shteti,
       destination_shteti: body.destination_shteti,
+      ora: body.ora,
+      pershkrimi: body.pershkrimi,
     })
   } catch (batchErr) {
     throw new AppError(

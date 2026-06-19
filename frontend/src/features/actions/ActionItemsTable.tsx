@@ -1,6 +1,7 @@
 import type { Produkti } from '../../lib/api'
 import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
+import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
@@ -46,7 +47,7 @@ export function ActionItemsTable(props: {
               <ActionTableColgroup widths={ACTION_TABLE_COL_WIDTHS} />
               <tbody>
                 {props.items.map((it) => {
-                  const lineTotal = (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0)
+                  const lineTotal = (Number(it.cmimi_njesi) || 0) * effectiveSasia(it.sasia)
                   return (
                     <tr key={it.key}>
                       <td>

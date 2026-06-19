@@ -1,10 +1,18 @@
 import { fmtEuro, productLabel } from '../../lib/format'
 import type { ActionBatchDetail } from '../../lib/api'
+import { ActionMetaDisplay } from '../actions/ActionMetaDisplay'
 
 export function ActionReadOnlyPanel(props: { detail: ActionBatchDetail }) {
   const total = props.detail.items.reduce((sum, it) => sum + it.totali, 0)
   return (
     <div className="history-expanded-panel">
+      <ActionMetaDisplay
+        data={props.detail.data}
+        ora={props.detail.ora}
+        pershkrimi={props.detail.pershkrimi}
+        showDate={false}
+        className="history-expanded-meta"
+      />
       <table className="table table-fixed history-subtable">
         <colgroup>
           <col style={{ width: '38%' }} />

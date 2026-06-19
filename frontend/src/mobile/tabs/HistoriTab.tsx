@@ -4,6 +4,7 @@ import { COUNTRY_META } from '../../lib/country'
 import type { ActionBatch } from '../../lib/api'
 import { DaljeIcon, HyrjeIcon, LlojiTransferIcon } from '../../components/icons'
 import { fmtEuro, formatDisplayDate, productCountLabel, countryLabel } from '../../lib/format'
+import { formatActionDateTime } from '../../lib/actionMeta'
 import { useHistoryBatches } from '../../hooks/useHistoryBatches'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import { BottomSheet } from '../components/BottomSheet'
@@ -137,8 +138,15 @@ export function HistoriTab(props: {
               >
                 <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
                   <MobileLlojiBadge lloji={action.lloji} />
-                  <span className="mobile-card-meta">{formatDisplayDate(action.data)}</span>
+                  <span className="mobile-card-meta">
+                    {formatActionDateTime(action.data, action.ora)}
+                  </span>
                 </div>
+                {action.pershkrimi?.trim() ? (
+                  <div className="mobile-card-meta mobile-meta-truncate" title={action.pershkrimi.trim()}>
+                    {action.pershkrimi.trim()}
+                  </div>
+                ) : null}
                 {action.lloji === 'Transfer' && action.destination_shteti ? (
                   <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }}>
                     <img className="flagIcon" src={COUNTRY_META[action.shteti].flagSrc} alt="" width={16} height={11} />

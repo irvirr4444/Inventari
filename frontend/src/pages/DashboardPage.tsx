@@ -21,6 +21,10 @@ export function DashboardPage() {
         onLlojiChange={d.setLloji}
         actionDate={d.actionDate}
         onActionDateChange={d.setActionDate}
+        actionOra={d.actionOra}
+        onActionOraChange={d.setActionOra}
+        actionPershkrimi={d.actionPershkrimi}
+        onActionPershkrimiChange={d.setActionPershkrimi}
         items={d.actionItemsState.items}
         products={d.products}
         onUpdateItem={d.actionItemsState.updateItem}
@@ -68,6 +72,8 @@ export function DashboardPage() {
           from={d.transferFrom}
           to={d.transferTo}
           date={d.transferDate}
+          ora={d.transferOra}
+          pershkrimi={d.transferPershkrimi}
           items={d.transferItemsState.items}
           products={d.products}
           error={d.transferError}
@@ -76,6 +82,8 @@ export function DashboardPage() {
           onFromChange={d.setTransferFrom}
           onToChange={d.setTransferTo}
           onDateChange={d.setTransferDate}
+          onOraChange={d.setTransferOra}
+          onPershkrimiChange={d.setTransferPershkrimi}
           onAddItem={d.transferItemsState.addItem}
           onRemoveItem={d.transferItemsState.removeItem}
           onUpdateItem={d.transferItemsState.updateItem}
@@ -147,6 +155,8 @@ export function DashboardPage() {
           lloji={d.lloji}
           country={d.country}
           actionDate={d.actionDate}
+          actionOra={d.actionOra}
+          actionPershkrimi={d.actionPershkrimi}
           items={d.actionItemsState.items}
           products={d.products}
           total={d.actionItemsState.total}

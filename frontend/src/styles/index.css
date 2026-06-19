@@ -1,6 +1,7 @@
 @import './tokens.css';
 @import './base.css';
 @import './components/date-input.css';
+@import './components/time-input.css';
 @import './components/product-search-select.css';
 @import './features/dashboard.css';
 @import './features/summary.css';

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import {
   createEmptyActionItem,
+  effectiveSasia,
   type ActionItemDraft,
 } from '../types/actionItem'
 
@@ -14,7 +15,7 @@ export function validateActionItems(items: ActionItemDraft[]): ActionItemsValida
     return { ok: false, error: 'Shto te pakten nje produkt.' }
   }
   for (const it of clean) {
-    if (Number(it.sasia) <= 0) {
+    if (effectiveSasia(it.sasia) <= 0) {
       return { ok: false, error: 'Sasia duhet te jete > 0.' }
     }
     if (Number(it.cmimi_njesi) < 0) {
@@ -59,7 +60,7 @@ export function useActionItems(onDuplicate?: (kodi: string) => void) {
   const total = React.useMemo(
     () =>
       items.reduce(
-        (sum, it) => sum + (Number(it.cmimi_njesi) || 0) * (Number(it.sasia) || 0),
+        (sum, it) => sum + (Number(it.cmimi_njesi) || 0) * effectiveSasia(it.sasia),
         0,
       ),
     [items],

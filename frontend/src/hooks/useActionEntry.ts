@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useActionItems, validateActionItems } from './useActionItems'
+import { effectiveSasia } from '../types/actionItem'
 import { createActionBatch } from '../lib/api'
 import { useCountry } from '../lib/country'
 import { todayISODate } from '../lib/dates'
@@ -16,6 +17,8 @@ export function useActionEntry(options: {
   const qc = useQueryClient()
   const [lloji, setLloji] = React.useState<'Hyrje' | 'Dalje'>('Hyrje')
   const [actionDate, setActionDate] = React.useState(todayISODate())
+  const [actionOra, setActionOra] = React.useState('')
+  const [actionPershkrimi, setActionPershkrimi] = React.useState('')
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const duplicateProductMessage = React.useCallback(
@@ -36,12 +39,14 @@ export function useActionEntry(options: {
         shteti: country,
         lloji,
         data: actionDate,
+        ora: actionOra.trim() || undefined,
+        pershkrimi: actionPershkrimi.trim() || undefined,
         items: itemsState.items
           .filter((i) => i.kodi_produktit.trim())
           .map((i) => ({
             kodi_produktit: i.kodi_produktit.trim(),
             cmimi_njesi: Number(i.cmimi_njesi) || 0,
-            sasia: Number(i.sasia) || 0,
+            sasia: effectiveSasia(i.sasia),
           })),
       }),
     onSuccess: async (result) => {
@@ -53,6 +58,8 @@ export function useActionEntry(options: {
         'success',
       )
       itemsState.reset()
+      setActionOra('')
+      setActionPershkrimi('')
       await invalidateAfterMutation(qc, 'all', { refetchSummary: true })
     },
     onError: (e) => {
@@ -78,6 +85,10 @@ export function useActionEntry(options: {
     setLloji,
     actionDate,
     setActionDate,
+    actionOra,
+    setActionOra,
+    actionPershkrimi,
+    setActionPershkrimi,
     confirmOpen,
     setConfirmOpen,
     itemsState,

@@ -33,9 +33,19 @@
     align-items: flex-start;
   }
 
+  .action-header-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
   .action-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
-    justify-content: space-between;
+    margin-left: 0;
+    gap: 10px;
   }
 
   .action-footer {
@@ -124,22 +134,23 @@
     gap: 12px;
   }
 
+  .action-header-title,
   .action-header h2 {
     width: 100%;
   }
 
   .action-controls {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
 
-  .action-controls > .row,
-  .action-date-control {
+  .action-header-control {
     justify-content: space-between;
   }
 
-  .action-date-control .date-input {
+  .action-header-control .date-input {
     width: 170px !important;
   }
 
@@ -254,7 +265,7 @@
     padding: 12px;
   }
 
-  .action-date-control .date-input {
+  .action-header-control .date-input {
     width: 150px !important;
   }
 

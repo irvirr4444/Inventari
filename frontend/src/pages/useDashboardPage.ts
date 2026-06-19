@@ -54,6 +54,8 @@ export function useDashboardPage() {
   const openTransferDialog = () => {
     transferEntry.setTransferFrom(country)
     transferEntry.setTransferDate(todayISODate())
+    transferEntry.setTransferOra('')
+    transferEntry.setTransferPershkrimi('')
     transferEntry.itemsState.reset()
     transferEntry.setTransferError(null)
     transferEntry.setConfirmOpen(false)
@@ -107,6 +109,10 @@ export function useDashboardPage() {
     setLloji: actionEntry.setLloji,
     actionDate: actionEntry.actionDate,
     setActionDate: actionEntry.setActionDate,
+    actionOra: actionEntry.actionOra,
+    setActionOra: actionEntry.setActionOra,
+    actionPershkrimi: actionEntry.actionPershkrimi,
+    setActionPershkrimi: actionEntry.setActionPershkrimi,
     confirmActionOpen: actionEntry.confirmOpen,
     setConfirmActionOpen: actionEntry.setConfirmOpen,
     transferDialogOpen,
@@ -117,6 +123,10 @@ export function useDashboardPage() {
     setTransferTo: transferEntry.setTransferTo,
     transferDate: transferEntry.transferDate,
     setTransferDate: transferEntry.setTransferDate,
+    transferOra: transferEntry.transferOra,
+    setTransferOra: transferEntry.setTransferOra,
+    transferPershkrimi: transferEntry.transferPershkrimi,
+    setTransferPershkrimi: transferEntry.setTransferPershkrimi,
     transferError: transferEntry.transferError,
     setTransferError: transferEntry.setTransferError,
     confirmTransferOpen: transferEntry.confirmOpen,

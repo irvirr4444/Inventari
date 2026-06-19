@@ -5,12 +5,17 @@ import type { Produkti } from '../../lib/api'
 import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { ActionItemsTable } from './ActionItemsTable'
+import { ActionMetaFields } from './ActionMetaFields'
 
 export function ActionEntryPanel(props: {
   lloji: 'Hyrje' | 'Dalje'
   onLlojiChange: (lloji: 'Hyrje' | 'Dalje') => void
   actionDate: string
   onActionDateChange: (date: string) => void
+  actionOra: string
+  onActionOraChange: (value: string) => void
+  actionPershkrimi: string
+  onActionPershkrimiChange: (value: string) => void
   items: ActionItemDraft[]
   products: Produkti[]
   onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
@@ -24,43 +29,29 @@ export function ActionEntryPanel(props: {
 }) {
   return (
     <div className="card action-card">
-      <div className="row action-header">
-        <h2>Regjistro Veprim</h2>
-        <button
-          type="button"
-          className="btn sm transfer-mode-btn"
-          onClick={props.onOpenTransfer}
-        >
-          <svg
-            aria-hidden="true"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M7 7h11l-3-3" />
-            <path d="M18 7l-3 3" />
-            <path d="M17 17H6l3 3" />
-            <path d="M6 17l3-3" />
-          </svg>
-          Transfero
-        </button>
-        <div className="spacer" />
-        <div className="row action-controls">
-          <div className="row" style={{ gap: 8 }}>
-            <span className="muted" style={{ fontSize: 13 }}>Shteti</span>
-            <CountrySelector />
-          </div>
-          <div className="row action-date-control" style={{ gap: 8 }}>
-            <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
-            <DateInput
-              value={props.actionDate}
-              onChange={props.onActionDateChange}
-              style={{ width: 150 }}
+      <div className="action-header">
+        <div className="action-header-top">
+          <h2 className="action-header-title">Regjistro Veprim</h2>
+          <div className="action-controls">
+            <div className="action-header-control action-header-control-country">
+              <span className="muted action-header-control-label">Shteti</span>
+              <CountrySelector />
+            </div>
+            <div className="action-header-control action-header-control-date">
+              <span className="muted action-header-control-label">Data e Veprimit</span>
+              <DateInput
+                value={props.actionDate}
+                onChange={props.onActionDateChange}
+                className="action-header-date-input"
+              />
+            </div>
+            <ActionMetaFields
+              layout="inline"
+              ora={props.actionOra}
+              pershkrimi={props.actionPershkrimi}
+              onOraChange={props.onActionOraChange}
+              onPershkrimiChange={props.onActionPershkrimiChange}
+              disabled={props.saving}
             />
           </div>
         </div>
@@ -84,6 +75,30 @@ export function ActionEntryPanel(props: {
               Dalje (OUT)
             </button>
           </div>
+          <div className="spacer" />
+          <button
+            type="button"
+            className="btn sm transfer-mode-btn"
+            onClick={props.onOpenTransfer}
+          >
+            <svg
+              aria-hidden="true"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7 7h11l-3-3" />
+              <path d="M18 7l-3 3" />
+              <path d="M17 17H6l3 3" />
+              <path d="M6 17l3-3" />
+            </svg>
+            Transfero
+          </button>
           <button
             type="button"
             className="btn ghost sm history-btn"

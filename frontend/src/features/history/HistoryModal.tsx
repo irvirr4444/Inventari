@@ -11,17 +11,16 @@ import {
 import {
   fmtEuro,
   formatDisplayDate,
-  productCountLabel,
 } from '../../lib/format'
 import { invalidateAfterMutation } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { DateInput } from '../../components/DateInput'
 import { ActionEditModal } from './ActionEditModal'
-import type { EditSaveKind } from './ActionEditForm'
 import { ExpandedActionDetail } from './ExpandedActionDetail'
 import { CountryCell, EditIcon, DeleteIcon, LlojiBadge } from './historyBadges'
-import { HistorySkeletonTable } from './HistorySkeletonTable'
+import { HistoryBatchMetaDisplay } from './HistoryBatchMetaDisplay'
+import { HistorySkeletonTable, HISTORY_TABLE_COL_COUNT } from './HistorySkeletonTable'
 
 type FilterState = {
   lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
@@ -30,7 +29,7 @@ type FilterState = {
   dateTo?: string
 }
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 8
 
 export function HistoryModal(props: {
   products: Produkti[]
@@ -97,7 +96,7 @@ export function HistoryModal(props: {
   )
 
   const handleEditSaveComplete = React.useCallback(
-    async (actionId: string, kind: EditSaveKind) => {
+    async (actionId: string) => {
       setEditActionId(null)
       setExpandedIds((prev) => {
         const next = new Set(prev)
@@ -106,12 +105,7 @@ export function HistoryModal(props: {
       })
       await invalidateAfterMutation(qc, 'all', { actionBatchId: actionId })
       await listQuery.refetch()
-      onNotify?.(
-        kind === 'product'
-          ? 'Produkti u perditesua me sukses.'
-          : 'Veprimi u perditesua me sukses.',
-        'success',
-      )
+      onNotify?.('Ndryshimet u ruajtuan me sukses.', 'success')
     },
     [qc, listQuery, onNotify],
   )
@@ -229,14 +223,27 @@ export function HistoryModal(props: {
 
           <div className="history-table-wrap">
             <table className="table history-table">
+              <colgroup>
+                <col className="history-col-expand" />
+                <col className="history-col-date" />
+                <col className="history-col-ora" />
+                <col className="history-col-pershkrimi" />
+                <col className="history-col-lloji" />
+                <col className="history-col-shteti" />
+                <col className="history-col-products" />
+                <col className="history-col-totali" />
+                <col className="history-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="history-col-expand" />
-                  <th>Data</th>
-                  <th>Lloji</th>
-                  <th>Shteti</th>
-                  <th>Produktet</th>
-                  <th style={{ textAlign: 'right' }}>Totali</th>
+                  <th className="history-col-date">Data</th>
+                  <th className="history-col-ora">Ora</th>
+                  <th className="history-col-pershkrimi">Pershkrimi</th>
+                  <th className="history-col-lloji">Lloji</th>
+                  <th className="history-col-shteti">Shteti</th>
+                  <th className="history-col-products">Produkte</th>
+                  <th className="history-col-totali">Totali</th>
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
@@ -245,7 +252,7 @@ export function HistoryModal(props: {
               ) : listQuery.isError ? (
                 <tbody>
                   <tr>
-                    <td colSpan={7} className="history-empty-cell">
+                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
                       <p className="muted">
                         {listQuery.error instanceof Error
                           ? listQuery.error.message
@@ -257,7 +264,7 @@ export function HistoryModal(props: {
               ) : actions.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={7} className="history-empty-cell">
+                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
                       <p className="muted">Nuk u gjet asnje veprim.</p>
                     </td>
                   </tr>
@@ -284,18 +291,18 @@ export function HistoryModal(props: {
                               </span>
                             </button>
                           </td>
-                          <td>{formatDisplayDate(action.data)}</td>
-                          <td>
+                          <HistoryBatchMetaDisplay batch={action} />
+                          <td className="history-col-lloji">
                             <LlojiBadge lloji={action.lloji} />
                           </td>
-                          <td>
+                          <td className="history-col-shteti">
                             <CountryCell action={action} />
                           </td>
-                          <td>{productCountLabel(action.item_count)}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td className="history-col-products">{action.item_count}</td>
+                          <td className="history-col-totali">
                             <span className="num">{fmtEuro(action.totali)}</span>
                           </td>
-                          <td className="history-row-actions">
+                          <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
                               className="btn sm ghost history-row-action-btn"
@@ -305,7 +312,7 @@ export function HistoryModal(props: {
                                 setError(null)
                               }}
                             >
-                              <EditIcon /> Ndrysho
+                              <EditIcon />
                             </button>
                             <button
                               type="button"
@@ -316,13 +323,13 @@ export function HistoryModal(props: {
                                 setError(null)
                               }}
                             >
-                              <DeleteIcon /> Fshi
+                              <DeleteIcon />
                             </button>
                           </td>
                         </tr>
                         {expanded && (
                           <tr className="history-expanded-row">
-                            <td colSpan={7}>
+                            <td colSpan={HISTORY_TABLE_COL_COUNT}>
                               <ExpandedActionDetail actionId={action.id} />
                             </td>
                           </tr>
@@ -395,7 +402,7 @@ export function HistoryModal(props: {
           actionId={editActionId}
           products={products}
           onClose={() => setEditActionId(null)}
-          onSaveComplete={(kind) => void handleEditSaveComplete(editActionId, kind)}
+          onSaveComplete={() => void handleEditSaveComplete(editActionId)}
           onError={setError}
         />
       )}

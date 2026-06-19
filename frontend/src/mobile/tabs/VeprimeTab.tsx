@@ -3,6 +3,7 @@ import { useActionEntry } from '../../hooks/useActionEntry'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import { COUNTRY_META, useCountry } from '../../lib/country'
 import { countryLabel, fmtEuro } from '../../lib/format'
+import { formatActionDateTime } from '../../lib/actionMeta'
 import { createEmptyActionItem } from '../../types/actionItem'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
@@ -12,6 +13,7 @@ import { ProductPickerSheet } from '../components/ProductPickerSheet'
 import { ProductRowCard } from '../components/ProductRowCard'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { StickyCta } from '../components/StickyCta'
+import { OraInput } from '../../components/OraInput'
 
 export function VeprimeTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
@@ -88,6 +90,34 @@ export function VeprimeTab(props: {
             onChange={entry.setActionDate}
             aria-label="Data"
             placeholder="Data"
+          />
+        </div>
+
+        <div className="mobile-field-row">
+          <div>
+            <label className="mobile-label" htmlFor="veprime-ora">
+              Ora
+            </label>
+            <OraInput
+              id="veprime-ora"
+              className="mobile-input"
+              value={entry.actionOra}
+              onChange={entry.setActionOra}
+            />
+          </div>
+        </div>
+        <div>
+          <label className="mobile-label" htmlFor="veprime-pershkrimi">
+            Pershkrimi
+          </label>
+          <input
+            id="veprime-pershkrimi"
+            type="text"
+            className="mobile-input"
+            value={entry.actionPershkrimi}
+            onChange={(e) => entry.setActionPershkrimi(e.target.value)}
+            maxLength={500}
+            placeholder="Opsionale"
           />
         </div>
 
@@ -169,6 +199,13 @@ export function VeprimeTab(props: {
         <p className="mobile-card-meta">
           {entry.lloji} ne {countryLabel(country)} me total{' '}
           <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
+          {entry.actionOra || entry.actionPershkrimi.trim() ? (
+            <>
+              {' '}
+              {formatActionDateTime(entry.actionDate, entry.actionOra)}
+              {entry.actionPershkrimi.trim() ? ` — ${entry.actionPershkrimi.trim()}` : ''}
+            </>
+          ) : null}
         </p>
       </BottomSheet>
     </>

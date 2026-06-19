@@ -199,3 +199,70 @@
   font-size: 18px;
   font-weight: 600;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTION META (ORA + PERSHKRIMI)
+   ═══════════════════════════════════════════════════════════════ */
+
+.action-meta-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 16px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.action-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.action-meta-field .input,
+.action-meta-field .time-input-trigger.input {
+  height: 45px;
+}
+
+.action-meta-field-grow {
+  min-width: 0;
+}
+
+.action-meta-ora-input {
+  width: 132px;
+}
+
+.history-meta-fields {
+  grid-column: 1 / -1;
+}
+
+.action-meta-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.action-meta-display-desc {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.history-expanded-meta {
+  margin-bottom: 12px;
+}
+
+.action-meta-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+}
+
+.action-meta-inline-desc {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

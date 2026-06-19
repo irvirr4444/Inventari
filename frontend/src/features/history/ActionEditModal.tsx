@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { getActionBatch, type Produkti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
-import { ActionEditForm, type EditSaveKind } from './ActionEditForm'
+import { ActionEditForm } from './ActionEditForm'
 
 export function ActionEditModal(props: {
   actionId: string
   products: Produkti[]
   onClose: () => void
-  onSaveComplete: (kind: EditSaveKind) => void
+  onSaveComplete: () => void
   onError: (message: string) => void
 }) {
   const detailQuery = useQuery({

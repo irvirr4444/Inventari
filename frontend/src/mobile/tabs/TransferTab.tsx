@@ -4,6 +4,7 @@ import { useProductsQuery } from '../../hooks/useProductsQuery'
 import type { Country } from '../../lib/country'
 import { COUNTRY_META } from '../../lib/country'
 import { countryLabel, fmtEuro } from '../../lib/format'
+import { formatActionDateTime } from '../../lib/actionMeta'
 import { createEmptyActionItem } from '../../types/actionItem'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
@@ -11,6 +12,7 @@ import { MobileDateInput } from '../components/MobileDateInput'
 import { ProductPickerSheet } from '../components/ProductPickerSheet'
 import { ProductRowCard } from '../components/ProductRowCard'
 import { StickyCta } from '../components/StickyCta'
+import { OraInput } from '../../components/OraInput'
 
 function TransferCountryField(props: {
   label: string
@@ -125,6 +127,32 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
         </div>
 
         <div>
+          <label className="mobile-label" htmlFor="transfer-ora">
+            Ora
+          </label>
+          <OraInput
+            id="transfer-ora"
+            className="mobile-input"
+            value={entry.transferOra}
+            onChange={entry.setTransferOra}
+          />
+        </div>
+        <div>
+          <label className="mobile-label" htmlFor="transfer-pershkrimi">
+            Pershkrimi
+          </label>
+          <input
+            id="transfer-pershkrimi"
+            type="text"
+            className="mobile-input"
+            value={entry.transferPershkrimi}
+            onChange={(e) => entry.setTransferPershkrimi(e.target.value)}
+            maxLength={500}
+            placeholder="Opsionale"
+          />
+        </div>
+
+        <div>
           <div className="mobile-section-label">Produktet</div>
           <button type="button" className="mobile-btn-outline" onClick={openAdd}>
             + Shto Produkt
@@ -212,6 +240,13 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
           Transfer nga {countryLabel(entry.transferFrom)} ne {countryLabel(entry.transferTo)},{' '}
           {filledItems.length} produkte, total{' '}
           <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
+          {entry.transferOra || entry.transferPershkrimi.trim() ? (
+            <>
+              {' '}
+              {formatActionDateTime(entry.transferDate, entry.transferOra)}
+              {entry.transferPershkrimi.trim() ? ` — ${entry.transferPershkrimi.trim()}` : ''}
+            </>
+          ) : null}
         </p>
       </BottomSheet>
     </>

@@ -2,7 +2,7 @@ export type UiLloji = 'legacy_fixed' | 'dynamic'
 
 export type SessionUser = {
   id: string
-  email: string
+  email: string | null
   emri: string | null
   uiLloji: UiLloji
   isLegacy: boolean
@@ -10,7 +10,7 @@ export type SessionUser = {
 
 export type PerdoruesRow = {
   id: string
-  email: string
+  email: string | null
   password_hash: string | null
   emri: string | null
   google_sub: string | null

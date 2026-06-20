@@ -4,19 +4,18 @@ export const UiLlojiSchema = z.enum(['legacy_fixed', 'dynamic'])
 export type UiLloji = z.infer<typeof UiLlojiSchema>
 
 export const LoginBodySchema = z.object({
-  email: z.string().email(),
+  emri: z.string().min(1),
   password: z.string().min(1),
 })
 
 export const SignupBodySchema = z.object({
-  email: z.string().email(),
+  emri: z.string().min(1),
   password: z.string().min(8),
-  emri: z.string().min(1).optional(),
 })
 
 export const SessionUserSchema = z.object({
   id: z.string().uuid(),
-  email: z.string().email(),
+  email: z.string().email().nullable(),
   emri: z.string().nullable(),
   uiLloji: UiLlojiSchema,
   isLegacy: z.boolean(),

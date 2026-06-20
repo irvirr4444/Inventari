@@ -117,14 +117,6 @@
   flex-shrink: 0;
 }
 
-.auth-name-field {
-  display: none;
-}
-
-.auth-name-field.visible {
-  display: block;
-}
-
 .auth-error-slot {
   margin-top: 4px;
 }

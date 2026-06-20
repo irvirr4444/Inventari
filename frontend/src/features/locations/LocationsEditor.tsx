@@ -15,6 +15,7 @@ type DraftLocation = {
 type LocationsEditorProps = {
   mode: 'onboarding' | 'settings'
   onComplete?: () => void
+  onBack?: () => void | Promise<void>
 }
 
 function newDraft(): DraftLocation {
@@ -116,6 +117,17 @@ export function LocationsEditor(props: LocationsEditorProps) {
     <section className="card auth-card locations-editor">
       {props.mode === 'onboarding' ? (
         <>
+          <div className="locations-onboarding-header">
+            {props.onBack ? (
+              <button
+                type="button"
+                className="btn ghost locations-back-btn"
+                onClick={() => props.onBack?.()}
+              >
+                Kthehu te hyrja
+              </button>
+            ) : null}
+          </div>
           <h1>Si quhen lokacionet e tua?</h1>
           <p className="muted">Mund t&apos;i shtosh ose ndryshosh me vone.</p>
         </>

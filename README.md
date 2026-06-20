@@ -30,8 +30,9 @@ Run migrations **in order** for a fresh project:
 | 1–6 | `docs/sql/01_tables.sql` … `06_veprim_batch_ora_pershkrimi.sql` | Core schema, batches, optional Ora/Pershkrimi |
 | 7 | `docs/sql/07_perdorues_lokacioni.sql` | Users + locations tables, placeholder legacy user |
 | 8–11 | `docs/sql/APPLY_08_through_11.sql` | Tenant columns, `gjendje`, stock triggers (safe to re-run) |
+| 13 | `docs/sql/13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
 
-**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql` (does not delete rows — wrapped in a transaction with row-count checks).
+**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql` (does not delete rows — wrapped in a transaction with row-count checks).
 
 **One-time** after migration 07:
 
@@ -59,7 +60,13 @@ npm run dev
 - Backend API: `http://localhost:3001`
 - Vite proxies `/api` to the backend during local development
 
-Log in at **`/login`** with legacy `login_email` / `login_password`, or use **Regjistrohu** on the same screen (or `/signup`, which redirects there) for a new dynamic account. Optional **Google sign-in** when `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` are set (see [Environment](#environment)).
+Log in at **`/login`**:
+
+- **Legacy admin (existing deployment):** use **Hyr** with `login_email` / `login_password` from `.env` (email in the Emri field works), or sign in as **`Legacy User`** with the same password.
+- **New dynamic account:** use **Regjistrohu** with a unique **Emri** + password (min 8 characters), then complete location onboarding.
+- Optional **Google sign-in** when `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` are set (see [Environment](#environment)).
+
+Do **not** use **Regjistrohu** with an email address — that creates a new account and sends you to onboarding instead of the legacy dashboard.
 
 ## Workspaces
 
@@ -128,8 +135,8 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 ### Auth & core flows
 
-- Email/password login and sign-up on one screen (`/login`); errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
-- Dynamic onboarding: add locations at `/onboarding/locations` before the dashboard; add more from the **action card location picker** (**+ Shto**) without visiting settings
+- **Emri** + password login and sign-up on one screen (`/login`); legacy users can also sign in with their email in the Emri field; errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
+- Dynamic onboarding: add at least one location at `/onboarding/locations` before the dashboard; add more from the **action card location picker** (**+ Shto**) without visiting settings
 - Location `kodi` is server-derived (UI shows emoji + name only)
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)

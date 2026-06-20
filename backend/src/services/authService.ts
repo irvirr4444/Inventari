@@ -1,12 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import crypto from 'node:crypto'
 import { OAuth2Client } from 'google-auth-library'
 import { AppError } from '../errors.js'
 import { hashPassword, verifyPassword } from '../auth/password.js'
 import {
   createPerdorues,
   findPerdoruesByEmail,
+  findPerdoruesByEmri,
   findPerdoruesByGoogleSub,
   findPerdoruesById,
+  normalizeEmri,
   toSessionUser,
   updateLegacyUserCredentials,
   updatePerdorues,
@@ -14,6 +17,39 @@ import {
 import { countActiveLokacionet } from '../repositories/lokacioniRepository.js'
 import type { SessionUser } from '../domain/user.js'
 import { LEGACY_USER_ID } from '../domain/user.js'
+
+function looksLikeEmail(value: string): boolean {
+  return value.includes('@')
+}
+
+async function resolveUniqueGoogleEmri(
+  supabase: SupabaseClient,
+  baseName: string | undefined,
+  email: string,
+): Promise<string> {
+  const localPart = email.split('@')[0] ?? 'user'
+  const candidates = [
+    baseName ? normalizeEmri(baseName) : '',
+    `${baseName ? normalizeEmri(baseName) : localPart} (${localPart})`,
+    `${localPart} (${localPart})`,
+  ].filter((value) => value.length > 0)
+
+  for (const candidate of candidates) {
+    const existing = await findPerdoruesByEmri(supabase, candidate)
+    if (!existing) return candidate
+  }
+
+  let suffix = 2
+  const root = normalizeEmri(baseName || localPart)
+  while (suffix < 100) {
+    const candidate = `${root} (${localPart}${suffix})`
+    const existing = await findPerdoruesByEmri(supabase, candidate)
+    if (!existing) return candidate
+    suffix += 1
+  }
+
+  return `${root} (${crypto.randomUUID().slice(0, 8)})`
+}
 
 export async function ensureLegacyUserSeeded(
   supabase: SupabaseClient,
@@ -29,14 +65,28 @@ export async function ensureLegacyUserSeeded(
   }
 }
 
+async function findPerdoruesForLogin(
+  supabase: SupabaseClient,
+  identifier: string,
+) {
+  const trimmed = identifier.trim()
+  if (looksLikeEmail(trimmed)) {
+    const byEmail = await findPerdoruesByEmail(supabase, trimmed)
+    if (byEmail) return byEmail
+  }
+  return findPerdoruesByEmri(supabase, trimmed)
+}
+
 export async function loginWithPassword(
   supabase: SupabaseClient,
-  email: string,
+  emri: string,
   password: string,
 ): Promise<SessionUser> {
-  await ensureLegacyUserSeeded(supabase, email, password)
+  if (looksLikeEmail(emri.trim())) {
+    await ensureLegacyUserSeeded(supabase, emri.trim(), password)
+  }
 
-  const user = await findPerdoruesByEmail(supabase, email)
+  const user = await findPerdoruesForLogin(supabase, emri)
   if (!user || !user.aktiv) {
     throw new AppError(401, 'Invalid credentials')
   }
@@ -55,16 +105,22 @@ export async function loginWithPassword(
 
 export async function signupWithPassword(
   supabase: SupabaseClient,
-  input: { email: string; password: string; emri?: string },
+  input: { emri: string; password: string },
 ): Promise<SessionUser> {
-  const existing = await findPerdoruesByEmail(supabase, input.email)
-  if (existing) throw new AppError(409, 'Email already registered')
+  const emri = normalizeEmri(input.emri)
+  if (!emri) throw new AppError(400, 'Name is required')
+  if (looksLikeEmail(emri)) {
+    throw new AppError(400, 'Use sign in for email accounts')
+  }
+
+  const existing = await findPerdoruesByEmri(supabase, emri)
+  if (existing) throw new AppError(409, 'Name already registered')
 
   const passwordHash = await hashPassword(input.password)
   const user = await createPerdorues(supabase, {
-    email: input.email,
+    email: null,
     passwordHash,
-    emri: input.emri ?? null,
+    emri,
     uiLloji: 'dynamic',
     isLegacy: false,
   })
@@ -135,9 +191,10 @@ export async function loginWithGoogle(
     return toSessionUser(updated)
   }
 
+  const emri = await resolveUniqueGoogleEmri(supabase, payload.name, email)
   const created = await createPerdorues(supabase, {
     email,
-    emri: payload.name ?? null,
+    emri,
     googleSub,
     uiLloji: 'dynamic',
     isLegacy: false,

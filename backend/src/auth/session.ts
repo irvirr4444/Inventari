@@ -7,7 +7,7 @@ export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
 
 const SessionPayloadSchema = z.object({
   sub: z.string().uuid(),
-  email: z.string().email(),
+  email: z.string().optional(),
   exp: z.number(),
   nonce: z.string(),
 })
@@ -20,11 +20,11 @@ export function signSession(sessionSecret: string, payload: string) {
 
 export function createSessionToken(
   sessionSecret: string,
-  user: { id: string; email: string },
+  user: { id: string; email: string | null },
 ) {
   const payload = JSON.stringify({
     sub: user.id,
-    email: user.email,
+    email: user.email ?? undefined,
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
     nonce: crypto.randomBytes(16).toString('base64url'),
   })
@@ -67,7 +67,7 @@ export function verifySessionToken(sessionSecret: string, token: string | undefi
 export function setSessionCookie(
   reply: FastifyReply,
   sessionSecret: string,
-  user: { id: string; email: string },
+  user: { id: string; email: string | null },
 ) {
   reply.setCookie(SESSION_COOKIE, createSessionToken(sessionSecret, user), {
     httpOnly: true,

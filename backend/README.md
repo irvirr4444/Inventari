@@ -122,8 +122,8 @@ backend/scripts/
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/api/health` | Health check |
-| POST | `/api/login` | Email/password login → session cookie (rate-limited) |
-| POST | `/api/auth/signup` | Create dynamic account |
+| POST | `/api/login` | Emri/password login → session cookie (rate-limited). If input contains `@`, email lookup runs first (legacy). Body: `{ emri, password }`. |
+| POST | `/api/auth/signup` | Create dynamic account. Body: `{ emri, password }` (min 8 chars). Emri must be unique (case-insensitive); email-like values rejected. |
 | POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`; body `{ id_token }`) |
 | POST | `/api/logout` | Clear session |
 | GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations` |
@@ -144,13 +144,14 @@ Protected routes require the `inventari_session` cookie except login, signup, go
 
 | Status | Message | When |
 | --- | --- | --- |
-| 401 | `Invalid credentials` | Wrong email/password |
+| 401 | `Invalid credentials` | Wrong emri/password |
 | 401 | `Account created with Google` | Password login for a Google-only account |
 | 401 | `Invalid Google token` | Bad or expired Google ID token |
-| 409 | `Email already registered` | Sign-up with existing email |
+| 400 | `Use sign in for email accounts` | Sign-up with an email-like Emri |
+| 409 | `Name already registered` | Sign-up with an existing Emri |
 | 503 | `Google sign-in is not configured` | `GOOGLE_CLIENT_ID` unset |
 
-Password login calls `ensureLegacyUserSeeded` once when the legacy user still has a placeholder email or no password hash. Google login links `google_sub` on an existing email match or creates a new dynamic user.
+Password login calls `ensureLegacyUserSeeded` once when the legacy user still has a placeholder email or no password hash (triggered when the login input looks like an email). Lookup order: if input contains `@`, try email first, then Emri; otherwise Emri only. Google login links `google_sub` on an existing email match or creates a new dynamic user with a unique Emri.
 
 ## Multi-tenancy
 
@@ -209,8 +210,9 @@ SQL migrations live in `docs/sql/`. Run in order.
 | `10_veprimi_lokacioni.sql` | `lokacioni_id` on `veprimi` / `veprim_batch` |
 | `11_stock_trigger_gjendje.sql` | Dual-write triggers (`gjendje` + legacy columns) |
 | `APPLY_08_through_11.sql` | **Combined 08–11** for upgrades; transaction + row-count safety |
+| `13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
 
-**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
+**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
 
 ## Tests
 

@@ -19,7 +19,7 @@ The browser talks only to the backend API. Supabase credentials stay on the serv
 
 - Node.js 20+
 - Backend running on `http://localhost:3001` (see [backend/README.md](../backend/README.md))
-- Supabase migrations **07** + **APPLY_08_through_11** applied for multi-tenant auth (see repo [README.md](../README.md))
+- Supabase migrations **07**, **APPLY_08_through_11**, and **13** applied for multi-tenant auth (see repo [README.md](../README.md))
 
 ### Setup
 
@@ -37,7 +37,7 @@ Or copy env from the repo root (Vite reads root `.env` via `envDir`):
 cp .env.example .env   # if present; or use backend/.env + root .env
 ```
 
-Log in with legacy credentials from `.env` (`login_email` / `login_password`), or use **Regjistrohu** on `/login` for a new dynamic account. Google sign-in appears when `VITE_GOOGLE_CLIENT_ID` is set.
+Log in with legacy credentials from `.env` (`login_email` / `login_password`) on the **Hyr** tab — enter the email or **`Legacy User`** in the Emri field. Use **Regjistrohu** only for a new dynamic account (unique Emri + password). Google sign-in appears when `VITE_GOOGLE_CLIENT_ID` is set.
 
 ### Scripts
 
@@ -118,7 +118,7 @@ packages/shared/               Zod schemas, productLabel, summary builders
 
 | Route | Access | Purpose |
 | --- | --- | --- |
-| `/login` | Public | Combined **Hyr** / **Regjistrohu** card (email, password, optional Google) |
+| `/login` | Public | Combined **Hyr** / **Regjistrohu** card (Emri, password, optional Google) |
 | `/signup` | Public | Redirects to `/login?mode=signup` |
 | `/onboarding/locations` | Auth, dynamic | First-time location setup (redirect until `has_locations`) |
 | `/settings/locations` | Auth, dynamic | Edit locations |
@@ -138,10 +138,12 @@ packages/shared/               Zod schemas, productLabel, summary builders
 Single card on `/login`:
 
 1. **Hyr** / **Regjistrohu** toggle (same `toggle-group` pattern as action card).
-2. Email + **Fjalekalimi**; sign-up mode adds optional **Emri**.
+2. **Emri** + **Fjalekalimi** (both modes). Legacy admin can enter their email or `Legacy User` on **Hyr**.
 3. Primary button: **Hyr** or **Krijo Llogari**.
 4. **ose** divider + **Vazhdo me Google** when `VITE_GOOGLE_CLIENT_ID` is set (custom label over Google Identity Services button).
 5. **Red error snackbar** at the bottom of the screen for validation and API errors (same `.snackbar.error` as the dashboard — no inline error box in the form).
+
+**Sign-up rules:** Emri is required and must be unique (case-insensitive). Values containing `@` are rejected — use **Hyr** for email-based legacy login.
 
 Post-auth redirects (`lib/auth/postAuthRedirect.ts`):
 
@@ -150,6 +152,8 @@ Post-auth redirects (`lib/auth/postAuthRedirect.ts`):
 | Legacy login | `/` |
 | Dynamic user with locations | `/` |
 | New sign-up or dynamic user without locations | `/onboarding/locations` |
+
+**Stuck on onboarding?** You are signed into a new dynamic account, not the legacy admin. Use **Kthehu te hyrja** at the top of the onboarding screen, then sign in on **Hyr** with your legacy email or `Legacy User`.
 
 API client: `lib/api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` (cookie session, `credentials: 'include'`).
 
@@ -325,7 +329,7 @@ Dynamic mobile uses full-width stacked cards for ≤3 summary locations (`Locati
 - `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save path.
 - `lib/queryKeys` + `lib/invalidateAppData` — React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql` then `docs/sql/APPLY_08_through_11.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql`, then `docs/sql/APPLY_08_through_11.sql`, then `docs/sql/13_perdorues_emri_unique.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
 ### Mobile web app
 
@@ -591,12 +595,12 @@ The platform starts at `/login` — a single card with **Hyr** (sign in) and **R
 
 Input fields:
 
-- **Sign in:** `email`, `password` (`Fjalekalimi`)
-- **Sign up:** optional `emri`, `email`, `password` (min 8 characters)
+- **Sign in (Hyr):** `emri`, `password` (`Fjalekalimi`). Legacy admin: use `login_email` from `.env` or `Legacy User` in the Emri field.
+- **Sign up (Regjistrohu):** `emri` (unique name), `password` (min 8 characters). Do not enter an email as Emri.
 
 Optional: **Vazhdo me Google** when `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) match the same Google Cloud Web client ID.
 
-Legacy deployment: use `login_email` / `login_password` from `.env` (seeded once via `npm run seed:legacy-user -w backend`).
+Legacy deployment: use `login_email` / `login_password` from `.env` (seeded once via `npm run seed:legacy-user -w backend`) on the **Hyr** tab.
 
 Google-only accounts (no password hash) receive a distinct API error if password login is attempted; the UI shows a message to use Google sign-in.
 
@@ -999,8 +1003,8 @@ Purpose:
 
 ## Data Flow
 
-1. User signs in or signs up at `/login` (password or Google).
-2. Dynamic new users add locations at `/onboarding/locations`, then reach the dashboard.
+1. User signs in or signs up at `/login` (Emri + password, or Google).
+2. Dynamic new users add at least one location at `/onboarding/locations`, then reach the dashboard.
 3. User creates products.
 4. User records stock movements.
 5. The backend validates the input and scopes data by `pronari_id`.

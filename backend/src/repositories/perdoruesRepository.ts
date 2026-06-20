@@ -2,6 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PerdoruesRow, SessionUser } from '../domain/user.js'
 import { mapSupabaseError } from '../errors.js'
 
+export function normalizeEmri(emri: string): string {
+  return emri.trim()
+}
+
+function escapeIlikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&')
+}
+
 function toSessionUser(row: PerdoruesRow): SessionUser {
   return {
     id: row.id,
@@ -20,6 +28,23 @@ export async function findPerdoruesByEmail(
     .from('perdorues')
     .select('*')
     .eq('email', email.trim().toLowerCase())
+    .maybeSingle()
+
+  if (error) throw mapSupabaseError(error)
+  return data as PerdoruesRow | null
+}
+
+export async function findPerdoruesByEmri(
+  supabase: SupabaseClient,
+  emri: string,
+): Promise<PerdoruesRow | null> {
+  const normalized = normalizeEmri(emri)
+  if (!normalized) return null
+
+  const { data, error } = await supabase
+    .from('perdorues')
+    .select('*')
+    .ilike('emri', escapeIlikePattern(normalized))
     .maybeSingle()
 
   if (error) throw mapSupabaseError(error)
@@ -53,7 +78,7 @@ export async function findPerdoruesByGoogleSub(
 export async function createPerdorues(
   supabase: SupabaseClient,
   input: {
-    email: string
+    email?: string | null
     passwordHash?: string | null
     emri?: string | null
     googleSub?: string | null
@@ -64,9 +89,9 @@ export async function createPerdorues(
   const { data, error } = await supabase
     .from('perdorues')
     .insert({
-      email: input.email.trim().toLowerCase(),
+      email: input.email ? input.email.trim().toLowerCase() : null,
       password_hash: input.passwordHash ?? null,
-      emri: input.emri ?? null,
+      emri: input.emri ? normalizeEmri(input.emri) : null,
       google_sub: input.googleSub ?? null,
       ui_lloji: input.uiLloji ?? 'dynamic',
       is_legacy: input.isLegacy ?? false,

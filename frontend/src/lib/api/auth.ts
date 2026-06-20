@@ -5,7 +5,7 @@ type SessionResponse =
   | { ok: false }
   | { ok: true; user: SessionUser & { has_locations: boolean } }
 
-export async function login(input: { email: string; password: string }): Promise<void> {
+export async function login(input: { emri: string; password: string }): Promise<void> {
   await http<{ ok: true }>(`/login`, {
     method: 'POST',
     body: JSON.stringify(input),
@@ -13,9 +13,8 @@ export async function login(input: { email: string; password: string }): Promise
 }
 
 export async function signup(input: {
-  email: string
+  emri: string
   password: string
-  emri?: string
 }): Promise<void> {
   await http<{ ok: true }>(`/auth/signup`, {
     method: 'POST',

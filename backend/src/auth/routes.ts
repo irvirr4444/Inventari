@@ -24,14 +24,13 @@ export type AuthRoutesDeps = {
 }
 
 const LoginBodySchema = z.object({
-  email: z.string().email(),
+  emri: z.string().min(1),
   password: z.string().min(1),
 })
 
 const SignupBodySchema = z.object({
-  email: z.string().email(),
+  emri: z.string().min(1),
   password: z.string().min(8),
-  emri: z.string().min(1).optional(),
 })
 
 const GoogleBodySchema = z.object({
@@ -42,7 +41,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
   app.post('/api/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
     const body = parseOrThrow(LoginBodySchema, req.body)
     try {
-      const user = await loginWithPassword(deps.supabase, body.email, body.password)
+      const user = await loginWithPassword(deps.supabase, body.emri, body.password)
       setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
       return { ok: true }
     } catch (err) {

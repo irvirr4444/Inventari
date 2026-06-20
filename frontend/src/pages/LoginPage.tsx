@@ -18,8 +18,11 @@ function mapAuthError(err: unknown, mode: AuthMode): string {
     if (err.status === 401 && err.message === 'Account created with Google') {
       return 'Kjo llogari eshte krijuar me Google. Hyr me Google.'
     }
-    if (err.status === 401) return 'Email ose fjalekalimi i pasakte.'
-    if (err.status === 409) return 'Ky email eshte i regjistruar.'
+    if (err.status === 400 && err.message === 'Use sign in for email accounts') {
+      return 'Per hyrje me email, perdor tab-in Hyr.'
+    }
+    if (err.status === 401) return 'Emri ose fjalekalimi i pasakte.'
+    if (err.status === 409) return 'Ky emer eshte i regjistruar.'
     if (err.status >= 500) return 'Gabim ne rrjet. Provo perseri.'
     return err.message || 'Gabim ne rrjet. Provo perseri.'
   }
@@ -35,7 +38,6 @@ export function LoginPage() {
   const initialMode: AuthMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
   const [mode, setMode] = React.useState<AuthMode>(initialMode)
   const [emri, setEmri] = React.useState('')
-  const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
@@ -65,11 +67,14 @@ export function LoginPage() {
   }
 
   const validate = (): string | null => {
-    const trimmedEmail = email.trim()
+    const trimmedEmri = emri.trim()
     const trimmedPassword = password.trim()
 
-    if (!trimmedEmail || !trimmedPassword) {
+    if (!trimmedEmri || !trimmedPassword) {
       return 'Ploteso te gjitha fushat e detyrueshme.'
+    }
+    if (mode === 'signup' && trimmedEmri.includes('@')) {
+      return 'Per hyrje me email, perdor tab-in Hyr.'
     }
     if (mode === 'signup' && trimmedPassword.length < 8) {
       return 'Fjalekalimi duhet te kete te pakten 8 karaktere.'
@@ -89,17 +94,16 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      const trimmedEmail = email.trim()
+      const trimmedEmri = emri.trim()
       const trimmedPassword = password.trim()
 
       if (mode === 'signin') {
-        await login({ email: trimmedEmail, password: trimmedPassword })
+        await login({ emri: trimmedEmri, password: trimmedPassword })
         await navigateAfterAuth()
       } else {
         await signup({
-          email: trimmedEmail,
+          emri: trimmedEmri,
           password: trimmedPassword,
-          emri: emri.trim() || undefined,
         })
         await refreshSession()
         navigate('/onboarding/locations', { replace: true })
@@ -140,26 +144,14 @@ export function LoginPage() {
         </div>
 
         <form className="form-grid" onSubmit={submit}>
-          <div className={`form-group auth-name-field ${mode === 'signup' ? 'visible' : ''}`}>
+          <div className="form-group">
             <label className="label">Emri</label>
             <input
               className="input"
               value={emri}
               onChange={(e) => setEmri(e.target.value)}
-              autoComplete="name"
-              disabled={formBusy}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="label">Email</label>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              autoFocus={mode === 'signin'}
+              autoComplete="username"
+              autoFocus
               disabled={formBusy}
             />
           </div>

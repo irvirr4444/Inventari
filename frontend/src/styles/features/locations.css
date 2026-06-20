@@ -260,6 +260,17 @@
   margin-top: 8px;
 }
 
+.locations-onboarding-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.locations-back-btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 @media (max-width: 640px) {
   .location-card-row {
     flex-direction: column;

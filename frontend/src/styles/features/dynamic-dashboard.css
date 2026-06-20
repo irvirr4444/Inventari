@@ -19,8 +19,41 @@
   gap: 16px;
 }
 
+.summary-panel-dynamic {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.summary-panel-dynamic .summary-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 4px;
+}
+
+.summary-panel-dynamic .summary-countries {
+  flex: none;
+}
+
+.summary-panel-dynamic .summary-countries > .summary-country {
+  flex: none;
+}
+
 .dynamic-summary-table-wrap {
-  margin-top: 12px;
+  margin-top: 0;
+}
+
+.dynamic-summary-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.dynamic-summary-table thead th {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.98));
+  box-shadow: 0 1px 0 var(--border-light);
 }
 
 .dynamic-history-location-checks {

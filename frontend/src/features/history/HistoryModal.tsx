@@ -23,6 +23,7 @@ import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAp
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { ActionEditModal } from './ActionEditModal'
 import type { HistoryEditSaveResult } from './historyEditSave'
 import { ExpandedActionDetail } from './ExpandedActionDetail'
@@ -173,7 +174,7 @@ export function HistoryModal(props: {
 
   return (
     <>
-      <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-overlay" onClick={(e) => handleOverlayDismiss(e, onClose)}>
         <div className="modal-content history-modal" onClick={(e) => e.stopPropagation()}>
           <div className="history-modal-header">
             <div className="history-title-row">

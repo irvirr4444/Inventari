@@ -29,6 +29,7 @@ export function DynamicProductsPanel(props: {
   onAddProduct: () => void
   onEditProduct: (product: DynamicProdukti) => void
   onDeleteProduct: (product: DynamicProdukti) => void
+  scrollableTable?: boolean
 }) {
   const multiplier = props.sort.direction === 'asc' ? 1 : -1
   const columnWidths = React.useMemo(
@@ -68,8 +69,14 @@ export function DynamicProductsPanel(props: {
     return props.sort.direction === 'asc' ? '↑' : '↓'
   }
 
+  const useFixedColumns = props.scrollableTable ?? false
+  const locationColWidth = '4.5rem'
+
   return (
-    <div className="card products-card">
+    <div
+      className="card products-card"
+      data-scrollable-table={useFixedColumns ? 'true' : undefined}
+    >
       <div className="row section-header products-header">
         <h3>Produkte</h3>
         <div className="products-search-wrap">
@@ -135,15 +142,33 @@ export function DynamicProductsPanel(props: {
         <table className="table products-table products-table-dynamic">
           <colgroup>
             <col className="products-col-kodi" />
-            <col className="products-col-emri" style={{ width: `${columnWidths.emriPct}%` }} />
+            <col
+              className="products-col-emri"
+              style={
+                useFixedColumns
+                  ? { width: '7rem' }
+                  : { width: `${columnWidths.emriPct}%` }
+              }
+            />
             {props.locations.map((loc) => (
               <col
                 key={loc.id}
                 className="products-col-location"
-                style={{ width: `${columnWidths.locationPct}%` }}
+                style={
+                  useFixedColumns
+                    ? { width: locationColWidth }
+                    : { width: `${columnWidths.locationPct}%` }
+                }
               />
             ))}
-            <col className="products-col-actions" style={{ width: `${columnWidths.actionsPct}%` }} />
+            <col
+              className="products-col-actions"
+              style={
+                useFixedColumns
+                  ? { width: '4rem' }
+                  : { width: `${columnWidths.actionsPct}%` }
+              }
+            />
           </colgroup>
           <thead>
             <tr>

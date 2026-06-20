@@ -1,43 +1,49 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Country } from '../../lib/country'
-import { COUNTRY_META } from '../../lib/country'
-import {
-  getActionBatch,
-  type ActionBatchDetail,
-  type Produkti,
-} from '../../lib/api'
-import { countryLabel, fmtEuro, productLabel, sortProductsByKodi } from '../../lib/format'
-import { formatActionDateTime, formatDisplayTime } from '../../lib/actionMeta'
+import { DeleteIcon } from '../../../../components/icons'
+import { NumericInput } from '../../../../components/NumericInput'
+import { OraInput } from '../../../../components/OraInput'
+import type { ActionBatchDetail, DynamicProdukti, Produkti } from '../../../../lib/api'
+import { getActionBatch } from '../../../../lib/api'
 import {
   batchTotal,
-  createEmptyEditRow,
-  isHistoryEditDirty,
   lineTotal,
   rowsFromDetail,
-  saveHistoryBatchEdits,
-  type HistoryBatchMetaDraft,
   type HistoryEditRow,
-  type HistoryEditSnapshot,
-} from '../../lib/historyBatchEdit'
-import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAppData'
-import { DeleteIcon } from '../../components/icons'
-import { NumericInput } from '../../components/NumericInput'
-import { queryKeys } from '../../lib/queryKeys'
-import { useAuth } from '../../lib/auth/AuthProvider'
-import { BottomSheet } from '../components/BottomSheet'
-import { ProductPickerSheet } from '../components/ProductPickerSheet'
+} from '../../../../lib/historyBatchEdit'
+import {
+  dynamicMetaFromDetail,
+  isDynamicHistoryEditDirty,
+  saveDynamicHistoryBatchEdits,
+  type DynamicHistoryBatchMetaDraft,
+  createEmptyDynamicEditRow,
+} from '../../../../lib/dynamicHistoryBatchEdit'
+import { fmtEuro, productLabel, sortProductsByKodi } from '../../../../lib/format'
+import { formatActionDateTime } from '../../../../lib/actionMeta'
+import { scheduleInvalidate, type InvalidateScope } from '../../../../lib/invalidateAppData'
+import { queryKeys } from '../../../../lib/queryKeys'
+import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
+import { BottomSheet } from '../../../../mobile/components/BottomSheet'
+import { ProductPickerSheet } from '../../../../mobile/components/ProductPickerSheet'
 import {
   SheetActionFooter,
   SheetConfirmButton,
   SheetEditButton,
   SheetFooterRow,
-} from '../components/SheetActions'
-import { MobileDateInput } from '../components/MobileDateInput'
-import { MobileCountryField } from '../components/MobileCountryField'
-import { SkeletonRow } from '../components/SkeletonRow'
-import { OraInput } from '../../components/OraInput'
-import type { MobileHeaderState } from '../types'
+} from '../../../../mobile/components/SheetActions'
+import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
+import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
+import type { MobileHeaderState } from '../../../../mobile/types'
+import {
+  DynamicLocationField,
+  DynamicLocationPickerSheet,
+} from '../components/DynamicLocationPickerSheet'
+
+type DynamicEditSnapshot = {
+  meta: DynamicHistoryBatchMetaDraft
+  rows: HistoryEditRow[]
+}
 
 function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   const cls =
@@ -49,20 +55,14 @@ function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   return <span className={`mobile-badge ${cls}`}>{props.lloji}</span>
 }
 
-function buildEditSnapshot(batch: ActionBatchDetail): HistoryEditSnapshot {
+function buildEditSnapshot(batch: ActionBatchDetail): DynamicEditSnapshot {
   return {
-    meta: {
-      data: batch.data,
-      ora: formatDisplayTime(batch.ora),
-      pershkrimi: batch.pershkrimi ?? '',
-      shteti: batch.shteti,
-      destination: batch.destination_shteti ?? '',
-    },
+    meta: dynamicMetaFromDetail(batch),
     rows: rowsFromDetail(batch.items),
   }
 }
 
-function HistoriEditProductRow(props: {
+function DynamicHistoriEditProductRow(props: {
   draft: HistoryEditRow['draft']
   products: Produkti[]
   otherKodis: string[]
@@ -85,9 +85,7 @@ function HistoriEditProductRow(props: {
         disabled={props.disabled}
         onClick={() => setPickerOpen(true)}
       >
-        <span className="mobile-meta-truncate" style={{ textAlign: 'left' }}>
-          {label}
-        </span>
+        <span className="mobile-meta-truncate" style={{ textAlign: 'left' }}>{label}</span>
         <span aria-hidden="true">▾</span>
       </button>
       <div className="mobile-field-row">
@@ -150,26 +148,22 @@ function HistoriEditProductRow(props: {
   )
 }
 
-function HistoriBatchEditView(props: {
+function DynamicHistoriBatchEditView(props: {
   detail: ActionBatchDetail
   products: Produkti[]
-  meta: HistoryBatchMetaDraft
+  locations: Array<{ id: string; emri: string; flag_emoji?: string | null }>
+  meta: DynamicHistoryBatchMetaDraft
   rows: HistoryEditRow[]
   busy: boolean
   error: string | null
-  onMetaChange: (meta: HistoryBatchMetaDraft) => void
+  onMetaChange: (meta: DynamicHistoryBatchMetaDraft) => void
   onRowsChange: (rows: HistoryEditRow[]) => void
   onSave: () => void
 }) {
+  const [fromOpen, setFromOpen] = React.useState(false)
+  const [toOpen, setToOpen] = React.useState(false)
+  const [locOpen, setLocOpen] = React.useState(false)
   const productsByKodi = sortProductsByKodi(props.products)
-
-  const updateFrom = (next: Country) => {
-    const updated = { ...props.meta, shteti: next }
-    if (props.detail.lloji === 'Transfer' && next === props.meta.destination) {
-      updated.destination = next === 'XK' ? 'AL' : 'XK'
-    }
-    props.onMetaChange(updated)
-  }
 
   const updateRow = (key: string, patch: Partial<HistoryEditRow['draft']>) => {
     props.onRowsChange(
@@ -185,7 +179,16 @@ function HistoriBatchEditView(props: {
   }
 
   const addRow = () => {
-    props.onRowsChange([...props.rows, createEmptyEditRow()])
+    props.onRowsChange([...props.rows, createEmptyDynamicEditRow()])
+  }
+
+  const setFrom = (id: string) => {
+    const next = { ...props.meta, lokacioni_id: id }
+    if (id === props.meta.destination_lokacioni_id) {
+      const alt = props.locations.find((l) => l.id !== id)
+      if (alt) next.destination_lokacioni_id = alt.id
+    }
+    props.onMetaChange(next)
   }
 
   const total = batchTotal(props.rows)
@@ -210,38 +213,32 @@ function HistoriBatchEditView(props: {
 
               {props.detail.lloji === 'Transfer' ? (
                 <div className="mobile-field-row mobile-history-route-row">
-                  <MobileCountryField
+                  <DynamicLocationField
                     label="Nga"
-                    value={props.meta.shteti}
-                    disabled={props.busy}
-                    sheetTitle="Nga"
-                    onChange={updateFrom}
+                    value={props.meta.lokacioni_id}
+                    locations={props.locations}
+                    onOpen={() => setFromOpen(true)}
                   />
-                  <MobileCountryField
+                  <DynamicLocationField
                     label="Te"
-                    value={props.meta.destination || (props.meta.shteti === 'XK' ? 'AL' : 'XK')}
-                    disabled={props.busy}
-                    exclude={props.meta.shteti}
-                    sheetTitle="Te"
-                    onChange={(c) => props.onMetaChange({ ...props.meta, destination: c })}
+                    value={props.meta.destination_lokacioni_id}
+                    locations={props.locations}
+                    onOpen={() => setToOpen(true)}
                   />
                 </div>
               ) : (
-                <MobileCountryField
-                  label="Shteti"
-                  value={props.meta.shteti}
-                  disabled={props.busy || props.detail.mirrored_to_albania}
-                  sheetTitle="Shteti"
-                  onChange={(shteti) => props.onMetaChange({ ...props.meta, shteti })}
+                <DynamicLocationField
+                  label="Lokacioni"
+                  value={props.meta.lokacioni_id}
+                  locations={props.locations}
+                  onOpen={() => setLocOpen(true)}
                 />
               )}
 
               <div className="mobile-history-meta-field">
-                <label className="mobile-label" htmlFor="batch-edit-ora">
-                  Ora
-                </label>
+                <label className="mobile-label" htmlFor="dynamic-batch-edit-ora">Ora</label>
                 <OraInput
-                  id="batch-edit-ora"
+                  id="dynamic-batch-edit-ora"
                   className="mobile-input"
                   value={props.meta.ora}
                   onChange={(ora) => props.onMetaChange({ ...props.meta, ora })}
@@ -249,11 +246,11 @@ function HistoriBatchEditView(props: {
                 />
               </div>
               <div className="mobile-history-meta-field">
-                <label className="mobile-label" htmlFor="batch-edit-pershkrimi">
+                <label className="mobile-label" htmlFor="dynamic-batch-edit-pershkrimi">
                   Pershkrimi
                 </label>
                 <input
-                  id="batch-edit-pershkrimi"
+                  id="dynamic-batch-edit-pershkrimi"
                   type="text"
                   className="mobile-input"
                   value={props.meta.pershkrimi}
@@ -273,7 +270,7 @@ function HistoriBatchEditView(props: {
           <div className="mobile-section-label">PRODUKTET</div>
           <div className="mobile-list-stack">
             {props.rows.map((row) => (
-              <HistoriEditProductRow
+              <DynamicHistoriEditProductRow
                 key={row.key}
                 draft={row.draft}
                 products={productsByKodi}
@@ -306,22 +303,41 @@ function HistoriBatchEditView(props: {
           <span>Totali i veprimit:</span>
           <span className="mobile-num">{fmtEuro(total)}</span>
         </div>
-        <button
-          type="button"
-          className="mobile-btn-primary"
-          disabled={props.busy}
-          onClick={props.onSave}
-        >
+        <button type="button" className="mobile-btn-primary" disabled={props.busy} onClick={props.onSave}>
           {props.busy ? 'Duke ruajtur…' : 'Ruaj Ndryshimet'}
         </button>
       </div>
+
+      <DynamicLocationPickerSheet
+        open={fromOpen}
+        title="Nga"
+        value={props.meta.lokacioni_id}
+        excludeIds={[props.meta.destination_lokacioni_id]}
+        onClose={() => setFromOpen(false)}
+        onSelect={setFrom}
+      />
+      <DynamicLocationPickerSheet
+        open={toOpen}
+        title="Te"
+        value={props.meta.destination_lokacioni_id}
+        excludeIds={[props.meta.lokacioni_id]}
+        onClose={() => setToOpen(false)}
+        onSelect={(id) => props.onMetaChange({ ...props.meta, destination_lokacioni_id: id })}
+      />
+      <DynamicLocationPickerSheet
+        open={locOpen}
+        title="Lokacioni"
+        value={props.meta.lokacioni_id}
+        onClose={() => setLocOpen(false)}
+        onSelect={(id) => props.onMetaChange({ ...props.meta, lokacioni_id: id })}
+      />
     </>
   )
 }
 
-export function HistoriBatchDetail(props: {
+export function DynamicHistoriBatchDetail(props: {
   batchId: string
-  products: Produkti[]
+  products: DynamicProdukti[]
   onNotify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onDeleteRequest: (batch: Pick<ActionBatchDetail, 'id' | 'lloji' | 'data'>) => void
   onHeaderChange: (header: MobileHeaderState) => void
@@ -330,6 +346,13 @@ export function HistoriBatchDetail(props: {
 }) {
   const qc = useQueryClient()
   const { user } = useAuth()
+  const { activeLokacionet } = useLokacioni()
+  const sortedLocations = React.useMemo(
+    () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
+    [activeLokacionet],
+  )
+  const pickerProducts = props.products as unknown as Produkti[]
+
   const detailQuery = useQuery({
     queryKey: queryKeys.actionBatch(user?.id, props.batchId),
     queryFn: () => getActionBatch(props.batchId),
@@ -338,27 +361,24 @@ export function HistoriBatchDetail(props: {
   const [isEditing, setIsEditing] = React.useState(false)
   const [cancelSheetOpen, setCancelSheetOpen] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [initialSnapshot, setInitialSnapshot] = React.useState<HistoryEditSnapshot | null>(null)
-  const [editMeta, setEditMeta] = React.useState<HistoryBatchMetaDraft | null>(null)
+  const [initialSnapshot, setInitialSnapshot] = React.useState<DynamicEditSnapshot | null>(null)
+  const [editMeta, setEditMeta] = React.useState<DynamicHistoryBatchMetaDraft | null>(null)
   const [editRows, setEditRows] = React.useState<HistoryEditRow[]>([])
 
   const detail = detailQuery.data
 
-  const currentSnapshot = React.useMemo((): HistoryEditSnapshot | null => {
+  const currentSnapshot = React.useMemo((): DynamicEditSnapshot | null => {
     if (!editMeta) return null
     return { meta: editMeta, rows: editRows }
   }, [editMeta, editRows])
 
-  const resetEditState = React.useCallback(
-    (batch: ActionBatchDetail) => {
-      const snapshot = buildEditSnapshot(batch)
-      setInitialSnapshot(snapshot)
-      setEditMeta(snapshot.meta)
-      setEditRows(snapshot.rows)
-      setError(null)
-    },
-    [],
-  )
+  const resetEditState = React.useCallback((batch: ActionBatchDetail) => {
+    const snapshot = buildEditSnapshot(batch)
+    setInitialSnapshot(snapshot)
+    setEditMeta(snapshot.meta)
+    setEditRows(snapshot.rows)
+    setError(null)
+  }, [])
 
   const startEditing = React.useCallback(() => {
     if (!detail) return
@@ -380,7 +400,7 @@ export function HistoriBatchDetail(props: {
       cancelEditing()
       return
     }
-    if (isHistoryEditDirty(initialSnapshot, currentSnapshot)) {
+    if (isDynamicHistoryEditDirty(initialSnapshot, currentSnapshot)) {
       setCancelSheetOpen(true)
     } else {
       cancelEditing()
@@ -391,17 +411,9 @@ export function HistoriBatchDetail(props: {
 
   React.useEffect(() => {
     if (isEditing) {
-      onHeaderChange({
-        kind: 'sub',
-        title: 'Ndrysho',
-        onBack: requestCancel,
-      })
+      onHeaderChange({ kind: 'sub', title: 'Ndrysho', onBack: requestCancel })
     } else {
-      onHeaderChange({
-        kind: 'sub',
-        title: 'Detajet',
-        onBack: onBackToList,
-      })
+      onHeaderChange({ kind: 'sub', title: 'Detajet', onBack: onBackToList })
     }
     return () => onHeaderChange({ kind: 'tab' })
   }, [isEditing, requestCancel, onBackToList, onHeaderChange])
@@ -409,19 +421,13 @@ export function HistoriBatchDetail(props: {
   const saveMut = useMutation({
     mutationFn: async () => {
       if (!detail || !editMeta) throw new Error('Missing batch')
-      return saveHistoryBatchEdits({
-        detail,
-        meta: editMeta,
-        rows: editRows,
-      })
+      return saveDynamicHistoryBatchEdits({ detail, meta: editMeta, rows: editRows })
     },
     onSuccess: (result) => {
       const nextBatchId = result.batch_id ?? props.batchId
-      if (result.batch_id) {
-        props.onBatchIdChange(result.batch_id)
-      }
+      if (result.batch_id) props.onBatchIdChange(result.batch_id)
       cancelEditing()
-      props.onNotify('Veprimi u përditësua me sukses.', 'success')
+      props.onNotify('Ndryshimet u ruajtuan me sukses.', 'success')
       const scope: InvalidateScope = result.itemsChanged ? 'all' : 'history'
       scheduleInvalidate(qc, scope, { actionBatchId: nextBatchId, userId: user?.id })
     },
@@ -449,13 +455,18 @@ export function HistoriBatchDetail(props: {
   }
 
   const busy = saveMut.isPending
+  const locLabel = detail.lokacioni_emri ?? sortedLocations.find((l) => l.id === detail.lokacioni_id)?.emri
+  const destLabel =
+    detail.destination_lokacioni_emri ??
+    sortedLocations.find((l) => l.id === detail.destination_lokacioni_id)?.emri
 
   if (isEditing && initialSnapshot && editMeta) {
     return (
       <>
-        <HistoriBatchEditView
+        <DynamicHistoriBatchEditView
           detail={detail}
-          products={props.products}
+          products={pickerProducts}
+          locations={sortedLocations}
           meta={editMeta}
           rows={editRows}
           busy={busy}
@@ -498,22 +509,16 @@ export function HistoriBatchDetail(props: {
             {detail.pershkrimi.trim()}
           </div>
         ) : null}
-        {detail.lloji === 'Transfer' && detail.destination_shteti ? (
+        {detail.lloji === 'Transfer' && destLabel ? (
           <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
-            <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
-            {countryLabel(detail.shteti)} → {countryLabel(detail.destination_shteti)}
-            <img
-              className="flagIcon"
-              src={COUNTRY_META[detail.destination_shteti].flagSrc}
-              alt=""
-              width={18}
-              height={12}
-            />
+            <span>{detail.flag_emoji ?? '📍'}</span>
+            {locLabel} → {destLabel}
+            <span>{detail.destination_flag_emoji ?? '📍'}</span>
           </div>
         ) : (
           <div className="mobile-card-meta row" style={{ gap: 6, marginTop: 4, alignItems: 'center' }}>
-            <img className="flagIcon" src={COUNTRY_META[detail.shteti].flagSrc} alt="" width={18} height={12} />
-            {countryLabel(detail.shteti)}
+            <span>{detail.flag_emoji ?? '📍'}</span>
+            {locLabel ?? '—'}
           </div>
         )}
         <div className="mobile-card-label" style={{ marginTop: 8 }}>
@@ -525,7 +530,11 @@ export function HistoriBatchDetail(props: {
 
       <div className="mobile-list-stack">
         {detail.items.map((item) => (
-          <div key={item.id} className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div
+            key={item.id}
+            className="mobile-row-card"
+            style={{ flexDirection: 'column', alignItems: 'stretch' }}
+          >
             <div className="mobile-row-card-title">
               {productLabel(item.emri_produktit, item.kodi_produktit)}
             </div>

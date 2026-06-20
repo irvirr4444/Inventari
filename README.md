@@ -124,12 +124,13 @@ The browser does not use Supabase keys directly. All data goes through the backe
 ### Accounts
 
 - **Legacy** (`ui_lloji = legacy_fixed`): Kosovo + Albania UI, `gjendje_kosove` / `gjendje_shqiperi` on products, country-based actions and summary.
-- **Dynamic** (new sign-ups): custom locations (`lokacioni`), `gjendje` stock per location, N-location desktop dashboard (`DynamicDashboardPage`).
+- **Dynamic** (new sign-ups): custom locations (`lokacioni`, emoji + name in UI), `gjendje` stock per location, N-column desktop dashboard with location picker menu and inline add
 
 ### Auth & core flows
 
-- Email/password login and sign-up on one screen (`/login`); optional Google sign-in
-- Dynamic onboarding: add locations at `/onboarding/locations` before the dashboard
+- Email/password login and sign-up on one screen (`/login`); errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
+- Dynamic onboarding: add locations at `/onboarding/locations` before the dashboard; add more from the **action card location picker** (**+ Shto**) without visiting settings
+- Location `kodi` is server-derived (UI shows emoji + name only)
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)
 - **Historiku** — paginated batches, server filters (type, date) + client filters (location checkboxes for dynamic, Ora, Pershkrimi, Totali, Produkte); edit and delete with stock rollback
@@ -144,5 +145,8 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 ### Desktop vs mobile
 
-- **Legacy:** full desktop + mobile (`MobileApp`) for Kosovo/Albania.
-- **Dynamic:** full **desktop** N-location dashboard; mobile UI for dynamic accounts is still legacy-shaped (follow-up).
+- **Legacy:** full desktop (`DashboardPage`) + mobile (`src/mobile/MobileApp.tsx`) for Kosovo/Albania.
+- **Dynamic:** full desktop (`DynamicDashboardPage`) + purpose-built mobile tabs (`src/features/dynamic/mobile/`) with the same five bottom tabs as legacy.
+- **Permbledhje on mobile:** bottom **Permbledhje** tab (not a separate route). Dynamic accounts get per-location **Hyrje/Dalje sasi and vlerë** for every `show_in_summary` location, including zeros when the date range has no activity; legacy shows Kosovo + Albania blocks with the same four metrics.
+- **Mobile sheets & overlays:** date/time pickers slide up from the bottom (`DatePickerSheet`, `TimePickerSheet`). Dismiss by tapping the dimmed backdrop closes the sheet/modal without triggering buttons underneath (`lib/pointerDismissGuard.ts`).
+- **Transfer tab (mobile):** `Nga` / `Te` and **Data** / **Ora** use two-column `mobile-field-row` layouts (half width each).

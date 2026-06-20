@@ -85,6 +85,7 @@ frontend/
     hooks/                     useSnackbar, useActionItems, feature hooks, useMobileClient
     lib/
       api.ts                   Main API client (products, actions, exports)
+      pointerDismissGuard.ts   Overlay/sheet dismiss without click-through to UI below
       api/http.ts              Fetch wrapper (credentials, errors)
       api/auth.ts              login, signup, session, Google
       api/lokacionet.ts        Location CRUD
@@ -94,9 +95,11 @@ frontend/
       lokacioni/               Dynamic location types + provider
     features/
       auth/                    GoogleSignInButton (GIS ID token)
+      locations/               LocationPicker, LocationAddModal, LocationsEditor, emoji picker
       onboarding/              LocationsOnboardingPage (dynamic gate)
       settings/                LocationsSettingsPage
       dynamic/                 DynamicDashboardPage, Dynamic* panels, history, hooks
+      dynamic/mobile/          DynamicMobileApp (N-location mobile tabs)
       actions/                 Legacy ActionEntryPanel, TransferModal; shared ActionItemsTable, ActionReviewModal
       products/                ProductsPanel, ProductFormModal
       summary/                 SummaryPanel, CountrySummary
@@ -125,6 +128,7 @@ packages/shared/               Zod schemas, productLabel, summary builders
 `AuthProvider` loads `GET /api/session` on mount. Session user includes `uiLloji`, `isLegacy`, and `has_locations`.
 
 - **Legacy** users (`uiLloji === legacy_fixed`) skip onboarding and render `DashboardPage` / `MobileApp`.
+- **Dynamic** users render `DynamicDashboardPage` (desktop) or `DynamicMobileApp` (mobile) after onboarding.
 - **Dynamic** users must complete `/onboarding/locations` until `has_locations` is true, then render `DynamicDashboardPage` (N-location panels; no `CountryProvider`).
 
 `AppProviders` branches providers: **legacy** and logged-out users get `CountryProvider` only; **dynamic** users get `LokacioniProvider` only. Dynamic code must not call `useCountry()`.
@@ -137,7 +141,7 @@ Single card on `/login`:
 2. Email + **Fjalekalimi**; sign-up mode adds optional **Emri**.
 3. Primary button: **Hyr** or **Krijo Llogari**.
 4. **ose** divider + **Vazhdo me Google** when `VITE_GOOGLE_CLIENT_ID` is set (custom label over Google Identity Services button).
-5. Inline `ErrorAlert` for validation and API errors (no snackbar on the auth screen).
+5. **Red error snackbar** at the bottom of the screen for validation and API errors (same `.snackbar.error` as the dashboard — no inline error box in the form).
 
 Post-auth redirects (`lib/auth/postAuthRedirect.ts`):
 
@@ -155,10 +159,10 @@ Not implemented in v1: forgot-password, social providers other than Google.
 
 On viewports **wider than the mobile breakpoint** (`useMobileClient`):
 
-| Account | Desktop component | Provider |
-| --- | --- | --- |
-| Legacy | `DashboardPage` + `useDashboardPage` | `CountryProvider` |
-| Dynamic | `DynamicDashboardPage` + `useDynamicDashboardPage` | `LokacioniProvider` |
+| Account | Desktop component | Mobile component | Provider |
+| --- | --- | --- | --- |
+| Legacy | `DashboardPage` + `useDashboardPage` | `MobileApp` | `CountryProvider` |
+| Dynamic | `DynamicDashboardPage` + `useDynamicDashboardPage` | `DynamicMobileApp` (per-tab hooks) | `LokacioniProvider` |
 
 Both dashboards share the same layout pattern (action card, products + summary grid) and reuse shared pieces (`ActionItemsTable`, `ActionMetaFields`, `ActionReviewModal`, `ConfirmModal`, `Snackbar`) without `isLegacy` branches inside legacy feature files — dynamic behavior lives in `features/dynamic/*` siblings.
 
@@ -176,20 +180,37 @@ Same three-area layout, keyed by **location** instead of country:
 
 | Area | Component | Notes |
 | --- | --- | --- |
-| Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` (pills ≤4 locations, `<select>` beyond); `createDynamicActionBatch` with `lokacioni_id` |
-| Transfer | `DynamicTransferModal` | `Nga` / `Ne` location pickers with `excludeIds` |
-| Products | `DynamicProductsPanel` | One stock column per active location (by `rradhitja`); `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3 |
-| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, table >3; `analyticsSummary` returns `Record<locationId, totals>` |
+| Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` — single trigger opens a portal menu (all locations + **+ Shto**); inline add modal (emoji + name, success snackbar). No top-bar **Lokacionet** link. |
+| Transfer | `DynamicTransferModal` | `Nga` / `Te` location pickers with `excludeIds` (pill row or `<select>` when many locations) |
+| Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow; tight **Kodi** column (~10 chars), wider name/location cols; `stock-badge` body cells. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. Mobile: `DynamicProdukteTab` card list (no table). |
+| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, scrollable table >3; header/date fixed, location list scrolls inside card |
 | Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route |
 | Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }` instead of `country` |
 
-**Location settings** (`LocationsEditor` in onboarding/settings): card UI with emoji picker + name only — internal `kodi` is derived server-side on create/rename and is not shown in the UI. Add/deactivate locations; per-row **Shfaq ne Permbledhje** toggle (`patchLokacioni({ show_in_summary })`).
+**Location UX** (`features/locations/`):
+
+- **Onboarding / settings** (`LocationsEditor`): card UI with `LocationEmojiPicker` + name; server-derived `kodi` (not shown). Settings: reorder, **Shfaq ne Permbledhje**, deactivate.
+- **Dashboard picker** (`LocationPicker` + `LocationAddModal`): dropdown menu portaled to `document.body` (z-index above cards); scroll only when the list would hit the viewport edge. **+ Shto** opens add modal (wide emoji grid 2×10 in modal).
 
 **Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`.
 
-**Styles:** `styles/features/dynamic-dashboard.css` (stock grid/table, summary table, history location checkboxes).
+**Styles:** `styles/features/locations.css` (picker menu, cards, emoji grids); `styles/features/dynamic-dashboard.css` (products table location headers, summary scroll, stock grid/table); `features/dynamic/mobile/dynamic-mobile.css` (dynamic mobile-only layout tweaks).
 
-Dynamic **mobile** UI is not implemented yet (`features/dynamic/mobile/` remains a follow-up); small viewports still use legacy `MobileApp` for dynamic users until that ships.
+#### Dynamic mobile (`DynamicMobileApp`)
+
+On mobile viewports, **dynamic** accounts get purpose-built tabs in `features/dynamic/mobile/` — same bottom tab bar as legacy (`Veprime | Transfer | Produkte | Histori | Permbledhje`), modeled on `src/mobile/tabs/*` but parameterized by **locations** (not countries). Desktop panels are **not** embedded in mobile.
+
+| Tab | Mobile component | Notes |
+| --- | --- | --- |
+| Veprime | `tabs/DynamicVeprimeTab.tsx` | `SegmentedControl`; **Lokacioni** + **Data** in one `mobile-field-row`; Ora/Pershkrimi below; `ProductRowCard`, `BottomSheet` finalize |
+| Transfer | `tabs/DynamicTransferTab.tsx` | **Nga** / **Te** half-width row; **Data** / **Ora** half-width row; location sheets, `ProductRowCard`, sticky CTA |
+| Produkte | `tabs/DynamicProdukteTab.tsx` | Search + card list, per-location stock on cards, `BottomSheet` add/edit/delete |
+| **Histori** | `tabs/DynamicHistoriTab.tsx` + `DynamicHistoriBatchDetail.tsx` | Chip filters, card batch list, in-tab detail/edit stack |
+| Permbledhje | `tabs/DynamicPermbledhjeTab.tsx` | Per `show_in_summary` location: Hyrje/Dalje **sasi** + **vlerë** (four rows); ≤3 → `mobile-summary-section` cards, >3 → bordered compact cards (same four rows); zeros when empty (no global “no data” hide); **Shkarko Excel** |
+
+Shared mobile components: `components/DynamicLocationPickerSheet.tsx`, `DynamicMobileStockLevels.tsx`; `mobile/components/DatePickerSheet.tsx`, `TimePickerSheet.tsx` (bottom-sheet date/time pickers).
+
+Mobile mode is detected by `useMobileClient` / `lib/mobileClient.ts` (UA, viewport, `?mobile=1`, or `sessionStorage` after login redirect). Use **`?mobile=1`** on desktop to test; login keeps mobile mode via query params + session storage.
 
 #### Shared desktop behavior (legacy + dynamic)
 
@@ -198,7 +219,7 @@ The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps 
 #### Action card and finalize review
 
 - **Product rows** use `ActionItemsTable` with a **fixed 2-row** scroll area (`--action-visible-rows: 2`, `--action-row-height: 62px`). Row 3+ scroll inside the card; a reserved hint slot shows `↕ N produkte — scroll për të parë të gjitha` when needed (no layout jump when the hint appears).
-- Optional **Ora** and **Pershkrimi** sit below the date row (`ActionMetaFields`); **Ora** uses `OraInput` with a portal time picker (`TimePickerPopover`, `HH:mm`). Empty values are omitted from `POST /api/actions`. Both are stored on `veprim_batch` (one set per action/transfer batch).
+- Optional **Ora** and **Pershkrimi** sit below the date row (`ActionMetaFields`); **Ora** uses `OraInput` + `TimePickerPopover` (`HH:mm`). On **mobile**, `OraInput` opens `TimePickerSheet` (bottom sheet) instead of the desktop portal popover. The wheel columns use **scroll-to-select** (centered row becomes the value), **infinite loop** (00 ↔ 23 / 00 ↔ 59), and hidden scrollbars. Empty values are omitted from `POST /api/actions`. Both are stored on `veprim_batch` (one set per action/transfer batch).
 - **Finalizo Veprimin** validates line items first; invalid input shows a **red error snackbar** (e.g. `Sasia duhet te jete > 0.`) without growing the action card.
 - On success, validation opens **`ActionReviewModal`** — a large review sheet (`max-width: 960px`, ~10 visible row slots) instead of the small `ConfirmModal` text dialog.
 - Review modal header: title, `LlojiBadge` (Hyrje/Dalje), **country flag + label** (legacy) or **location name + emoji** (dynamic via `location` prop), formatted action date, product count; **Pershkrimi** shown below when set (`ActionMetaDisplay`).
@@ -248,9 +269,10 @@ Desktop product lines use the same controls everywhere:
 
 Transfer is separate from the main action form:
 
-- **Legacy:** `TransferModal` — `Nga` / `Ne` country selectors (`CountrySelect`); `POST /api/actions` with `shteti` + `destination_shteti`.
+- **Legacy:** `TransferModal` — `Nga` / `Te` country selectors (`CountrySelect`); `POST /api/actions` with `shteti` + `destination_shteti`.
 - **Dynamic:** `DynamicTransferModal` — `DynamicLocationSelect` for both ends; `createDynamicActionBatch` with `lokacioni_id` + `destination_lokacioni_id`.
-- Shared: action date, optional **Ora** / **Pershkrimi**, `ActionItemsTable`, total, **Finalizo Transfertën**, stacked `ConfirmModal` on finalize.
+- **Mobile Transfer tab** (legacy + dynamic): `Nga` / `Te` on one `mobile-field-row` (half width each); **Data** / **Ora** on the next row (half width each); full-width **Pershkrimi** below.
+- Shared: action date, optional **Ora** / **Pershkrimi**, `ActionItemsTable`, total, **Finalizo Transfertën**, stacked `ConfirmModal` on finalize (desktop) or `BottomSheet` confirm (mobile).
 - On success: modal closes, green snackbar, products and summary refresh.
 
 #### Products card
@@ -267,10 +289,19 @@ Transfer is separate from the main action form:
 - Totals use **action date** (`Data e Veprimit`), not `created_at`.
 - Excel: same `exportUrl('xlsx', { from, to })` — backend branches legacy template vs dynamic **Veprime** + **Permbledhje** pivot sheets.
 
+**Mobile Permbledhje tab** (bottom tab, not a separate URL):
+
+| Account | Component | Layout | Empty period |
+| --- | --- | --- | --- |
+| **Legacy** | `src/mobile/tabs/PermbledhjeTab.tsx` | Kosovo + Albania `SummarySection` cards (four metrics each) | Global empty state when both countries have zero qty; per-section “Nuk ka të dhëna…” when that country is all zeros |
+| **Dynamic** | `tabs/DynamicPermbledhjeTab.tsx` | One card per `show_in_summary` location — **Hyrje (sasi)**, **Hyrje (vlerë)**, **Dalje (sasi)**, **Dalje (vlerë)** | Always lists every summary location with **0** / **0 €** when there is no activity (only empty when no locations are configured for summary) |
+
+Dynamic mobile uses full-width stacked cards for ≤3 summary locations (`LocationSummarySection`); for >3 locations, the same four rows appear in smaller bordered cards (`dynamic-mobile-summary-compact`) — not a desktop-style scroll table. Both mobile tabs include **Shkarko Excel** below the cards.
+
 #### Feedback (snackbars)
 
-- Green success snackbar (`.snackbar.success`) for: registered actions/transfers, successful history edits/deletes, product create/edit/delete.
-- Red error snackbar (`.snackbar.error`) for: action/transfer finalize validation failures, API errors on submit, invalid edits in the review modal.
+- Green success snackbar (`.snackbar.success`) for: registered actions/transfers, successful history edits/deletes, product create/edit/delete, new location from dashboard picker.
+- Red error snackbar (`.snackbar.error`) for: **login / sign-up / Google** errors, action/transfer finalize validation failures, API errors on submit, invalid edits in the review modal.
 - Dark default snackbar for other messages (e.g. duplicate product in a row).
 
 #### Shared desktop UI and hooks
@@ -279,7 +310,8 @@ Transfer is separate from the main action form:
 - `features/actions/ActionMetaFields` / `ActionMetaDisplay` — optional Ora + Pershkrimi entry and read-only display (`OraInput` + text field).
 - `features/history/HistoryFilterBar`, `features/history/HistoryBatchMetaDisplay`, `features/history/historyBadges` — filter bar, history list meta columns, and type/country badges.
 - `lib/historyClientFilters.ts` — client-side Historiku filters applied after the paginated list fetch.
-- `components/OraInput`, `components/TimePickerPopover` — shared time entry (`HH:mm`) for actions, transfers, and history edit.
+- `components/OraInput`, `components/TimePickerPopover` — shared time entry (`HH:mm`); mobile uses `TimePickerSheet`.
+- `lib/pointerDismissGuard.ts` — `handleOverlayDismiss` + short-lived capture-phase guard so tapping a modal/sheet backdrop closes it without activating buttons underneath.
 - `features/actions/ActionReviewModal` — large finalize review for Hyrje/Dalje (desktop).
 - `features/actions/TransferModal`, `features/products/ProductFormModal` — use `Modal`, `ErrorAlert`, `CountrySelect`, `StockFields`, `NumericInput`.
 - `components/ProductSearchSelect`, `components/NumericInput`, `components/ConfirmModal`, `DateInput`, `Snackbar`, `icons`.
@@ -294,22 +326,53 @@ Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs
 
 ### Mobile web app
 
-On **phones and small touch devices**, the app opens the mobile UI automatically at **`/`** (no `/mobile` path needed). Detection uses screen width, touch capability, and user agent.
+On **phones and small touch devices**, the app opens a mobile shell at **`/`** (no `/mobile` path needed). Detection uses screen width, touch capability, user agent, **`?mobile=1`**, or persisted session preference after login.
 
 | Route | Desktop | Phone |
 | --- | --- | --- |
 | `/` | Dashboard | Mobile app (bottom tabs) |
 | `/mobile` | Redirects to `/` | Redirects to `/` |
 
+| Account | Mobile shell | Source |
+| --- | --- | --- |
+| Legacy (`legacy_fixed`) | `src/mobile/MobileApp.tsx` | Kosovo/Albania tabs |
+| Dynamic | `src/features/dynamic/mobile/DynamicMobileApp.tsx` | N-location tabs |
+
 For manual testing on desktop, resize the browser below 768px, use DevTools device mode, or open **`http://localhost:5173/?mobile=1`** to force the mobile UI.
 
-Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
+Open **`http://<your-ip>:5173/?mobile=1`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
 
-**Navigation:** fixed bottom tab bar — Veprime | Transfer | Produkte | Histori | Permbledhje.
+**Navigation:** fixed bottom tab bar — **Veprime | Transfer | Produkte | Histori | Permbledhje** (both account types).
 
-**Interaction model:**
+#### Where to find Historiku on mobile
 
-- Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete). Desktop Hyrje/Dalje uses **`ActionReviewModal`** for finalize; mobile still uses a compact **BottomSheet** confirm.
+There is no separate `/histori` URL in v1 — history lives on the **Histori** bottom tab:
+
+| Account | Tab component | History implementation | Edit/delete |
+| --- | --- | --- | --- |
+| **Legacy** | `src/mobile/tabs/HistoriTab.tsx` | Card list + `HistoriBatchDetail` in-tab stack | `lib/historyBatchEdit.ts` |
+| **Dynamic** | `tabs/DynamicHistoriTab.tsx` | Card list + `DynamicHistoriBatchDetail` in-tab stack | `lib/dynamicHistoryBatchEdit.ts` |
+
+**Legacy Histori tab:** type/country chips, date filters, advanced filters panel (`HistoriAdvancedFiltersPanel`), tap a batch for detail, **Ndrysho** opens full-screen `HistoriBatchDetail`.
+
+**Dynamic Histori tab:** Lloji + Lokacioni chip filters, date row, advanced filters panel, **card list** of batches (not a table), tap → `DynamicHistoriBatchDetail` with full-screen edit (location sheets for route). Desktop opens history via **Historiku** on the action card (`DynamicHistoryModal` modal); mobile uses the Histori tab.
+
+#### Where to find Permbledhje on mobile
+
+There is no separate `/permbledhje` URL — summary lives on the **Permbledhje** bottom tab:
+
+| Account | Tab component | What you see |
+| --- | --- | --- |
+| **Legacy** | `src/mobile/tabs/PermbledhjeTab.tsx` | **Nga** / **Deri** date row, Kosovo and Albania cards with Hyrje/Dalje sasi and vlerë, **Shkarko Excel** |
+| **Dynamic** | `tabs/DynamicPermbledhjeTab.tsx` | **Nga** / **Deri** date row, one card per summary location (emoji + name) with all four metrics, **Shkarko Excel** |
+
+Desktop dynamic users see the same totals in `DynamicSummaryPanel` (card grid ≤3 locations, table >3). Mobile never embeds that panel — it uses the tab components above.
+
+**Interaction model (legacy mobile; dynamic matches the same patterns):**
+
+- Bottom sheets instead of modal stacks (add product rows, confirm finalize, edit/delete). Dynamic mobile Veprime/Transfer use **BottomSheet** confirm like legacy (not `ActionReviewModal`). **Date** uses `MobileDateInput` → `DatePickerSheet`; **Ora** uses `OraInput` → `TimePickerSheet` on mobile.
+- Tapping outside a **bottom sheet** or **modal overlay** closes it only — `lib/pointerDismissGuard.ts` prevents the dismiss tap from activating controls underneath (`BottomSheet`, `Modal`, `ConfirmModal`, history modals).
+- **Veprime tab:** `Lokacioni` + **Data** side by side (`mobile-field-row`, labels aligned). **Transfer tab:** `Nga` / `Te` on one row; **Data** / **Ora** on the next (half width each). Long location/country names truncate in narrow fields.
 - Card lists instead of tables; touch targets ≥48px.
 - Sticky **FINALIZO** CTAs on Veprime and Transfer tabs.
 - Veprime and Transfer tabs include optional **Ora** (`OraInput`) / **Pershkrimi** fields; Histori list cards and detail show them when set (date · ora on one line; Pershkrimi as a muted truncated second line with `title` tooltip).
@@ -321,18 +384,25 @@ Open **`http://<your-ip>:5173/`** on your phone (same Wi‑Fi). See [docs/local-
 **Structure:**
 
 ```text
-src/mobile/
-  MobileApp.tsx           Shell + tab routing (useState, instant switch)
-  types.ts                TabId union
-  components/             BottomSheet, BottomNav, HistoriAdvancedFiltersPanel, ProductRowCard, …
-  tabs/                   One file per tab (+ HistoriBatchDetail)
-  styles/                 mobile.css hub (tokens + layout + components)
+src/mobile/                          Legacy mobile (XK/AL)
+  MobileApp.tsx                      Shell + tab routing
+  components/                        BottomSheet, DatePickerSheet, TimePickerSheet, …
+  tabs/HistoriTab.tsx                Histori tab + list/detail stack
+  tabs/HistoriBatchDetail.tsx        Full-screen legacy history edit
+  …
+
+src/features/dynamic/mobile/
+  DynamicMobileApp.tsx               Shell + tab routing
+  tabs/                              DynamicVeprimeTab, Transfer, Produkte, Histori, Permbledhje
+  components/                        DynamicLocationPickerSheet, DynamicMobileStockLevels
+  dynamic-mobile.css                 Stock lines, summary compact card layout (four rows per location)
 ```
 
 **Shared libs/hooks** (used by desktop and mobile):
 
 - `useProductsQuery`, `useActionEntry`, `useTransferEntry`, `useProductCrud`, `useSummaryQuery`, `useHistoryBatches` — legacy desktop/mobile
-- `useDynamicProductsQuery`, `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud` — dynamic desktop only
+- `useDynamicDashboardPage` — dynamic **desktop** only
+- `useDynamicProductsQuery`, `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud` — dynamic desktop + mobile tabs
 - `lib/historyClientFilters.ts` — client-side Historiku filters (`locationIds` for dynamic)
 - `lib/historyBatchEdit.ts` — legacy history edit save
 - `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save (`lokacioni_id`)
@@ -348,7 +418,7 @@ Main endpoints used by the UI:
 | Function / module | Purpose |
 | --- | --- |
 | `api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` | Authentication |
-| `api/lokacionet.ts` — CRUD | Dynamic user locations |
+| `api/lokacionet.ts` — CRUD | Dynamic locations (`emri`, `flag_emoji`; no client `kodi`) |
 | `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Legacy product CRUD |
 | `listDynamicProducts` / `updateDynamicProduct` | Dynamic product list + PATCH with `stock[]` |
 | `createActionBatch` | Legacy `Hyrje`, `Dalje`, `Transfer` (`shteti`) |
@@ -401,7 +471,7 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `tokens.css` | CSS variables (`:root`) |
 | `base.css` | Links, cursor states |
 | `components/date-input.css` | Date picker |
-| `components/time-input.css` | Ora field + time picker popover |
+| `components/time-input.css` | Ora field; `TimePickerPopover` wheel (scroll-select, infinite loop, hidden scrollbar) |
 | `components/forms.css` | Form layout, stock field cards (`stock-fields-grid`) |
 | `components/modals.css` | Modals, snackbar, stacked overlay, `action-review-modal` |
 | `components/product-search-select.css` | Searchable product combobox + portal list |
@@ -409,15 +479,15 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
 | `features/summary.css` | Permbledhje panel |
 | `features/history.css` | Historiku modal filters, columns, edit subtable |
-| `features/locations.css` | Location pills, onboarding/settings cards, emoji picker |
-| `features/dynamic-dashboard.css` | Dynamic stock grid/table, summary table, history location filters |
+| `features/locations.css` | Location picker menu (portal), pills, onboarding/settings cards, emoji grids |
+| `features/dynamic-dashboard.css` | Dynamic products table headers, summary scroll, stock grid/table, history location filters |
 | `responsive.css` | Breakpoints |
 
 - Dashboard layout is viewport-locked with internal scrolling in the action table (2 rows), products table, and review modal list (10 row slots; scroll only when >10 products).
 - Historiku filter bar uses `.history-filters-bar` with grouped controls (32px height, vertical separators, labeled fields). Pershkrimi stretches on row 1; Totali/Produkte sit on row 2.
 - Historiku list uses `table-layout: fixed` with percentage column widths (expand 3%, Data 12%, Ora 8%, Pershkrimi 22%, Lloji 9%, Shteti 17%, Produkte 8%, Totali 11%, Veprime 10%). Lloji/Shteti keep `min-width` so badges and transfer routes do not wrap awkwardly.
 - Action and history-edit product tables scroll horizontally when columns need more space.
-- Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals (product delete, transfer finalize).
+- Confirm dialogs use `.modal-overlay-stacked` so they appear above other modals (product delete, transfer finalize). Overlay dismiss uses `handleOverlayDismiss` (no click-through).
 - Success snackbars use `.snackbar.success` (green); errors use `.snackbar.error` (red); modals use `.modal-close-btn` (×).
 - Editing a history line item highlights the row (`.item-row-editing`, amber background).
 
@@ -449,7 +519,7 @@ Each product has one shared identity, but two stock balances:
 
 When the user records a movement, the app updates the correct country stock and stores the action history. This gives the business a clear record of what came in, what went out, when it happened, and how much it was worth.
 
-For transfers, the user opens the **Transfero** popup from the action card. Inside that popup they choose where stock leaves from (`Nga`), where it arrives (`Ne`), the action date, and the same product rows used for normal movements (product, unit price, quantity). The main action form stays focused on `Hyrje` and `Dalje` only.
+For transfers, the user opens the **Transfero** popup from the action card. Inside that popup they choose where stock leaves from (`Nga`), where it arrives (`Te`), the action date, and the same product rows used for normal movements (product, unit price, quantity). The main action form stays focused on `Hyrje` and `Dalje` only.
 
 Transfer is represented using the same movement logic as the rest of the system:
 
@@ -628,7 +698,7 @@ Transfer is opened from the **Transfero** button on the action card. The entire 
 Input fields:
 
 - `Nga` - source country.
-- `Ne` - destination country.
+- `Te` - destination country.
 - `Data e Veprimit` - action date.
 - Action item rows (same structure as normal movements):
   - `Produkti` — `ProductSearchSelect` (`Emri (Kodi)`, sorted by code)
@@ -638,8 +708,8 @@ Input fields:
 Rules:
 
 - Source and destination must be different.
-- The country selected in `Nga` cannot be chosen again in `Ne` (that option is disabled).
-- If the user changes `Nga` to match the current `Ne` value, `Ne` switches automatically to the other country.
+- The country selected in `Nga` cannot be chosen again in `Te` (that option is disabled).
+- If the user changes `Nga` to match the current `Te` value, `Te` switches automatically to the other country.
 - Transfer supports both directions:
   - Kosovo to Albania.
   - Albania to Kosovo.
@@ -651,7 +721,7 @@ Rules:
 
 Workflow inside the popup:
 
-1. Choose `Nga` and `Ne`.
+1. Choose `Nga` and `Te`.
 2. Set the action date.
 3. Add one or more product rows with price and quantity.
 4. Review the transfer total.

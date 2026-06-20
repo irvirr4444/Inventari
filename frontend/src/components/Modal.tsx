@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { handleOverlayDismiss } from '../lib/pointerDismissGuard'
 
 type ModalProps = {
   open: boolean
@@ -16,7 +17,7 @@ export function Modal(props: ModalProps) {
   return (
     <div
       className={props.stacked ? 'modal-overlay modal-overlay-stacked' : 'modal-overlay'}
-      onClick={props.onClose}
+      onClick={(e) => handleOverlayDismiss(e, props.onClose)}
     >
       <div
         className={props.className ? `modal-content ${props.className}` : 'modal-content'}

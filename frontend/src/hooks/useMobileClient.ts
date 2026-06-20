@@ -18,7 +18,6 @@ export function useMobileClient(): boolean {
 
   React.useEffect(() => {
     applyMobileClientClass(mobile)
-    return () => applyMobileClientClass(false)
   }, [mobile])
 
   return mobile

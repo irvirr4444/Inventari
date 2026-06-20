@@ -1,17 +1,80 @@
-import { DynamicDashboardPage } from '../DynamicDashboardPage'
+import * as React from 'react'
+import { createPortal } from 'react-dom'
+import { LogOutIcon } from '../../../components/icons'
+import { Snackbar } from '../../../components/Snackbar'
+import { useSnackbar } from '../../../hooks/useSnackbar'
+import { BottomNav } from '../../../mobile/components/BottomNav'
+import type { MobileHeaderState, TabId } from '../../../mobile/types'
+import { DynamicHistoriTab } from './tabs/DynamicHistoriTab'
+import { DynamicPermbledhjeTab } from './tabs/DynamicPermbledhjeTab'
+import { DynamicProdukteTab } from './tabs/DynamicProdukteTab'
+import { DynamicTransferTab } from './tabs/DynamicTransferTab'
+import { DynamicVeprimeTab } from './tabs/DynamicVeprimeTab'
+import './dynamic-mobile.css'
+
+const TAB_TITLES: Record<TabId, string> = {
+  veprime: 'Veprime',
+  transfer: 'Transfer',
+  produkte: 'Produkte',
+  histori: 'Histori',
+  permblehdje: 'Permbledhje',
+}
+
+const CTA_TABS: TabId[] = ['veprime', 'transfer']
 
 export function DynamicMobileApp(props: { onLogout: () => void }) {
+  const [tab, setTab] = React.useState<TabId>('veprime')
+  const [header, setHeader] = React.useState<MobileHeaderState>({ kind: 'tab' })
+  const { snackbar, notify } = useSnackbar()
+
+  React.useEffect(() => {
+    setHeader({ kind: 'tab' })
+  }, [tab])
+
+  const contentClass = CTA_TABS.includes(tab)
+    ? 'mobile-content mobile-content-with-cta'
+    : 'mobile-content'
+  const headerTitle = header.kind === 'sub' ? header.title : TAB_TITLES[tab]
+
   return (
-    <div className="mobile-app">
+    <div className="mobile-app dynamic-mobile-app">
       <header className="mobile-header">
-        <span className="mobile-header-title">Inventari</span>
+        <div className="mobile-header-start">
+          {header.kind === 'sub' ? (
+            <button
+              type="button"
+              className="mobile-header-back"
+              aria-label="Kthehu"
+              onClick={header.onBack}
+            >
+              ←
+            </button>
+          ) : null}
+          <span className="mobile-header-title">{headerTitle}</span>
+        </div>
         <button type="button" className="mobile-header-logout" onClick={props.onLogout}>
-          Dil
+          <LogOutIcon />
+          <span>Dil</span>
         </button>
       </header>
-      <main className="mobile-content">
-        <DynamicDashboardPage />
+
+      <main className={contentClass}>
+        {tab === 'veprime' && <DynamicVeprimeTab notify={notify} />}
+        {tab === 'transfer' && <DynamicTransferTab notify={notify} />}
+        {tab === 'produkte' && <DynamicProdukteTab notify={notify} />}
+        {tab === 'histori' && (
+          <DynamicHistoriTab notify={notify} onHeaderChange={setHeader} />
+        )}
+        {tab === 'permblehdje' && <DynamicPermbledhjeTab />}
       </main>
+
+      <BottomNavPortal active={tab} onChange={setTab} />
+      <Snackbar snackbar={snackbar} />
     </div>
   )
+}
+
+function BottomNavPortal(props: { active: TabId; onChange: (tab: TabId) => void }) {
+  if (typeof document === 'undefined') return null
+  return createPortal(<BottomNav active={props.active} onChange={props.onChange} />, document.body)
 }

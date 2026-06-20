@@ -8,7 +8,13 @@
     <script>
       (function () {
         var p = new URLSearchParams(location.search)
-        if (p.get('desktop') === '1') return
+        if (p.get('desktop') === '1') {
+          try { sessionStorage.removeItem('inventari-mobile') } catch (_) {}
+          return
+        }
+        if (p.get('mobile') === '1') {
+          try { sessionStorage.setItem('inventari-mobile', '1') } catch (_) {}
+        }
         var ua = navigator.userAgent || ''
         var mobile =
           p.get('mobile') === '1' ||

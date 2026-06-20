@@ -228,7 +228,7 @@ export function ActionEditForm(props: {
                 </select>
               </div>
               <div className="form-group">
-                <label className="label">Ne</label>
+                <label className="label">Te</label>
                 <select
                   className="select"
                   value={destination}

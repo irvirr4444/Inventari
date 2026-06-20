@@ -1,0 +1,76 @@
+.dynamic-mobile-stock-inline {
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.dynamic-mobile-stock-chip {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dynamic-mobile-stock-expanded {
+  margin-top: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.dynamic-mobile-location-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.dynamic-mobile-location-chip {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dynamic-mobile-location-chip.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(var(--primary-rgb, 59, 130, 246), 0.08);
+}
+
+.dynamic-mobile-product-form-stocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dynamic-mobile-summary-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dynamic-mobile-summary-compact-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--mobile-radius, 12px);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.dynamic-mobile-summary-compact-row .mobile-summary-row {
+  padding: 2px 0;
+}

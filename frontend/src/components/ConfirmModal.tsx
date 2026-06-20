@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { handleOverlayDismiss } from '../lib/pointerDismissGuard'
 
 export function ConfirmModal(props: {
   title: string
@@ -12,7 +13,7 @@ export function ConfirmModal(props: {
   return (
     <div
       className="modal-overlay modal-overlay-stacked"
-      onClick={() => !props.loading && props.onCancel()}
+      onClick={(e) => !props.loading && handleOverlayDismiss(e, props.onCancel)}
     >
       <div className="modal-content confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className="confirm-modal-header">

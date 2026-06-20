@@ -21,6 +21,7 @@ import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
 import { ExpandedActionDetail } from '../history/ExpandedActionDetail'
 import { EditIcon, DeleteIcon, LlojiBadge } from '../history/historyBadges'
@@ -36,8 +37,9 @@ export function DynamicHistoryModal(props: {
   products: DynamicProdukti[]
   onClose: () => void
   onNotify?: (message: string, variant?: 'success' | 'default') => void
+  variant?: 'modal' | 'embedded'
 }) {
-  const { products, onClose, onNotify } = props
+  const { products, onClose, onNotify, variant = 'modal' } = props
   const qc = useQueryClient()
   const { user } = useAuth()
   const { activeLokacionet } = useLokacioni()
@@ -173,40 +175,43 @@ export function DynamicHistoryModal(props: {
     return pages
   }, [totalPages])
 
-  return (
-    <>
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content history-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="history-modal-header">
-            <div className="history-title-row">
-              <svg
-                className="history-title-icon"
-                aria-hidden="true"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-              <h3>Historiku i Veprimeve</h3>
-              <div className="spacer" />
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={onClose}
-                aria-label="Mbyll"
-              >
-                ×
-              </button>
-            </div>
+  const historyBody = (
+    <div
+      className={variant === 'embedded' ? 'history-embedded' : 'modal-content history-modal'}
+      onClick={variant === 'modal' ? (e) => e.stopPropagation() : undefined}
+    >
+      <div className="history-modal-header">
+        {variant === 'modal' ? (
+          <div className="history-title-row">
+            <svg
+              className="history-title-icon"
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <h3>Historiku i Veprimeve</h3>
+            <div className="spacer" />
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={onClose}
+              aria-label="Mbyll"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
 
-            <DynamicHistoryFilterBar
+        <DynamicHistoryFilterBar
               serverFilters={filters}
               clientFilters={clientFilters}
               locations={sortedLocations}
@@ -398,8 +403,18 @@ export function DynamicHistoryModal(props: {
               </div>
             </div>
           )}
+    </div>
+  )
+
+  return (
+    <>
+      {variant === 'modal' ? (
+        <div className="modal-overlay" onClick={(e) => handleOverlayDismiss(e, onClose)}>
+          {historyBody}
         </div>
-      </div>
+      ) : (
+        historyBody
+      )}
 
       {editActionId && (
         <DynamicActionEditModal

@@ -1,6 +1,8 @@
 import { bootstrapMobileClient } from './lib/mobileBootstrap'
+import { installPointerDismissGuard } from './lib/pointerDismissGuard'
 
 bootstrapMobileClient()
+installPointerDismissGuard()
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

@@ -1,14 +1,15 @@
 import * as React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Snackbar } from '../components/Snackbar'
 import { login, signup, fetchSession } from '../lib/api/auth'
 import { ApiError } from '../lib/api/http'
 import { useAuth } from '../lib/auth/AuthProvider'
 import { getPostAuthPath } from '../lib/auth/postAuthRedirect'
+import { useSnackbar } from '../hooks/useSnackbar'
 import {
   GoogleSignInButton,
   isGoogleSignInConfigured,
 } from '../features/auth/GoogleSignInButton'
-import { ErrorAlert } from '../components/ErrorAlert'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -29,31 +30,37 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { refreshSession } = useAuth()
+  const { snackbar, notify, clear } = useSnackbar()
 
   const initialMode: AuthMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin'
   const [mode, setMode] = React.useState<AuthMode>(initialMode)
   const [emri, setEmri] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
-  const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
 
   const googleEnabled = isGoogleSignInConfigured()
   const formBusy = loading || googleLoading
 
+  const showError = (message: string) => {
+    notify(message, 'error')
+  }
+
   const switchMode = (next: AuthMode) => {
     setMode(next)
-    setError(null)
+    clear()
   }
 
   const navigateAfterAuth = async () => {
     await refreshSession()
     const session = await fetchSession()
     if (session.ok) {
-      navigate(getPostAuthPath(session.user), { replace: true })
+      const path = getPostAuthPath(session.user)
+      const qs = searchParams.toString()
+      navigate(qs ? `${path}?${qs}` : path, { replace: true })
     } else {
-      setError('Hyrja deshtoi. Provo perseri.')
+      showError('Hyrja deshtoi. Provo perseri.')
     }
   }
 
@@ -72,11 +79,11 @@ export function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
+    clear()
 
     const validationError = validate()
     if (validationError) {
-      setError(validationError)
+      showError(validationError)
       return
     }
 
@@ -98,105 +105,102 @@ export function LoginPage() {
         navigate('/onboarding/locations', { replace: true })
       }
     } catch (err) {
-      setError(mapAuthError(err, mode))
+      showError(mapAuthError(err, mode))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <section className="card auth-card">
-      <div style={{ marginBottom: 20, textAlign: 'center' }}>
-        <h1>Inventari</h1>
-      </div>
+    <>
+      <section className="card auth-card">
+        <div style={{ marginBottom: 20, textAlign: 'center' }}>
+          <h1>Inventari</h1>
+        </div>
 
-      <div className="auth-mode-toggle">
-        <div className="toggle-group">
-          <button
-            type="button"
-            className={`toggle-btn ${mode === 'signin' ? 'active' : ''}`}
-            onClick={() => switchMode('signin')}
-            disabled={formBusy}
-          >
-            Hyr
+        <div className="auth-mode-toggle">
+          <div className="toggle-group">
+            <button
+              type="button"
+              className={`toggle-btn ${mode === 'signin' ? 'active' : ''}`}
+              onClick={() => switchMode('signin')}
+              disabled={formBusy}
+            >
+              Hyr
+            </button>
+            <button
+              type="button"
+              className={`toggle-btn ${mode === 'signup' ? 'active' : ''}`}
+              onClick={() => switchMode('signup')}
+              disabled={formBusy}
+            >
+              Regjistrohu
+            </button>
+          </div>
+        </div>
+
+        <form className="form-grid" onSubmit={submit}>
+          <div className={`form-group auth-name-field ${mode === 'signup' ? 'visible' : ''}`}>
+            <label className="label">Emri</label>
+            <input
+              className="input"
+              value={emri}
+              onChange={(e) => setEmri(e.target.value)}
+              autoComplete="name"
+              disabled={formBusy}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Email</label>
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              autoFocus={mode === 'signin'}
+              disabled={formBusy}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Fjalekalimi</label>
+            <input
+              className="input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              disabled={formBusy}
+            />
+          </div>
+
+          <button type="submit" className="btn primary" disabled={formBusy}>
+            {loading
+              ? mode === 'signin'
+                ? 'Duke hyre...'
+                : 'Duke krijuar...'
+              : mode === 'signin'
+                ? 'Hyr'
+                : 'Krijo Llogari'}
           </button>
-          <button
-            type="button"
-            className={`toggle-btn ${mode === 'signup' ? 'active' : ''}`}
-            onClick={() => switchMode('signup')}
-            disabled={formBusy}
-          >
-            Regjistrohu
-          </button>
-        </div>
-      </div>
+        </form>
 
-      <form className="form-grid" onSubmit={submit}>
-        <div className={`form-group auth-name-field ${mode === 'signup' ? 'visible' : ''}`}>
-          <label className="label">Emri</label>
-          <input
-            className="input"
-            value={emri}
-            onChange={(e) => setEmri(e.target.value)}
-            autoComplete="name"
-            disabled={formBusy}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Email</label>
-          <input
-            className="input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            autoFocus={mode === 'signin'}
-            disabled={formBusy}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Fjalekalimi</label>
-          <input
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            disabled={formBusy}
-          />
-        </div>
-
-        {error ? (
-          <div className="auth-error-slot">
-            <ErrorAlert message={error} style={{ padding: '10px 14px', fontSize: 13 }} />
+        {googleEnabled ? (
+          <div className="auth-google-section">
+            <div className="auth-divider">ose</div>
+            <GoogleSignInButton
+              onSuccess={navigateAfterAuth}
+              onError={showError}
+              onClearError={clear}
+              onLoadingChange={setGoogleLoading}
+              disabled={loading}
+            />
           </div>
         ) : null}
-
-        <button type="submit" className="btn primary" disabled={formBusy}>
-          {loading
-            ? mode === 'signin'
-              ? 'Duke hyre...'
-              : 'Duke krijuar...'
-            : mode === 'signin'
-              ? 'Hyr'
-              : 'Krijo Llogari'}
-        </button>
-      </form>
-
-      {googleEnabled ? (
-        <div className="auth-google-section">
-          <div className="auth-divider">ose</div>
-          <GoogleSignInButton
-            onSuccess={navigateAfterAuth}
-            onError={(message) => setError(message)}
-            onClearError={() => setError(null)}
-            onLoadingChange={setGoogleLoading}
-            disabled={loading}
-          />
-        </div>
-      ) : null}
-    </section>
+      </section>
+      <Snackbar snackbar={snackbar} />
+    </>
   )
 }

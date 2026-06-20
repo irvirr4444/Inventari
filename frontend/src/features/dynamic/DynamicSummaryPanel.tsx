@@ -69,7 +69,7 @@ export function DynamicSummaryPanel(props: {
   const useTable = props.locations.length > 3
 
   return (
-    <div className="card summary-panel">
+    <div className="card summary-panel summary-panel-dynamic">
       <div className="row summary-header">
         <h3>Permbledhje</h3>
         <div className="spacer" />
@@ -108,49 +108,51 @@ export function DynamicSummaryPanel(props: {
         />
       )}
 
-      {useTable ? (
-        <div className="dynamic-summary-table-wrap">
-          <table className="table dynamic-summary-table">
-            <thead>
-              <tr>
-                <th>Lokacioni</th>
-                <th>Hyrje</th>
-                <th>Dalje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {props.locations.map((loc) => {
-                const s = props.summaryByLocation[loc.id] ?? emptySummary
-                return (
-                  <tr key={loc.id}>
-                    <td>
-                      <span className="row" style={{ gap: 6 }}>
-                        {locationBadge(loc)} {loc.emri}
-                      </span>
-                    </td>
-                    <td className="num">
-                      {fmtInt(s.in_qty)} <span className="muted">({fmt(s.in_value)} €)</span>
-                    </td>
-                    <td className="num">
-                      {fmtInt(s.out_qty)} <span className="muted">({fmt(s.out_value)} €)</span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="summary-countries dynamic-summary-grid">
-          {props.locations.map((loc) => (
-            <LocationSummaryCard
-              key={loc.id}
-              location={loc}
-              summary={props.summaryByLocation[loc.id] ?? emptySummary}
-            />
-          ))}
-        </div>
-      )}
+      <div className="summary-panel-scroll">
+        {useTable ? (
+          <div className="dynamic-summary-table-wrap">
+            <table className="table dynamic-summary-table">
+              <thead>
+                <tr>
+                  <th>Lokacioni</th>
+                  <th>Hyrje</th>
+                  <th>Dalje</th>
+                </tr>
+              </thead>
+              <tbody>
+                {props.locations.map((loc) => {
+                  const s = props.summaryByLocation[loc.id] ?? emptySummary
+                  return (
+                    <tr key={loc.id}>
+                      <td>
+                        <span className="row" style={{ gap: 6 }}>
+                          {locationBadge(loc)} {loc.emri}
+                        </span>
+                      </td>
+                      <td className="num">
+                        {fmtInt(s.in_qty)} <span className="muted">({fmt(s.in_value)} €)</span>
+                      </td>
+                      <td className="num">
+                        {fmtInt(s.out_qty)} <span className="muted">({fmt(s.out_value)} €)</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="summary-countries dynamic-summary-grid">
+            {props.locations.map((loc) => (
+              <LocationSummaryCard
+                key={loc.id}
+                location={loc}
+                summary={props.summaryByLocation[loc.id] ?? emptySummary}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

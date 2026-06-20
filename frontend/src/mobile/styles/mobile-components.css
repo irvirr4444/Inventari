@@ -305,10 +305,20 @@
 .mobile-field-row {
   display: flex;
   gap: var(--mobile-space-sm);
-  align-items: center;
+  align-items: flex-end;
 }
 
 .mobile-field-row > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-field-row .time-input {
+  width: 100%;
+}
+
+.mobile-field-row .mobile-tap-field-value {
+  min-width: 0;
   flex: 1;
 }
 

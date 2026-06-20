@@ -4,6 +4,7 @@ import { countryLabel, fmt, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
+import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { LlojiBadge } from '../history/historyBadges'
 import { ActionMetaDisplay } from './ActionMetaDisplay'
 import { formatActionDateTime } from '../../lib/actionMeta'
@@ -52,7 +53,7 @@ export function ActionReviewModal(
   return (
     <div
       className="modal-overlay modal-overlay-stacked"
-      onClick={() => !props.loading && props.onCancel()}
+      onClick={(e) => !props.loading && handleOverlayDismiss(e, props.onCancel)}
     >
       <div className="modal-content action-review-modal" onClick={(e) => e.stopPropagation()}>
         <div className="action-review-header">

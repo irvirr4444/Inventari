@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getActionBatch, type Produkti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
+import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { ActionEditForm, type HistoryEditSaveResult } from './ActionEditForm'
 
 export function ActionEditModal(props: {
@@ -18,7 +19,10 @@ export function ActionEditModal(props: {
   })
 
   return (
-    <div className="modal-overlay history-edit-overlay" onClick={props.onClose}>
+    <div
+      className="modal-overlay history-edit-overlay"
+      onClick={(e) => handleOverlayDismiss(e, props.onClose)}
+    >
       <div className="modal-content history-edit-modal" onClick={(e) => e.stopPropagation()}>
         <div className="history-edit-modal-header">
           <h3>Ndrysho Veprimin</h3>

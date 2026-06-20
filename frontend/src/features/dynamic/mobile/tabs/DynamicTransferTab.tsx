@@ -1,75 +1,41 @@
 import * as React from 'react'
-import { useTransferEntry } from '../../hooks/useTransferEntry'
-import { useProductsQuery } from '../../hooks/useProductsQuery'
-import type { Country } from '../../lib/country'
-import { COUNTRY_META } from '../../lib/country'
-import { countryLabel, fmtEuro } from '../../lib/format'
-import { formatActionDateTime } from '../../lib/actionMeta'
-import { createEmptyActionItem } from '../../types/actionItem'
-import { BottomSheet } from '../components/BottomSheet'
-import { SheetActionFooter } from '../components/SheetActions'
-import { MobileDateInput } from '../components/MobileDateInput'
-import { ProductPickerSheet } from '../components/ProductPickerSheet'
-import { ProductRowCard } from '../components/ProductRowCard'
-import { StickyCta } from '../components/StickyCta'
-import { OraInput } from '../../components/OraInput'
+import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
+import { useDynamicTransferEntry } from '../../../../hooks/useDynamicTransferEntry'
+import { OraInput } from '../../../../components/OraInput'
+import type { Produkti } from '../../../../lib/api'
+import { fmtEuro } from '../../../../lib/format'
+import { formatActionDateTime } from '../../../../lib/actionMeta'
+import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
+import { createEmptyActionItem } from '../../../../types/actionItem'
+import { BottomSheet } from '../../../../mobile/components/BottomSheet'
+import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
+import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
+import { ProductPickerSheet } from '../../../../mobile/components/ProductPickerSheet'
+import { ProductRowCard } from '../../../../mobile/components/ProductRowCard'
+import { StickyCta } from '../../../../mobile/components/StickyCta'
+import {
+  DynamicLocationField,
+  DynamicLocationPickerSheet,
+} from '../components/DynamicLocationPickerSheet'
 
-function TransferCountryField(props: {
-  label: string
-  value: Country
-  onOpen: () => void
+export function DynamicTransferTab(props: {
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
-  return (
-    <div>
-      <label className="mobile-label">{props.label}</label>
-      <button type="button" className="mobile-tap-field" onClick={props.onOpen}>
-        <span className="row mobile-tap-field-value" style={{ gap: 8, alignItems: 'center' }}>
-          <img className="flagIcon" src={COUNTRY_META[props.value].flagSrc} alt="" width={20} height={14} />
-          <span className="mobile-meta-truncate">{countryLabel(props.value)}</span>
-        </span>
-        <span aria-hidden="true">▾</span>
-      </button>
-    </div>
+  const { activeLokacionet } = useLokacioni()
+  const sortedLocations = React.useMemo(
+    () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
+    [activeLokacionet],
   )
-}
+  const [initialFrom] = React.useState(() => sortedLocations[0]?.id ?? '')
 
-function TransferCountrySelectSheet(props: {
-  open: boolean
-  title: string
-  exclude?: Country
-  onClose: () => void
-  onSelect: (c: Country) => void
-}) {
-  return (
-    <BottomSheet open={props.open} title={props.title} onClose={props.onClose}>
-      <div className="mobile-list-stack">
-        {(['XK', 'AL'] as Country[])
-          .filter((c) => c !== props.exclude)
-          .map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="mobile-tap-field"
-              onClick={() => {
-                props.onSelect(c)
-                props.onClose()
-              }}
-            >
-              <span className="row" style={{ gap: 8, alignItems: 'center' }}>
-                <img className="flagIcon" src={COUNTRY_META[c].flagSrc} alt="" width={20} height={14} />
-                {countryLabel(c)}
-              </span>
-            </button>
-          ))}
-      </div>
-    </BottomSheet>
-  )
-}
-
-export function TransferTab(props: { notify: (message: string, variant?: 'success' | 'default') => void }) {
-  const productsQuery = useProductsQuery()
+  const productsQuery = useDynamicProductsQuery()
   const products = productsQuery.data ?? []
-  const entry = useTransferEntry({ products, notify: props.notify })
+  const entry = useDynamicTransferEntry({
+    products,
+    activeLokacionet: sortedLocations,
+    notify: props.notify,
+    initialFrom,
+  })
 
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [editingKey, setEditingKey] = React.useState<string | null>(null)
@@ -81,6 +47,8 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
   const editingItem = editingKey
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
+  const hasValidItems = filledItems.length > 0
+  const pickerProducts = products as unknown as Produkti[]
 
   const openAdd = () => {
     setEditingKey(null)
@@ -115,8 +83,18 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
     <>
       <div className="mobile-tab-panel">
         <div className="mobile-field-row">
-          <TransferCountryField label="Nga" value={entry.transferFrom} onOpen={() => setFromOpen(true)} />
-          <TransferCountryField label="Te" value={entry.transferTo} onOpen={() => setToOpen(true)} />
+          <DynamicLocationField
+            label="Nga"
+            value={entry.transferFrom}
+            locations={sortedLocations}
+            onOpen={() => setFromOpen(true)}
+          />
+          <DynamicLocationField
+            label="Te"
+            value={entry.transferTo}
+            locations={sortedLocations}
+            onOpen={() => setToOpen(true)}
+          />
         </div>
 
         <div className="mobile-field-row">
@@ -130,11 +108,9 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
             />
           </div>
           <div>
-            <label className="mobile-label" htmlFor="transfer-ora">
-              Ora
-            </label>
+            <label className="mobile-label" htmlFor="dynamic-transfer-ora">Ora</label>
             <OraInput
-              id="transfer-ora"
+              id="dynamic-transfer-ora"
               className="mobile-input"
               value={entry.transferOra}
               onChange={entry.setTransferOra}
@@ -142,11 +118,9 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
           </div>
         </div>
         <div>
-          <label className="mobile-label" htmlFor="transfer-pershkrimi">
-            Pershkrimi
-          </label>
+          <label className="mobile-label" htmlFor="dynamic-transfer-pershkrimi">Pershkrimi</label>
           <input
-            id="transfer-pershkrimi"
+            id="dynamic-transfer-pershkrimi"
             type="text"
             className="mobile-input"
             value={entry.transferPershkrimi}
@@ -169,7 +143,7 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
               <ProductRowCard
                 key={item.key}
                 item={item}
-                products={products}
+                products={pickerProducts}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
               />
@@ -177,7 +151,9 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
           </div>
         ) : null}
 
-        {entry.transferError ? <div className="mobile-inline-error">{entry.transferError}</div> : null}
+        {entry.transferError ? (
+          <div className="mobile-inline-error">{entry.transferError}</div>
+        ) : null}
 
         <div className="mobile-total-row">
           <span>Totali:</span>
@@ -187,21 +163,24 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
 
       <StickyCta
         label="FINALIZO TRANSFERTËN"
-        disabled={!entry.hasValidItems}
+        disabled={!hasValidItems}
         loading={entry.mutation.isPending}
         onClick={entry.requestFinalize}
       />
 
-      <TransferCountrySelectSheet
+      <DynamicLocationPickerSheet
         open={fromOpen}
         title="Nga"
+        value={entry.transferFrom}
+        excludeIds={[entry.transferTo]}
         onClose={() => setFromOpen(false)}
         onSelect={entry.setTransferFrom}
       />
-      <TransferCountrySelectSheet
+      <DynamicLocationPickerSheet
         open={toOpen}
         title="Te"
-        exclude={entry.transferFrom}
+        value={entry.transferTo}
+        excludeIds={[entry.transferFrom]}
         onClose={() => setToOpen(false)}
         onSelect={entry.setTransferTo}
       />
@@ -209,7 +188,7 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
       <ProductPickerSheet
         open={pickerOpen}
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
-        products={products}
+        products={pickerProducts}
         existingKodis={existingKodis}
         initial={
           editingItem
@@ -241,7 +220,7 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
         }
       >
         <p className="mobile-card-meta">
-          Transfer nga {countryLabel(entry.transferFrom)} ne {countryLabel(entry.transferTo)},{' '}
+          Transfer nga {entry.fromLabel} ne {entry.toLabel},{' '}
           {filledItems.length} produkte, total{' '}
           <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
           {entry.transferOra || entry.transferPershkrimi.trim() ? (

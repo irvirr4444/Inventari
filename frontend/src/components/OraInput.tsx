@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { formatDisplayTime } from '../lib/actionMeta'
+import { useMobileClient } from '../hooks/useMobileClient'
+import { TimePickerSheet } from '../mobile/components/TimePickerSheet'
 import { TimePickerPopover } from './TimePickerPopover'
 import { parseOraDigits } from './timePickerUtils'
 
@@ -79,6 +81,7 @@ export function OraInput({
   variant = 'default',
   ...rest
 }: OraInputProps) {
+  const isMobile = useMobileClient()
   const rootRef = React.useRef<HTMLDivElement | null>(null)
   const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const popoverRef = React.useRef<HTMLDivElement | null>(null)
@@ -108,14 +111,14 @@ export function OraInput({
   }, [disabled])
 
   React.useLayoutEffect(() => {
-    if (!open) return
+    if (!open || isMobile) return
     repositionPopover()
     const raf = requestAnimationFrame(repositionPopover)
     return () => cancelAnimationFrame(raf)
-  }, [open, value, repositionPopover])
+  }, [open, value, repositionPopover, isMobile])
 
   React.useEffect(() => {
-    if (!open) return
+    if (!open || isMobile) return
 
     const onDocMouseDown = (e: MouseEvent) => {
       const target = e.target as Node
@@ -139,9 +142,9 @@ export function OraInput({
       window.removeEventListener('resize', onReposition)
       window.removeEventListener('scroll', onReposition, true)
     }
-  }, [open, repositionPopover])
+  }, [open, repositionPopover, isMobile])
 
-  const popover = open ? (
+  const popover = open && !isMobile ? (
     <div
       ref={popoverRef}
       className="time-picker-popover time-picker-popover-portal"
@@ -212,6 +215,16 @@ export function OraInput({
       </button>
 
       {popover && createPortal(popover, document.body)}
+
+      {isMobile ? (
+        <TimePickerSheet
+          open={open}
+          value={value}
+          title={placeholder}
+          onClose={closePicker}
+          onChange={onChange}
+        />
+      ) : null}
     </div>
   )
 }

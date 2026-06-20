@@ -83,7 +83,7 @@ backend/src/
   app.ts                buildApp(): plugins, routes, static SPA fallback
   supabase.ts           Supabase admin client factory
   errors.ts             AppError, Zod/Supabase error mapping
-  domain/               User, lokacioni, tenant types
+  domain/               User, lokacioni, tenant types; lokacioniKodi (derive/dedupe)
   repositories/         Tenant-scoped DB access (produkti, veprimi, batch, perdorues, lokacioni)
   services/
     authService.ts      Login, signup, Google, legacy seed helper
@@ -127,11 +127,11 @@ backend/scripts/
 | POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`; body `{ id_token }`) |
 | POST | `/api/logout` | Clear session |
 | GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations` |
-| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]`. List returns legacy columns or `stock[]`. |
+| GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic). Create: `emri`, optional `flag_emoji` (defaults 📍), optional `rradhitja`; `kodi` derived server-side. PATCH: no client `kodi` (regenerated when `emri` changes). |
+| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]` updates `gjendje` only (not a `produkti` column). List returns legacy columns or `stock[]`. |
 | POST/GET | `/api/actions` | Create batch or list raw `veprimi`. Legacy body: `shteti`. Dynamic body: `lokacioni_id` (+ `destination_lokacioni_id` for Transfer). |
 | GET/PATCH/DELETE | `/api/action-batches/*` | Historiku. Responses include `lokacioni_id`, optional `lokacioni_emri` / emoji (dynamic). PATCH accepts `lokacioni_id` for dynamic users. |
 | POST/PATCH/DELETE | `/api/action-batches/:id/items/*` | Add, update, or remove product lines on a batch |
-| GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic accounts) |
 | GET | `/api/analytics/summary` | Hyrje/Dalje totals — `SummaryByCountry` (legacy) or `SummaryByLocation` keyed by `lokacioni_id` (dynamic, `show_in_summary` locations) |
 | GET | `/api/analytics/stock` | Stock list filtered by country (legacy) |
 | GET | `/api/exports/products.xlsx` | Product export |
@@ -156,9 +156,14 @@ Password login calls `ensureLegacyUserSeeded` once when the legacy user still ha
 
 - All product/action/batch queries filter by `pronari_id` (owner user id).
 - **Legacy user** (`ui_lloji = legacy_fixed`, fixed id `00000000-0000-4000-8000-000000000001`): existing data backfilled to this id; API returns Kosovo/Albania columns unchanged; Kosovo `Dalje` still mirrors to Albania.
-- **Dynamic users**: configurable `lokacioni` rows, `gjendje` stock table, location-based actions and exports.
+- **Dynamic users**: configurable `lokacioni` rows (`flag_emoji`, `show_in_summary`), `gjendje` stock table, location-based actions and exports. Internal `kodi` is auto-derived from `emri` on create/rename (collision suffixes `TIR`, `TIR2`, …).
 
 Session payload includes `uiLloji`, `isLegacy`, and `has_locations` so the frontend can branch UI and gate onboarding.
+
+### Locations (`/api/lokacionet`)
+
+- `lokacioniService` + `domain/lokacioniKodi.ts` — derive base code (3 letters from name, fallback `LOC`), dedupe per owner, regenerate on rename.
+- Deactivating a location with stock returns an optional `stock_warning` in the PATCH response (UI may alert).
 
 ## Key behavior
 
@@ -213,7 +218,7 @@ SQL migrations live in `docs/sql/`. Run in order.
 npm -w backend run test
 ```
 
-Covers `actionsService`, `inventariExcel`, `legacyBatches`, and tenant isolation guards. Shared analytics/format tests: `npm -w @inventari/shared run test`.
+Covers `actionsService`, `inventariExcel`, `legacyBatches`, `lokacioniKodi`, and tenant isolation guards. Shared analytics/format tests: `npm -w @inventari/shared run test`.
 
 ## Production
 

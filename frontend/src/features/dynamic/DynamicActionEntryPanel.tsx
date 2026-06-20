@@ -29,6 +29,8 @@ export function DynamicActionEntryPanel(props: {
   onSubmit: (e: React.FormEvent) => void
   onOpenTransfer: () => void
   onOpenHistory: () => void
+  hideNavActions?: boolean
+  hideInlineSubmit?: boolean
 }) {
   return (
     <div className="card action-card">
@@ -84,7 +86,9 @@ export function DynamicActionEntryPanel(props: {
             </button>
           </div>
           <div className="spacer" />
-          <button type="button" className="btn sm transfer-mode-btn" onClick={props.onOpenTransfer}>
+          {!props.hideNavActions ? (
+            <>
+              <button type="button" className="btn sm transfer-mode-btn" onClick={props.onOpenTransfer}>
             <svg
               aria-hidden="true"
               width="14"
@@ -120,6 +124,8 @@ export function DynamicActionEntryPanel(props: {
             </svg>
             Historiku
           </button>
+            </>
+          ) : null}
         </div>
 
         <ActionItemsTable
@@ -138,14 +144,16 @@ export function DynamicActionEntryPanel(props: {
             <span className="muted">Total:</span>
             <span className="num-lg">{fmt(props.total)}</span>
           </div>
-          <button
-            type="submit"
-            className="btn primary action-submit"
-            disabled={props.saving}
-            style={{ marginLeft: 16 }}
-          >
-            {props.saving ? 'Duke finalizuar…' : 'Finalizo Veprimin'}
-          </button>
+          {!props.hideInlineSubmit ? (
+            <button
+              type="submit"
+              className="btn primary action-submit"
+              disabled={props.saving}
+              style={{ marginLeft: 16 }}
+            >
+              {props.saving ? 'Duke finalizuar…' : 'Finalizo Veprimin'}
+            </button>
+          ) : null}
         </div>
       </form>
     </div>

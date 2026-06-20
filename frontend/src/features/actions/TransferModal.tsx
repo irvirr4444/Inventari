@@ -54,7 +54,7 @@ export function TransferModal(props: {
             →
           </div>
           <div className="form-group">
-            <label className="label">Ne</label>
+            <label className="label">Te</label>
             <CountrySelect
               value={props.to}
               onChange={props.onToChange}

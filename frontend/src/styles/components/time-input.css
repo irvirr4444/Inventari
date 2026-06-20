@@ -198,9 +198,47 @@
 .time-picker-columns {
   display: grid;
   grid-template-columns: 68px auto 68px;
-  align-items: end;
-  gap: 6px;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  row-gap: 6px;
+  align-items: center;
   justify-content: center;
+}
+
+.time-picker-column-label-hour {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.time-picker-colon-spacer {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.time-picker-column-label-minute {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.time-picker-wheel-hour {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.time-picker-colon {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: center;
+  align-self: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.time-picker-wheel-minute {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 .time-picker-column-label {
@@ -234,8 +272,11 @@
   z-index: 2;
   height: 168px;
   overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  scrollbar-width: thin;
+  scroll-snap-type: y proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   padding: 66px 0;
   mask-image: linear-gradient(
     to bottom,
@@ -244,6 +285,12 @@
     #000 82%,
     transparent 100%
   );
+}
+
+.time-picker-column-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .time-picker-column-item {
@@ -273,15 +320,6 @@
   color: var(--primary);
   font-size: 18px;
   font-weight: 700;
-}
-
-.time-picker-colon {
-  align-self: center;
-  padding-bottom: 78px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-muted);
-  line-height: 1;
 }
 
 .time-picker-footer {

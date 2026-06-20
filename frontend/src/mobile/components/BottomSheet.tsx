@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 
 type BottomSheetProps = {
   open: boolean
@@ -86,7 +87,8 @@ export function BottomSheet(props: BottomSheetProps) {
       <div
         className="mobile-sheet-overlay open"
         style={{ zIndex: overlayZ }}
-        onPointerDown={closeSheet}
+        onPointerDown={(e) => e.preventDefault()}
+        onClick={(e) => handleOverlayDismiss(e, closeSheet)}
         aria-hidden={false}
       />
       <div

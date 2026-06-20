@@ -16,9 +16,16 @@ const TABS: { id: TabId; label: string; Icon: () => React.JSX.Element }[] = [
   { id: 'permblehdje', label: 'Permbledhje', Icon: TabPermbledhjeIcon },
 ]
 
-export function BottomNav(props: { active: TabId; onChange: (tab: TabId) => void }) {
+export function BottomNav(props: {
+  active: TabId
+  onChange: (tab: TabId) => void
+  className?: string
+}) {
   return (
-    <nav className="mobile-bottom-nav" aria-label="Navigimi kryesor">
+    <nav
+      className={`mobile-bottom-nav${props.className ? ` ${props.className}` : ''}`}
+      aria-label="Navigimi kryesor"
+    >
       {TABS.map(({ id, label, Icon }) => (
         <button
           key={id}

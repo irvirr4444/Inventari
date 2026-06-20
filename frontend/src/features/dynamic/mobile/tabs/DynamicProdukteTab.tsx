@@ -20,6 +20,7 @@ import {
   SheetFooterRow,
 } from '../../../../mobile/components/SheetActions'
 import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
+import { DynamicProductCard } from '../components/DynamicProductCard'
 import { DynamicMobileStockLevels } from '../components/DynamicMobileStockLevels'
 
 function DynamicProductFormFields(props: {
@@ -79,7 +80,6 @@ export function DynamicProdukteTab(props: {
   const [addOpen, setAddOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
-  const [expandedStockId, setExpandedStockId] = React.useState<string | null>(null)
 
   const [newKodi, setNewKodi] = React.useState('')
   const [newEmri, setNewEmri] = React.useState('')
@@ -181,20 +181,32 @@ export function DynamicProdukteTab(props: {
     )
   }
 
+  const openAdd = () => {
+    initStock()
+    setAddOpen(true)
+  }
+
   return (
     <>
-      <div className="mobile-tab-panel">
-        <div className="mobile-search-wrap">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input
-            className="mobile-search-input"
-            placeholder="Kërko produkt..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <div className="mobile-tab-panel dynamic-produkte-panel">
+        <div className="dynamic-produkte-toolbar">
+          <div className="mobile-search-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              className="mobile-search-input"
+              placeholder="Kërko produkt..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {!productsQuery.isLoading && products.length > 0 ? (
+            <button type="button" className="mobile-btn-outline dynamic-produkte-add-btn" onClick={openAdd}>
+              + Shto produkt
+            </button>
+          ) : null}
         </div>
 
         {productsQuery.isLoading ? (
@@ -202,55 +214,23 @@ export function DynamicProdukteTab(props: {
         ) : products.length === 0 ? (
           <div className="mobile-empty">
             <div className="mobile-empty-title">Nuk ka produkte</div>
-            <button
-              type="button"
-              className="mobile-btn-outline"
-              onClick={() => {
-                initStock()
-                setAddOpen(true)
-              }}
-            >
+            <button type="button" className="mobile-btn-outline" onClick={openAdd}>
               + Shto produkt
             </button>
           </div>
         ) : (
-          <div className="mobile-list-stack">
+          <div className="dynamic-produkte-list">
             {products.map((p) => (
-              <button
+              <DynamicProductCard
                 key={p.id}
-                type="button"
-                className="mobile-row-card"
-                style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
-                onClick={() => setDetailProduct(p)}
-              >
-                <div className="mobile-row-card-body">
-                  <div className="mobile-row-card-title">{productLabel(p.emri, p.kodi)}</div>
-                  <DynamicMobileStockLevels
-                    locations={sortedLocations}
-                    stock={stockRecord(p)}
-                    expanded={expandedStockId === p.id}
-                    onToggleExpand={() =>
-                      setExpandedStockId((id) => (id === p.id ? null : p.id))
-                    }
-                  />
-                </div>
-              </button>
+                product={p}
+                locations={sortedLocations}
+                onTap={() => setDetailProduct(p)}
+              />
             ))}
           </div>
         )}
       </div>
-
-      <button
-        type="button"
-        className="mobile-fab"
-        aria-label="Shto produkt"
-        onClick={() => {
-          initStock()
-          setAddOpen(true)
-        }}
-      >
-        +
-      </button>
 
       <BottomSheet
         open={!!detailProduct}
@@ -274,7 +254,6 @@ export function DynamicProdukteTab(props: {
           <DynamicMobileStockLevels
             locations={sortedLocations}
             stock={stockRecord(detailProduct)}
-            expanded
           />
         ) : null}
       </BottomSheet>

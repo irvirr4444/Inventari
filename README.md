@@ -146,7 +146,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 ### Desktop vs mobile
 
 - **Legacy:** full desktop (`DashboardPage`) + mobile (`src/mobile/MobileApp.tsx`) for Kosovo/Albania.
-- **Dynamic:** full desktop (`DynamicDashboardPage`) + purpose-built mobile tabs (`src/features/dynamic/mobile/`) with the same five bottom tabs as legacy.
+- **Dynamic:** full desktop (`DynamicDashboardPage`) + purpose-built mobile tabs (`src/features/dynamic/mobile/`) with the same five bottom tabs as legacy. Dynamic mobile Produkte shows all location stock inline on each product card; header and bottom nav share the `--surface` theme.
 - **Permbledhje on mobile:** bottom **Permbledhje** tab (not a separate route). Dynamic accounts get per-location **Hyrje/Dalje sasi and vlerë** for every `show_in_summary` location, including zeros when the date range has no activity; legacy shows Kosovo + Albania blocks with the same four metrics.
 - **Mobile sheets & overlays:** date/time pickers slide up from the bottom (`DatePickerSheet`, `TimePickerSheet`). Dismiss by tapping the dimmed backdrop closes the sheet/modal without triggering buttons underneath (`lib/pointerDismissGuard.ts`).
 - **Transfer tab (mobile):** `Nga` / `Te` and **Data** / **Ora** use two-column `mobile-field-row` layouts (half width each).

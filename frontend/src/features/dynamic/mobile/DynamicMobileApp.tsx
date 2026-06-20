@@ -76,5 +76,8 @@ export function DynamicMobileApp(props: { onLogout: () => void }) {
 
 function BottomNavPortal(props: { active: TabId; onChange: (tab: TabId) => void }) {
   if (typeof document === 'undefined') return null
-  return createPortal(<BottomNav active={props.active} onChange={props.onChange} />, document.body)
+  return createPortal(
+    <BottomNav active={props.active} onChange={props.onChange} className="dynamic-mobile-bottom-nav" />,
+    document.body,
+  )
 }

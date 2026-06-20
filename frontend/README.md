@@ -182,7 +182,7 @@ Same three-area layout, keyed by **location** instead of country:
 | --- | --- | --- |
 | Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` — single trigger opens a portal menu (all locations + **+ Shto**); inline add modal (emoji + name, success snackbar). No top-bar **Lokacionet** link. |
 | Transfer | `DynamicTransferModal` | `Nga` / `Te` location pickers with `excludeIds` (pill row or `<select>` when many locations) |
-| Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow; tight **Kodi** column (~10 chars), wider name/location cols; `stock-badge` body cells. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. Mobile: `DynamicProdukteTab` card list (no table). |
+| Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow; tight **Kodi** column (~10 chars), wider name/location cols; `stock-badge` body cells. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. Mobile: `DynamicProdukteTab` — dense card list (no table); every location’s stock shown inline as stat chips on each card (zero = muted grey). |
 | Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, scrollable table >3; header/date fixed, location list scrolls inside card |
 | Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route |
 | Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }` instead of `country` |
@@ -194,21 +194,23 @@ Same three-area layout, keyed by **location** instead of country:
 
 **Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`.
 
-**Styles:** `styles/features/locations.css` (picker menu, cards, emoji grids); `styles/features/dynamic-dashboard.css` (products table location headers, summary scroll, stock grid/table); `features/dynamic/mobile/dynamic-mobile.css` (dynamic mobile-only layout tweaks).
+**Styles:** `styles/features/locations.css` (picker menu, cards, emoji grids); `styles/features/dynamic-dashboard.css` (products table location headers, summary scroll, stock grid/table); `features/dynamic/mobile/dynamic-mobile.css` (dynamic mobile-only: `--surface` chrome on Produkte tab + bottom nav, product cards, stock stat chips, summary compact cards).
 
 #### Dynamic mobile (`DynamicMobileApp`)
 
 On mobile viewports, **dynamic** accounts get purpose-built tabs in `features/dynamic/mobile/` — same bottom tab bar as legacy (`Veprime | Transfer | Produkte | Histori | Permbledhje`), modeled on `src/mobile/tabs/*` but parameterized by **locations** (not countries). Desktop panels are **not** embedded in mobile.
 
+**Chrome:** header and bottom nav use `var(--surface)` with white labels/icons (`dynamic-mobile-bottom-nav` on the portaled `BottomNav`). Tab content backgrounds vary by tab; Produkte uses the same `--surface` fill edge-to-edge.
+
 | Tab | Mobile component | Notes |
 | --- | --- | --- |
 | Veprime | `tabs/DynamicVeprimeTab.tsx` | `SegmentedControl`; **Lokacioni** + **Data** in one `mobile-field-row`; Ora/Pershkrimi below; `ProductRowCard`, `BottomSheet` finalize |
 | Transfer | `tabs/DynamicTransferTab.tsx` | **Nga** / **Te** half-width row; **Data** / **Ora** half-width row; location sheets, `ProductRowCard`, sticky CTA |
-| Produkte | `tabs/DynamicProdukteTab.tsx` | Search + card list, per-location stock on cards, `BottomSheet` add/edit/delete |
+| Produkte | `tabs/DynamicProdukteTab.tsx` | Search + **+ Shto produkt** toolbar (no FAB); `DynamicProductCard` list — bold **Emri**, muted **(Kodi)**, all locations as wrapping stat chips (`emoji name qty`); tap card → `BottomSheet` detail/edit/delete |
 | **Histori** | `tabs/DynamicHistoriTab.tsx` + `DynamicHistoriBatchDetail.tsx` | Chip filters, card batch list, in-tab detail/edit stack |
 | Permbledhje | `tabs/DynamicPermbledhjeTab.tsx` | Per `show_in_summary` location: Hyrje/Dalje **sasi** + **vlerë** (four rows); ≤3 → `mobile-summary-section` cards, >3 → bordered compact cards (same four rows); zeros when empty (no global “no data” hide); **Shkarko Excel** |
 
-Shared mobile components: `components/DynamicLocationPickerSheet.tsx`, `DynamicMobileStockLevels.tsx`; `mobile/components/DatePickerSheet.tsx`, `TimePickerSheet.tsx` (bottom-sheet date/time pickers).
+Shared mobile components: `components/DynamicProductCard.tsx`, `DynamicLocationPickerSheet.tsx`, `DynamicMobileStockLevels.tsx`; `mobile/components/BottomNav.tsx` (optional `className` for dynamic theming), `DatePickerSheet.tsx`, `TimePickerSheet.tsx` (bottom-sheet date/time pickers).
 
 Mobile mode is detected by `useMobileClient` / `lib/mobileClient.ts` (UA, viewport, `?mobile=1`, or `sessionStorage` after login redirect). Use **`?mobile=1`** on desktop to test; login keeps mobile mode via query params + session storage.
 
@@ -280,6 +282,7 @@ Transfer is separate from the main action form:
 - Search field filters by **kodi** or **emri** (live, case-insensitive); pickers sorted by **kodi**.
 - **Legacy:** `ProductsPanel` + `ProductFormModal` — Kosovo / Shqiperia stock cards; `updateProduct` with `gjendje_kosove` / `gjendje_shqiperi`.
 - **Dynamic:** `DynamicProductsPanel` + `DynamicProductFormModal` — one column per location; stock grid (≤3 locations) or table (>3); `updateDynamicProduct` with `stock: [{ lokacioni_id, sasia }]`. Create seeds all locations via API; optional PATCH sets initial stock.
+- **Dynamic mobile Produkte tab:** `DynamicProdukteTab` + `DynamicProductCard` — no desktop table; search, toolbar **+ Shto produkt**, card per product with all location chips visible; `BottomSheet` for add/edit/delete (per-location stock fields in form).
 - **Delete:** `ConfirmModal`. Success → green snackbar.
 
 #### Summary panel (Permbledhje)
@@ -342,7 +345,7 @@ For manual testing on desktop, resize the browser below 768px, use DevTools devi
 
 Open **`http://<your-ip>:5173/?mobile=1`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
 
-**Navigation:** fixed bottom tab bar — **Veprime | Transfer | Produkte | Histori | Permbledhje** (both account types).
+**Navigation:** fixed bottom tab bar — **Veprime | Transfer | Produkte | Histori | Permbledhje** (both account types). Dynamic mobile styles the bar with `--surface` background and white/muted-white tab icons (legacy keeps the default light bar).
 
 #### Where to find Historiku on mobile
 
@@ -392,10 +395,10 @@ src/mobile/                          Legacy mobile (XK/AL)
   …
 
 src/features/dynamic/mobile/
-  DynamicMobileApp.tsx               Shell + tab routing
+  DynamicMobileApp.tsx               Shell + tab routing; passes dynamic bottom-nav class
   tabs/                              DynamicVeprimeTab, Transfer, Produkte, Histori, Permbledhje
-  components/                        DynamicLocationPickerSheet, DynamicMobileStockLevels
-  dynamic-mobile.css                 Stock lines, summary compact card layout (four rows per location)
+  components/                        DynamicProductCard, DynamicLocationPickerSheet, DynamicMobileStockLevels
+  dynamic-mobile.css                 Surface chrome, product cards, stock stat chips, summary compact cards
 ```
 
 **Shared libs/hooks** (used by desktop and mobile):

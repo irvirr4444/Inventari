@@ -56,7 +56,7 @@ You do **not** need to run the seed script every time you start the backend. It 
 | `npm -w backend run lint` | ESLint |
 | `npm -w backend run test` | Vitest unit tests |
 | `npm run seed:legacy-user -w backend` | One-time: sync legacy email/password from `.env` |
-| `npm run diagnose:tenant -w backend` | Report schema + row counts for legacy tenant |
+| `npm run diagnose:tenant -w backend` | Report schema (incl. `tenant_config`) + row counts for legacy tenant |
 | `npm run apply:tenant-migrations -w backend` | Apply `docs/sql/APPLY_08_through_11.sql` via `DATABASE_URL` |
 
 ## Environment
@@ -84,13 +84,14 @@ backend/src/
   supabase.ts           Supabase admin client factory
   errors.ts             AppError, Zod/Supabase error mapping
   domain/               User, lokacioni, tenant types; lokacioniKodi (derive/dedupe)
-  repositories/         Tenant-scoped DB access (produkti, veprimi, batch, perdorues, lokacioni)
+  repositories/         Tenant-scoped DB access (produkti, veprimi, batch, perdorues, lokacioni, tenantConfig)
   services/
     authService.ts      Login, signup, Google, legacy seed helper
     productsService.ts  Product CRUD + legacy/dynamic DTO mapping
     actionsService.ts   Normalize, validate, stock check, row building
     lokacioniService.ts Location CRUD
-    exportsService.ts   CSV + Excel (legacy vs dynamic templates)
+    tenantConfigService.ts Tenant onboarding config (track_price, onboarding_complete, tutorial_seen)
+    exportsService.ts   CSV + Excel (legacy vs dynamic templates; tenant-config column sets)
     legacyDtoService.ts Legacy XK/AL response shape
     inventariExcel.ts   Template load, stock replay, Permbledhje rows
   auth/
@@ -105,6 +106,7 @@ backend/src/
     analytics.ts        /api/analytics/stock, /summary
     exports.ts          CSV + products.xlsx + Permbledhje template xlsx
     lokacionet.ts       /api/lokacionet CRUD
+    tenantConfig.ts     /api/tenant-config GET/POST/PATCH + complete + tutorial-seen
   actionBatches.ts      /api/action-batches/* routes
   legacyBatches.ts      Pre-batch_id grouping and legacy IDs
   batchDomain.ts        Shared batch/mirror helpers
@@ -126,9 +128,12 @@ backend/scripts/
 | POST | `/api/auth/signup` | Create dynamic account. Body: `{ emri, password }` (min 8 chars). Emri must be unique (case-insensitive); email-like values rejected. |
 | POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`; body `{ id_token }`) |
 | POST | `/api/logout` | Clear session |
-| GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations` |
+| GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations`, `tenantConfig` (dynamic) |
+| GET/POST/PATCH | `/api/tenant-config` | Read or upsert tenant config (`track_price`, `onboarding_complete`, `tutorial_seen`) |
+| POST | `/api/tenant-config/complete` | Mark onboarding done (requires at least one active location) |
+| POST | `/api/tenant-config/tutorial-seen` | Mark tutorial dismissed |
 | GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic). Create: `emri`, optional `flag_emoji` (defaults 📍), optional `rradhitja`; `kodi` derived server-side. PATCH: no client `kodi` (regenerated when `emri` changes). |
-| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]` updates `gjendje` only (not a `produkti` column). List returns legacy columns or `stock[]`. |
+| GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Dynamic products include optional `njesi_matese` (when tenant tracks units). Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]` updates `gjendje` only (not a `produkti` column). List returns legacy columns or `stock[]`. |
 | POST/GET | `/api/actions` | Create batch or list raw `veprimi`. Legacy body: `shteti`. Dynamic body: `lokacioni_id` (+ `destination_lokacioni_id` for Transfer). |
 | GET/PATCH/DELETE | `/api/action-batches/*` | Historiku. Responses include `lokacioni_id`, optional `lokacioni_emri` / emoji (dynamic). PATCH accepts `lokacioni_id` for dynamic users. |
 | POST/PATCH/DELETE | `/api/action-batches/:id/items/*` | Add, update, or remove product lines on a batch |
@@ -159,7 +164,17 @@ Password login calls `ensureLegacyUserSeeded` once when the legacy user still ha
 - **Legacy user** (`ui_lloji = legacy_fixed`, fixed id `00000000-0000-4000-8000-000000000001`): existing data backfilled to this id; API returns Kosovo/Albania columns unchanged; Kosovo `Dalje` still mirrors to Albania.
 - **Dynamic users**: configurable `lokacioni` rows (`flag_emoji`, `show_in_summary`), `gjendje` stock table, location-based actions and exports. Internal `kodi` is auto-derived from `emri` on create/rename (collision suffixes `TIR`, `TIR2`, …).
 
-Session payload includes `uiLloji`, `isLegacy`, and `has_locations` so the frontend can branch UI and gate onboarding.
+Session payload includes `uiLloji`, `isLegacy`, `has_locations`, and nested `tenantConfig` (`track_price`, `onboarding_complete`, `tutorial_seen`) for dynamic users so the frontend can gate onboarding and tutorial.
+
+### Tenant config (`/api/tenant-config`)
+
+- One row per dynamic owner in `tenant_config` (migrations `14` + `15_tenant_config_v2.sql`).
+- **V2 fields:** `track_price` (boolean), `onboarding_complete`, `tutorial_seen`.
+- `POST /api/tenant-config` upserts `{ track_price }` during onboarding screen 4.
+- `POST /api/tenant-config/complete` sets `onboarding_complete=true` after validating at least one location exists.
+- `POST /api/tenant-config/tutorial-seen` marks the post-onboarding tutorial dismissed.
+- Missing row defaults to `track_price=true`, `onboarding_complete=false`, `tutorial_seen=false`.
+- Existing dynamic users are backfilled with `onboarding_complete=true` and `tutorial_seen=true` by migrations 14–15.
 
 ### Locations (`/api/lokacionet`)
 
@@ -188,8 +203,8 @@ Session payload includes `uiLloji`, `isLegacy`, and `has_locations` so the front
 
 - **Legacy:** template `docs/excel/Inventari Excel Template.xlsx` — 13 columns (Kosova + Shqiperi blocks); stock replay from history.
 - **Dynamic:** generated workbook with:
-  - **Veprime** — movement lines (Data, Lloji, Lokacioni, Kodi, Cmimi, Sasia, Totali)
-  - **Permbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`)
+  - **Veprime** — movement lines; price/total columns omitted when `track_price=false`
+  - **Permbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`); value columns omitted when not tracking price
 - Products export: legacy two stock columns vs dynamic N location columns.
 
 ## Database
@@ -211,8 +226,10 @@ SQL migrations live in `docs/sql/`. Run in order.
 | `11_stock_trigger_gjendje.sql` | Dual-write triggers (`gjendje` + legacy columns) |
 | `APPLY_08_through_11.sql` | **Combined 08–11** for upgrades; transaction + row-count safety |
 | `13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
+| `14_tenant_config.sql` | Initial `tenant_config` table; backfill for existing dynamic users |
+| `15_tenant_config_v2.sql` | V2: `tutorial_seen`, rename `onboarding_complete`, drop unit columns, RLS |
 
-**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
+**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
 
 ## Tests
 
@@ -234,4 +251,4 @@ Covers `actionsService`, `inventariExcel`, `legacyBatches`, `lokacioniKodi`, and
 - [Repo root quick start](../README.md)
 - [Local development](../docs/local-dev.md)
 - [Render deployment](../docs/render.md)
-- [Multi-tenancy plan](../MULTI_TENANCY_PLAN.md)
+- [Onboarding wizard & tenant config (V2)](../onboarding_revamp.md)

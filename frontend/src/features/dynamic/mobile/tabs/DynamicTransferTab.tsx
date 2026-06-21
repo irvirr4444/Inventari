@@ -6,6 +6,7 @@ import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
 import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
+import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { createEmptyActionItem } from '../../../../types/actionItem'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
@@ -21,6 +22,7 @@ import {
 export function DynamicTransferTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
+  const { trackPrice } = useTenantConfig()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = React.useMemo(
     () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
@@ -155,10 +157,12 @@ export function DynamicTransferTab(props: {
           <div className="mobile-inline-error">{entry.transferError}</div>
         ) : null}
 
-        <div className="mobile-total-row">
-          <span>Totali:</span>
-          <span className="mobile-num">{fmtEuro(entry.itemsState.total)}</span>
-        </div>
+        {trackPrice ? (
+          <div className="mobile-total-row">
+            <span>Totali:</span>
+            <span className="mobile-num">{fmtEuro(entry.itemsState.total)}</span>
+          </div>
+        ) : null}
       </div>
 
       <StickyCta
@@ -190,6 +194,7 @@ export function DynamicTransferTab(props: {
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
         products={pickerProducts}
         existingKodis={existingKodis}
+        showPrice={trackPrice}
         initial={
           editingItem
             ? {
@@ -221,8 +226,13 @@ export function DynamicTransferTab(props: {
       >
         <p className="mobile-card-meta">
           Transfer nga {entry.fromLabel} ne {entry.toLabel},{' '}
-          {filledItems.length} produkte, total{' '}
-          <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
+          {filledItems.length} produkte
+          {trackPrice ? (
+            <>
+              , total <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>
+            </>
+          ) : null}
+          .
           {entry.transferOra || entry.transferPershkrimi.trim() ? (
             <>
               {' '}

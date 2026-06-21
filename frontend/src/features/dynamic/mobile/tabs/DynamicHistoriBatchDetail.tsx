@@ -24,6 +24,7 @@ import { scheduleInvalidate, type InvalidateScope } from '../../../../lib/invali
 import { queryKeys } from '../../../../lib/queryKeys'
 import { useAuth } from '../../../../lib/auth/AuthProvider'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
+import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { ProductPickerSheet } from '../../../../mobile/components/ProductPickerSheet'
 import {
@@ -68,6 +69,7 @@ function DynamicHistoriEditProductRow(props: {
   otherKodis: string[]
   disabled: boolean
   canRemove: boolean
+  showPrice: boolean
   onDraftChange: (patch: Partial<HistoryEditRow['draft']>) => void
   onRemove: () => void
 }) {
@@ -88,19 +90,21 @@ function DynamicHistoriEditProductRow(props: {
         <span className="mobile-meta-truncate" style={{ textAlign: 'left' }}>{label}</span>
         <span aria-hidden="true">▾</span>
       </button>
-      <div className="mobile-field-row">
-        <div>
-          <label className="mobile-label">Cmimi/Njesi</label>
-          <NumericInput
-            className="mobile-input"
-            step="0.01"
-            min={0}
-            value={props.draft.cmimi_njesi}
-            disabled={props.disabled}
-            onChange={(v) => props.onDraftChange({ cmimi_njesi: v })}
-            placeholder="0.00"
-          />
-        </div>
+      <div className={`mobile-field-row${props.showPrice ? '' : ' mobile-field-row-single'}`}>
+        {props.showPrice ? (
+          <div>
+            <label className="mobile-label">Cmimi/Njesi</label>
+            <NumericInput
+              className="mobile-input"
+              step="0.01"
+              min={0}
+              value={props.draft.cmimi_njesi}
+              disabled={props.disabled}
+              onChange={(v) => props.onDraftChange({ cmimi_njesi: v })}
+              placeholder="0.00"
+            />
+          </div>
+        ) : null}
         <div>
           <label className="mobile-label">Sasia</label>
           <NumericInput
@@ -114,7 +118,11 @@ function DynamicHistoriEditProductRow(props: {
         </div>
       </div>
       <div className="mobile-history-edit-card-footer">
-        <span className="mobile-row-card-total">Totali: {fmtEuro(lineTotal(props.draft))}</span>
+        {props.showPrice ? (
+          <span className="mobile-row-card-total">Totali: {fmtEuro(lineTotal(props.draft))}</span>
+        ) : (
+          <span />
+        )}
         {props.canRemove ? (
           <button
             type="button"
@@ -133,6 +141,7 @@ function DynamicHistoriEditProductRow(props: {
         title="Zgjedh produktin"
         products={props.products}
         existingKodis={props.otherKodis}
+        showPrice={props.showPrice}
         initial={{
           kodi_produktit: props.draft.kodi_produktit,
           cmimi_njesi: props.draft.cmimi_njesi,
@@ -156,6 +165,7 @@ function DynamicHistoriBatchEditView(props: {
   rows: HistoryEditRow[]
   busy: boolean
   error: string | null
+  showPrice: boolean
   onMetaChange: (meta: DynamicHistoryBatchMetaDraft) => void
   onRowsChange: (rows: HistoryEditRow[]) => void
   onSave: () => void
@@ -280,6 +290,7 @@ function DynamicHistoriBatchEditView(props: {
                   .filter(Boolean)}
                 disabled={props.busy}
                 canRemove={props.rows.length > 1}
+                showPrice={props.showPrice}
                 onDraftChange={(patch) => updateRow(row.key, patch)}
                 onRemove={() => removeRow(row.key)}
               />
@@ -298,15 +309,23 @@ function DynamicHistoriBatchEditView(props: {
         {props.error ? <div className="mobile-inline-error">{props.error}</div> : null}
       </div>
 
-      <div className="mobile-edit-footer">
-        <div className="mobile-total-row mobile-history-edit-total">
-          <span>Totali i veprimit:</span>
-          <span className="mobile-num">{fmtEuro(total)}</span>
+      {props.showPrice ? (
+        <div className="mobile-edit-footer">
+          <div className="mobile-total-row mobile-history-edit-total">
+            <span>Totali i veprimit:</span>
+            <span className="mobile-num">{fmtEuro(total)}</span>
+          </div>
+          <button type="button" className="mobile-btn-primary" disabled={props.busy} onClick={props.onSave}>
+            {props.busy ? 'Duke ruajtur…' : 'Ruaj Ndryshimet'}
+          </button>
         </div>
-        <button type="button" className="mobile-btn-primary" disabled={props.busy} onClick={props.onSave}>
-          {props.busy ? 'Duke ruajtur…' : 'Ruaj Ndryshimet'}
-        </button>
-      </div>
+      ) : (
+        <div className="mobile-edit-footer">
+          <button type="button" className="mobile-btn-primary" disabled={props.busy} onClick={props.onSave}>
+            {props.busy ? 'Duke ruajtur…' : 'Ruaj Ndryshimet'}
+          </button>
+        </div>
+      )}
 
       <DynamicLocationPickerSheet
         open={fromOpen}
@@ -346,6 +365,7 @@ export function DynamicHistoriBatchDetail(props: {
 }) {
   const qc = useQueryClient()
   const { user } = useAuth()
+  const { trackPrice } = useTenantConfig()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = React.useMemo(
     () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
@@ -471,6 +491,7 @@ export function DynamicHistoriBatchDetail(props: {
           rows={editRows}
           busy={busy}
           error={error}
+          showPrice={trackPrice}
           onMetaChange={setEditMeta}
           onRowsChange={setEditRows}
           onSave={() => saveMut.mutate()}
@@ -521,9 +542,11 @@ export function DynamicHistoriBatchDetail(props: {
             {locLabel ?? '—'}
           </div>
         )}
-        <div className="mobile-card-label" style={{ marginTop: 8 }}>
-          Total: {fmtEuro(detail.totali)}
-        </div>
+        {trackPrice ? (
+          <div className="mobile-card-label" style={{ marginTop: 8 }}>
+            Total: {fmtEuro(detail.totali)}
+          </div>
+        ) : null}
       </div>
 
       <div className="mobile-section-label">Produktet</div>
@@ -539,9 +562,17 @@ export function DynamicHistoriBatchDetail(props: {
               {productLabel(item.emri_produktit, item.kodi_produktit)}
             </div>
             <div className="mobile-row-card-sub">
-              {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
+              {trackPrice ? (
+                <>
+                  {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
+                </>
+              ) : (
+                <>{item.sasia} cop</>
+              )}
             </div>
-            <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
+            {trackPrice ? (
+              <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
+            ) : null}
           </div>
         ))}
       </div>

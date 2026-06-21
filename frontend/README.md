@@ -2,7 +2,7 @@
 
 React client for the Inventari inventory platform. This README covers local development and **desktop** product behavior (dashboard at `/` on wide screens). Mobile behavior is summarized in the [Mobile web app](#mobile-web-app) section.
 
-**Multi-tenancy:** the shell branches on session `uiLloji`. **Legacy** users (`legacy_fixed`) see the original Kosovo/Albania dashboard and mobile UI unchanged. **Dynamic** users sign up on `/login` (Regjistrohu tab), complete location onboarding, then use the dynamic dashboard (N locations). See [Authentication & routing](#authentication--routing).
+**Multi-tenancy:** the shell branches on session `uiLloji`. **Legacy** users (`legacy_fixed`) see the original Kosovo/Albania dashboard and mobile UI unchanged. **Dynamic** users sign up on `/login` (Regjistrohu tab), complete the onboarding wizard at `/onboarding`, then use the dynamic dashboard (N locations) with UI driven by `tenant_config.track_price` (price/totals on or off). See [Authentication & routing](#authentication--routing) and [Tenant config & conditional UI](#tenant-config--conditional-ui).
 
 ## Development
 
@@ -19,7 +19,7 @@ The browser talks only to the backend API. Supabase credentials stay on the serv
 
 - Node.js 20+
 - Backend running on `http://localhost:3001` (see [backend/README.md](../backend/README.md))
-- Supabase migrations **07**, **APPLY_08_through_11**, and **13** applied for multi-tenant auth (see repo [README.md](../README.md))
+- Supabase migrations **07**, **APPLY_08_through_11**, **13**, and **14** applied for multi-tenant auth and tenant config (see repo [README.md](../README.md))
 
 ### Setup
 
@@ -78,26 +78,28 @@ frontend/
   src/
     App.tsx                    Routes, auth gate, legacy vs dynamic shell
     main.tsx                   Bootstrap + providers
-    providers/AppProviders.tsx AuthProvider; CountryProvider (legacy) or LokacioniProvider (dynamic)
+    providers/AppProviders.tsx AuthProvider; CountryProvider (legacy) or LokacioniProvider + TenantConfigProvider (dynamic)
     index.css                  Imports styles/index.css hub
     styles/                    Design tokens, components (auth.css), features, responsive
     components/                Modal, ConfirmModal, DateInput, OraInput, …
-    hooks/                     useSnackbar, useActionItems, feature hooks, useMobileClient
+    hooks/                     useSnackbar, useActionItems, useTenantConfig, feature hooks, useMobileClient
     lib/
       api.ts                   Main API client (products, actions, exports)
       pointerDismissGuard.ts   Overlay/sheet dismiss without click-through to UI below
       api/http.ts              Fetch wrapper (credentials, errors)
       api/auth.ts              login, signup, session, Google
       api/lokacionet.ts        Location CRUD
+      api/tenantConfig.ts      POST tenant-config, complete, tutorial-seen
       auth/AuthProvider.tsx    Session state, refreshSession, logout
-      auth/postAuthRedirect.ts Post-login path helper (dashboard vs onboarding)
-      auth/types.ts            SessionUser shape
+      auth/postAuthRedirect.ts Post-login path helper (dashboard vs onboarding vs tutorial)
+      auth/types.ts            SessionUser shape (incl. tenantConfig)
+      tenantConfig/            TenantConfigContext — session-backed useTenantConfig()
       lokacioni/               Dynamic location types + provider
     features/
       auth/                    GoogleSignInButton (GIS ID token)
       locations/               LocationPicker, LocationAddModal, LocationsEditor, emoji picker
-      onboarding/              LocationsOnboardingPage (dynamic gate)
-      settings/                LocationsSettingsPage
+      onboarding/              OnboardingWizard (5 screens), TutorialOverlay; CSS in styles/features/
+      settings/                LocationsSettingsPage, TenantConfigDisplay (read-only config summary)
       dynamic/                 DynamicDashboardPage, Dynamic* panels, history, hooks
       dynamic/mobile/          DynamicMobileApp (N-location mobile tabs)
       actions/                 Legacy ActionEntryPanel, TransferModal; shared ActionItemsTable, ActionReviewModal
@@ -120,18 +122,19 @@ packages/shared/               Zod schemas, productLabel, summary builders
 | --- | --- | --- |
 | `/login` | Public | Combined **Hyr** / **Regjistrohu** card (Emri, password, optional Google) |
 | `/signup` | Public | Redirects to `/login?mode=signup` |
-| `/onboarding/locations` | Auth, dynamic | First-time location setup (redirect until `has_locations`) |
-| `/settings/locations` | Auth, dynamic | Edit locations |
-| `/` | Auth | Legacy or dynamic dashboard (desktop/mobile by viewport) |
+| `/onboarding` | Auth, dynamic | 5-screen onboarding wizard (until `tenantConfig.onboarding_complete`) |
+| `/onboarding/locations` | Auth | Redirects to `/onboarding` (legacy URL) |
+| `/settings/locations` | Auth, dynamic | Edit locations + read-only tenant config summary |
+| `/` | Auth | Legacy or dynamic dashboard (desktop/mobile by viewport); per-user tutorial overlay once after onboarding |
 | `/mobile/*` | — | Redirects to `/` |
 
-`AuthProvider` loads `GET /api/session` on mount. Session user includes `uiLloji`, `isLegacy`, and `has_locations`.
+`AuthProvider` loads `GET /api/session` on mount. Dynamic session users include nested `tenantConfig: { track_price, onboarding_complete, tutorial_seen }`.
 
 - **Legacy** users (`uiLloji === legacy_fixed`) skip onboarding and render `DashboardPage` / `MobileApp`.
-- **Dynamic** users render `DynamicDashboardPage` (desktop) or `DynamicMobileApp` (mobile) after onboarding.
-- **Dynamic** users must complete `/onboarding/locations` until `has_locations` is true, then render `DynamicDashboardPage` (N-location panels; no `CountryProvider`).
+- **Dynamic** users with `!tenantConfig.onboarding_complete` are redirected to `/onboarding`.
+- **Dynamic** users after onboarding render `DynamicDashboardPage` (desktop) or `DynamicMobileApp` (mobile); tutorial shows when `!tenantConfig.tutorial_seen`.
 
-`AppProviders` branches providers: **legacy** and logged-out users get `CountryProvider` only; **dynamic** users get `LokacioniProvider` only. Dynamic code must not call `useCountry()`.
+`AppProviders` branches providers: **legacy** and logged-out users get `CountryProvider` only; **dynamic** users get `LokacioniProvider` + `TenantConfigProvider`. Dynamic code must not call `useCountry()`.
 
 #### Login page (`LoginPage.tsx`)
 
@@ -150,10 +153,39 @@ Post-auth redirects (`lib/auth/postAuthRedirect.ts`):
 | Case | Destination |
 | --- | --- |
 | Legacy login | `/` |
-| Dynamic user with locations | `/` |
-| New sign-up or dynamic user without locations | `/onboarding/locations` |
+| Dynamic user with `tenantConfig.onboarding_complete` | `/` |
+| New sign-up or dynamic user without completed onboarding | `/onboarding` |
 
-**Stuck on onboarding?** You are signed into a new dynamic account, not the legacy admin. Use **Kthehu te hyrja** at the top of the onboarding screen, then sign in on **Hyr** with your legacy email or `Legacy User`.
+**Stuck on onboarding?** You are signed into a new dynamic account, not the legacy admin. On welcome use **Kthehu te hyrja**, then sign in on **Hyr** with your legacy email or `Legacy User`. On later wizard steps use **← Kthehu** to edit a previous screen.
+
+#### Onboarding wizard (`/onboarding`)
+
+Five screens in `features/onboarding/screens/`, styled with the same navy gradient and blue primary as login (`styles/features/onboarding-wizard.css` — uses `--primary`, `--card`, etc.).
+
+| Step | Screen | Behavior |
+| --- | --- | --- |
+| 1 | `Screen1Welcome` | Intro; top bar **Kthehu te hyrja** → logout |
+| 2 | `Screen2LocationCount` | `−` / `+` or type count (1–20); **← Kthehu** → welcome |
+| 3 | `Screen3LocationNames` | **All** name rows shown at once (count from step 2); name input + `LocationEmojiPicker` per row; **← Kthehu** → count |
+| 4 | `Screen4Pricing` | Two cards: Me çmime / Vetëm sasi; `POST /api/tenant-config` saves `track_price`; **← Kthehu** → names |
+| 5 | `Screen5Confirm` | Summary with real names; **Fillo të punosh →** creates locations, `POST /api/tenant-config/complete`, session refresh → `/` |
+
+State lives in React until confirm (refresh mid-wizard restarts from step 1). Top bar: **Kthehu te hyrja** on welcome only; **← Kthehu** on steps 2–5.
+
+#### Post-onboarding tutorial
+
+Shown once per dynamic user when `tenantConfig.tutorial_seen === false`.
+
+| Piece | Location |
+| --- | --- |
+| Overlay | `features/onboarding/TutorialOverlay.tsx` |
+| Gating | `App.tsx` (`shouldShowTutorial`) + session `tenantConfig.tutorial_seen` |
+| Styles | `styles/features/tutorial-overlay.css` |
+| Dismiss | Skip/complete/navigate → `POST /api/tenant-config/tutorial-seen` + `refreshSession()` |
+
+Desktop: 7 steps (`data-tutorial` on products table, action card, location picker, etc.). Mobile: 5 steps on bottom-nav tabs (`tab-produkte`, `tab-veprime`, …).
+
+Post-onboarding location edits remain at `/settings/locations` (`LocationsSettingsPage` + `TenantConfigDisplay` read-only summary).
 
 API client: `lib/api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` (cookie session, `credentials: 'include'`).
 
@@ -186,19 +218,32 @@ Same three-area layout, keyed by **location** instead of country:
 | --- | --- | --- |
 | Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` — single trigger opens a portal menu (all locations + **+ Shto**); inline add modal (emoji + name, success snackbar). No top-bar **Lokacionet** link. |
 | Transfer | `DynamicTransferModal` | `Nga` / `Te` location pickers with `excludeIds` (pill row or `<select>` when many locations) |
-| Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow; tight **Kodi** column (~10 chars), wider name/location cols; `stock-badge` body cells. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. Mobile: `DynamicProdukteTab` — dense card list (no table); every location’s stock shown inline as stat chips on each card (zero = muted grey). |
-| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, scrollable table >3; header/date fixed, location list scrolls inside card |
-| Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route |
-| Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }` instead of `country` |
+| Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. Mobile: `DynamicProdukteTab` — dense card list with inline stock stat chips. |
+| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, scrollable table >3; hides **vlerë** when `track_price = false` |
+| Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route; price fields hidden when `track_price = false` |
+| Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }`; price/total columns hidden when `track_price = false` via `useTenantConfig()` |
 
 **Location UX** (`features/locations/`):
 
 - **Onboarding / settings** (`LocationsEditor`): card UI with `LocationEmojiPicker` + name; server-derived `kodi` (not shown). Settings: reorder, **Shfaq ne Permbledhje**, deactivate.
 - **Dashboard picker** (`LocationPicker` + `LocationAddModal`): dropdown menu portaled to `document.body` (z-index above cards); scroll only when the list would hit the viewport edge. **+ Shto** opens add modal (wide emoji grid 2×10 in modal).
 
-**Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`.
+**Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`, `useTenantConfig` (from `hooks/useTenantConfig.tsx`).
 
-**Styles:** `styles/features/locations.css` (picker menu, cards, emoji grids); `styles/features/dynamic-dashboard.css` (products table location headers, summary scroll, stock grid/table); `features/dynamic/mobile/dynamic-mobile.css` (dynamic mobile-only: `--surface` chrome on Produkte tab + bottom nav, product cards, stock stat chips, summary compact cards).
+#### Tenant config & conditional UI
+
+`TenantConfigProvider` (dynamic users only) reads `user.tenantConfig` from the session — no TanStack Query fetch on mount. Components call `useTenantConfig()` — throws outside the provider or for legacy users.
+
+| Config | UI effect |
+| --- | --- |
+| `track_price = false` | Hide **Cmimi/Njesi**, line totals, and summary **vlerë** rows/columns in actions, history, review modal, and mobile Permbledhje; action table columns 55% / 30% / 15% |
+| `track_price = true` | Same as before (price + totals visible) |
+
+Wired in: `ActionItemsTable`, `DynamicActionEntryPanel`, `DynamicTransferForm`, `DynamicProductsPanel`, `DynamicSummaryPanel`, `ActionReviewModal`, `DynamicProductFormModal`, dynamic mobile tabs, history filters.
+
+Excel exports mirror the same rules server-side (`exportsService` reads `tenant_config`).
+
+**Styles:** `styles/features/locations.css`; `styles/features/dynamic-dashboard.css`; `styles/features/onboarding-wizard.css`; `styles/features/tutorial-overlay.css`; `features/dynamic/mobile/dynamic-mobile.css`.
 
 #### Dynamic mobile (`DynamicMobileApp`)
 
@@ -329,7 +374,7 @@ Dynamic mobile uses full-width stacked cards for ≤3 summary locations (`Locati
 - `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save path.
 - `lib/queryKeys` + `lib/invalidateAppData` — React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql`, then `docs/sql/APPLY_08_through_11.sql`, then `docs/sql/13_perdorues_emri_unique.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql`, then `docs/sql/APPLY_08_through_11.sql`, then `docs/sql/13_perdorues_emri_unique.sql`, then `docs/sql/14_tenant_config.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
 ### Mobile web app
 
@@ -608,7 +653,7 @@ Purpose:
 
 - Confirms that the user is allowed to access the inventory system.
 - Keeps inventory data behind a controlled, tenant-scoped session instead of exposing it publicly.
-- New dynamic accounts complete location onboarding before the main dashboard.
+- New dynamic accounts complete the onboarding wizard at `/onboarding`, then see a one-time per-user dashboard tutorial.
 
 ### Product Creation
 
@@ -1004,8 +1049,8 @@ Purpose:
 ## Data Flow
 
 1. User signs in or signs up at `/login` (Emri + password, or Google).
-2. Dynamic new users add at least one location at `/onboarding/locations`, then reach the dashboard.
-3. User creates products.
+2. Dynamic new users complete the onboarding wizard at `/onboarding`, then see a one-time dashboard tutorial (per user id, not shared across accounts on the same browser).
+3. User creates products (kodi + emri + optional initial stock per location).
 4. User records stock movements.
 5. The backend validates the input and scopes data by `pronari_id`.
 6. The database stores products and action history.
@@ -1039,4 +1084,4 @@ It is focused on the practical inventory workflow: enter product movements once,
 - [Repo root quick start](../README.md)
 - [Local development](../docs/local-dev.md)
 - [SQL migrations](../docs/sql/)
-- [Multi-tenancy plan](../MULTI_TENANCY_PLAN.md)
+- [Onboarding wizard & tenant config (V2)](../onboarding_revamp.md)

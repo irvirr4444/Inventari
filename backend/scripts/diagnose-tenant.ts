@@ -83,14 +83,37 @@ async function main() {
     .select('*', { count: 'exact', head: true })
   console.log('lokacioni rows:', lokErr ? lokErr.message : lokacioniCount)
 
+  const { data: tenantConfigSample, error: tenantConfigErr } = await supabase
+    .from('tenant_config')
+    .select('pronari_id, track_price, onboarding_complete, tutorial_seen')
+    .limit(1)
+  console.log(
+    'tenant_config table:',
+    tenantConfigErr ? `MISSING or incomplete — ${tenantConfigErr.message}` : 'OK',
+  )
+  if (!tenantConfigErr && tenantConfigSample?.[0]) {
+    const row = tenantConfigSample[0] as Record<string, unknown>
+    console.log('  sample row keys:', Object.keys(row).join(', '))
+  }
+
   const missingPronari = ownersErr?.message?.includes('pronari_id')
   const missingLokacioniCol = lokacioniColErr?.message?.includes('lokacioni_id')
+  const missingTenantConfig = tenantConfigErr != null
+  const needsV2Migration =
+    tenantConfigErr?.message?.includes('tutorial_seen') ||
+    tenantConfigErr?.message?.includes('onboarding_complete')
 
   if (missingPronari || missingLokacioniCol || lokacioniCount === 0) {
     console.log('\n--- FIX ---')
     console.log('Migrations 08–11 are incomplete. Run docs/sql/APPLY_08_through_11.sql')
     console.log('in Supabase SQL Editor, or set DATABASE_URL and run:')
     console.log('  npm run apply:tenant-migrations -w backend')
+  } else if (missingTenantConfig && !needsV2Migration) {
+    console.log('\n--- FIX ---')
+    console.log('Run docs/sql/14_tenant_config.sql in Supabase SQL Editor.')
+  } else if (needsV2Migration) {
+    console.log('\n--- FIX ---')
+    console.log('Run docs/sql/15_tenant_config_v2.sql in Supabase SQL Editor (after 14).')
   } else {
     console.log('\nSchema looks OK.')
   }

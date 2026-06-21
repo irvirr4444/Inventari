@@ -15,6 +15,8 @@ import {
   updatePerdorues,
 } from '../repositories/perdoruesRepository.js'
 import { countActiveLokacionet } from '../repositories/lokacioniRepository.js'
+import { getTenantConfigForSession } from '../services/tenantConfigService.js'
+import type { TenantConfig } from '@inventari/shared'
 import type { SessionUser } from '../domain/user.js'
 import { LEGACY_USER_ID } from '../domain/user.js'
 
@@ -142,14 +144,19 @@ export async function getSessionPayload(
   user: SessionUser,
 ): Promise<{
   ok: true
-  user: SessionUser & { has_locations: boolean }
+  user: SessionUser & {
+    has_locations: boolean
+    tenantConfig: TenantConfig | null
+  }
 }> {
   const locationCount = await countActiveLokacionet(supabase, user.id)
+  const tenantConfig = await getTenantConfigForSession(supabase, user)
   return {
     ok: true,
     user: {
       ...user,
       has_locations: locationCount > 0,
+      tenantConfig,
     },
   }
 }

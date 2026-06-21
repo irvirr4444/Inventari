@@ -20,7 +20,9 @@ export function DynamicHistoryFilterBar(props: {
   onClientFilterChange: (patch: Partial<HistoryClientFilters>) => void
   onClearAll: () => void
   showClearLink: boolean
+  showTotali?: boolean
 }) {
+  const showTotali = props.showTotali ?? true
   const toggleLocation = (id: string) => {
     const current = props.clientFilters.locationIds
     const next = current.includes(id)
@@ -119,27 +121,29 @@ export function DynamicHistoryFilterBar(props: {
         />
       </div>
 
-      <div className="history-filter-group history-filter-group-labeled">
-        <span className="history-filter-group-label">Totali</span>
-        <div className="history-filter-pair">
-          <NumericInput
-            className="history-filter-num"
-            value={props.clientFilters.totaliMin}
-            placeholder="Min"
-            onChange={(v) =>
-              props.onClientFilterChange({ totaliMin: parseNumericFilter(String(v)) })
-            }
-          />
-          <NumericInput
-            className="history-filter-num"
-            value={props.clientFilters.totaliMax}
-            placeholder="Max"
-            onChange={(v) =>
-              props.onClientFilterChange({ totaliMax: parseNumericFilter(String(v)) })
-            }
-          />
+      {showTotali ? (
+        <div className="history-filter-group history-filter-group-labeled">
+          <span className="history-filter-group-label">Totali</span>
+          <div className="history-filter-pair">
+            <NumericInput
+              className="history-filter-num"
+              value={props.clientFilters.totaliMin}
+              placeholder="Min"
+              onChange={(v) =>
+                props.onClientFilterChange({ totaliMin: parseNumericFilter(String(v)) })
+              }
+            />
+            <NumericInput
+              className="history-filter-num"
+              value={props.clientFilters.totaliMax}
+              placeholder="Max"
+              onChange={(v) =>
+                props.onClientFilterChange({ totaliMax: parseNumericFilter(String(v)) })
+              }
+            />
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="history-filter-group history-filter-group-labeled">
         <span className="history-filter-group-label">Produkte</span>

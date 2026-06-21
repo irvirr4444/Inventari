@@ -107,7 +107,7 @@ export function DynamicProductsPanel(props: {
           </div>
         </div>
         <div className="spacer" />
-        <button type="button" className="btn" onClick={props.onAddProduct}>
+        <button type="button" className="btn" onClick={props.onAddProduct} data-tutorial="add-product-btn">
           + Shto produkt
         </button>
         <a
@@ -138,7 +138,7 @@ export function DynamicProductsPanel(props: {
         <ErrorAlert message={props.error} style={{ marginBottom: 12, padding: '10px 14px', fontSize: 13 }} />
       )}
 
-      <div className="table-scroll products-table-wrap">
+      <div className="table-scroll products-table-wrap" data-tutorial="products-table">
         <table className="table products-table products-table-dynamic">
           <colgroup>
             <col className="products-col-kodi" />

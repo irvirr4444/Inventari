@@ -11,5 +11,7 @@
 @import './features/history.css';
 @import './features/locations.css';
 @import './features/dynamic-dashboard.css';
+@import './features/onboarding-wizard.css';
+@import './features/tutorial-overlay.css';
 @import './components/stock-badges.css';
 @import './responsive.css';

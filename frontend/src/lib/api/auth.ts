@@ -3,7 +3,7 @@ import { http } from './http'
 
 type SessionResponse =
   | { ok: false }
-  | { ok: true; user: SessionUser & { has_locations: boolean } }
+  | { ok: true; user: SessionUser }
 
 export async function login(input: { emri: string; password: string }): Promise<void> {
   await http<{ ok: true }>(`/login`, {

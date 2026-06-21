@@ -10,6 +10,7 @@ import {
 import { useHistoryBatches } from '../../../../hooks/useHistoryBatches'
 import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
+import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import {
   fmtEuro,
   formatDisplayDate,
@@ -47,6 +48,7 @@ export function DynamicHistoriTab(props: {
   onHeaderChange: (header: MobileHeaderState) => void
 }) {
   const productsQuery = useDynamicProductsQuery()
+  const { trackPrice } = useTenantConfig()
   const history = useHistoryBatches({ onNotify: props.notify })
   const { activeLokacionet } = useLokacioni()
   const [screen, setScreen] = React.useState<{ mode: 'list' | 'detail'; batchId?: string }>({
@@ -67,11 +69,11 @@ export function DynamicHistoriTab(props: {
   const products = productsQuery.data ?? []
 
   const filteredActions = React.useMemo(
-    () => applyHistoryClientFilters(history.actions, appliedClientFilters),
-    [history.actions, appliedClientFilters],
+    () => applyHistoryClientFilters(history.actions, appliedClientFilters, { trackPrice }),
+    [history.actions, appliedClientFilters, trackPrice],
   )
 
-  const hasAdvancedFilters = hasActiveClientFilters(appliedClientFilters)
+  const hasAdvancedFilters = hasActiveClientFilters(appliedClientFilters, { trackPrice })
   const locationFilterCount = appliedClientFilters.locationIds.length
   const locationLabel =
     locationFilterCount === 0
@@ -179,6 +181,7 @@ export function DynamicHistoriTab(props: {
             <HistoriAdvancedFiltersPanel
               open={advancedFiltersOpen}
               draft={draftClientFilters}
+              showTotali={trackPrice}
               onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
               onApply={applyAdvancedFilters}
               onClear={clearAdvancedFilters}
@@ -253,7 +256,8 @@ export function DynamicHistoriTab(props: {
                       {formatLocationRoute(action)}
                     </div>
                     <div className="mobile-card-meta" style={{ marginTop: 6 }}>
-                      {productCountLabel(action.item_count)} · {fmtEuro(action.totali)}
+                      {productCountLabel(action.item_count)}
+                      {trackPrice ? <> · {fmtEuro(action.totali)}</> : null}
                     </div>
                   </button>
                 ))}

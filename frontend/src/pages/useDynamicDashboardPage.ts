@@ -108,7 +108,10 @@ export function useDynamicDashboardPage() {
       return
     }
     productCrud.createMut.mutate(
-      { kodi: newKodi.trim(), emri: newEmri.trim() },
+      {
+        kodi: newKodi.trim(),
+        emri: newEmri.trim(),
+      },
       {
         onSuccess: (created) => {
           const stock = sortedLocations.map((loc) => ({

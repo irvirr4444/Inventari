@@ -1,4 +1,5 @@
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { ActionReviewModal } from '../actions/ActionReviewModal'
 import { validateActionItems } from '../../hooks/useActionItems'
 import { fmt, productLabel } from '../../lib/format'
@@ -15,6 +16,7 @@ export function DynamicDashboardModals(props: {
   showHistoryModal?: boolean
 }) {
   const d = props.d
+  const { trackPrice } = useTenantConfig()
   const showTransfer = props.showTransferModal ?? true
   const showHistory = props.showHistoryModal ?? true
 
@@ -128,6 +130,7 @@ export function DynamicDashboardModals(props: {
             }
             d.actionMutation.mutate()
           }}
+          showPrice={trackPrice}
         />
       )}
 
@@ -136,10 +139,16 @@ export function DynamicDashboardModals(props: {
           title="Finalizo transfertën?"
           message={
             <span>
-              Transfer nga {d.transferFromLabel} ne {d.transferToLabel} me total{' '}
-              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                {fmt(d.transferItemsState.total)}
-              </strong>
+              Transfer nga {d.transferFromLabel} ne {d.transferToLabel}
+              {trackPrice ? (
+                <>
+                  {' '}
+                  me total{' '}
+                  <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
+                    {fmt(d.transferItemsState.total)}
+                  </strong>
+                </>
+              ) : null}
               .
             </span>
           }

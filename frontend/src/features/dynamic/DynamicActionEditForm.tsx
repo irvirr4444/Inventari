@@ -15,12 +15,14 @@ import { rowsFromDetail, type HistoryEditRow } from '../../lib/historyBatchEdit'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
 import { DynamicLocationSelect } from './DynamicLocationSelect'
 
-const HISTORY_EDIT_COL_WIDTHS = ['40%', '22%', '15%', '23%'] as const
+const HISTORY_EDIT_COL_WIDTHS_FULL = ['40%', '22%', '15%', '23%'] as const
+const HISTORY_EDIT_COL_WIDTHS_NO_PRICE = ['55%', '30%', '15%'] as const
 
-function HistoryEditColgroup() {
+function HistoryEditColgroup(props: { showPrice: boolean }) {
+  const widths = props.showPrice ? HISTORY_EDIT_COL_WIDTHS_FULL : HISTORY_EDIT_COL_WIDTHS_NO_PRICE
   return (
     <colgroup>
-      {HISTORY_EDIT_COL_WIDTHS.map((width, i) => (
+      {widths.map((width, i) => (
         <col key={i} style={{ width }} />
       ))}
     </colgroup>
@@ -31,9 +33,11 @@ export function DynamicActionEditForm(props: {
   detail: ActionBatchDetail
   products: DynamicProdukti[]
   disabled: boolean
+  trackPrice?: boolean
   onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
 }) {
+  const showPrice = props.trackPrice ?? true
   const [meta, setMeta] = React.useState<DynamicHistoryBatchMetaDraft>(() =>
     dynamicMetaFromDetail(props.detail),
   )
@@ -142,19 +146,19 @@ export function DynamicActionEditForm(props: {
 
       <div className="history-edit-table-wrap">
         <table className="table table-fixed history-edit-table history-edit-table-head">
-          <HistoryEditColgroup />
+          <HistoryEditColgroup showPrice={showPrice} />
           <thead>
             <tr>
               <th>Produkti</th>
-              <th>Cmimi/Njesi</th>
+              {showPrice ? <th>Cmimi/Njesi</th> : null}
               <th>Sasia</th>
-              <th style={{ textAlign: 'right' }}>Totali</th>
+              {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
             </tr>
           </thead>
         </table>
         <div className="history-edit-rows">
           <table className="table table-fixed history-edit-table history-edit-table-body">
-            <HistoryEditColgroup />
+            <HistoryEditColgroup showPrice={showPrice} />
             <tbody>
               {rows.map((row) => {
                 const lineTotal =
@@ -169,16 +173,18 @@ export function DynamicActionEditForm(props: {
                         disabled={busy}
                       />
                     </td>
-                    <td>
-                      <NumericInput
-                        className="input"
-                        step="0.01"
-                        min={0}
-                        value={row.draft.cmimi_njesi}
-                        onChange={(v) => updateRow(row.key, { cmimi_njesi: String(v) })}
-                        disabled={busy}
-                      />
-                    </td>
+                    {showPrice ? (
+                      <td>
+                        <NumericInput
+                          className="input"
+                          step="0.01"
+                          min={0}
+                          value={row.draft.cmimi_njesi}
+                          onChange={(v) => updateRow(row.key, { cmimi_njesi: String(v) })}
+                          disabled={busy}
+                        />
+                      </td>
+                    ) : null}
                     <td>
                       <NumericInput
                         className="input"
@@ -188,9 +194,11 @@ export function DynamicActionEditForm(props: {
                         disabled={busy}
                       />
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="num">{fmtEuro(lineTotal)}</span>
-                    </td>
+                    {showPrice ? (
+                      <td style={{ textAlign: 'right' }}>
+                        <span className="num">{fmtEuro(lineTotal)}</span>
+                      </td>
+                    ) : null}
                   </tr>
                 )
               })}
@@ -200,9 +208,11 @@ export function DynamicActionEditForm(props: {
       </div>
 
       <div className="history-edit-footer">
-        <div className="history-expanded-total">
-          Totali: <strong className="num">{fmtEuro(actionTotal)}</strong>
-        </div>
+        {showPrice ? (
+          <div className="history-expanded-total">
+            Totali: <strong className="num">{fmtEuro(actionTotal)}</strong>
+          </div>
+        ) : null}
         <div className="history-edit-actions">
           <button
             type="button"

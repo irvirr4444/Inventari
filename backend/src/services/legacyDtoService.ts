@@ -12,6 +12,7 @@ export type DynamicProduktiDto = {
   id: string
   kodi: string
   emri: string
+  njesi_matese: string | null
   stock: DynamicStockEntry[]
   created_at?: string
   updated_at?: string
@@ -30,6 +31,7 @@ export function toDynamicProductDto(
     id: row.id,
     kodi: row.kodi,
     emri: row.emri,
+    njesi_matese: row.njesi_matese ?? null,
     stock,
     created_at: row.created_at,
     updated_at: row.updated_at,

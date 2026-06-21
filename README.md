@@ -31,8 +31,10 @@ Run migrations **in order** for a fresh project:
 | 7 | `docs/sql/07_perdorues_lokacioni.sql` | Users + locations tables, placeholder legacy user |
 | 8–11 | `docs/sql/APPLY_08_through_11.sql` | Tenant columns, `gjendje`, stock triggers (safe to re-run) |
 | 13 | `docs/sql/13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
+| 14 | `docs/sql/14_tenant_config.sql` | `tenant_config` table (initial); backfill for existing dynamic users |
+| 15 | `docs/sql/15_tenant_config_v2.sql` | V2 config: `tutorial_seen`, rename `onboarding_complete`, drop unit columns, RLS |
 
-**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql` (does not delete rows — wrapped in a transaction with row-count checks).
+**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql` (does not delete rows — wrapped in a transaction with row-count checks).
 
 **One-time** after migration 07:
 
@@ -63,7 +65,7 @@ npm run dev
 Log in at **`/login`**:
 
 - **Legacy admin (existing deployment):** use **Hyr** with `login_email` / `login_password` from `.env` (email in the Emri field works), or sign in as **`Legacy User`** with the same password.
-- **New dynamic account:** use **Regjistrohu** with a unique **Emri** + password (min 8 characters), then complete location onboarding.
+- **New dynamic account:** use **Regjistrohu** with a unique **Emri** + password (min 8 characters), then complete the onboarding wizard at `/onboarding`.
 - Optional **Google sign-in** when `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID` are set (see [Environment](#environment)).
 
 Do **not** use **Regjistrohu** with an email address — that creates a new account and sends you to onboarding instead of the legacy dashboard.
@@ -124,20 +126,21 @@ The browser does not use Supabase keys directly. All data goes through the backe
 - **Local development:** [docs/local-dev.md](docs/local-dev.md)
 - **Deploy (Render):** [docs/render.md](docs/render.md)
 - **SQL migrations:** [docs/sql/](docs/sql/)
-- **Multi-tenancy plan:** [MULTI_TENANCY_PLAN.md](MULTI_TENANCY_PLAN.md)
+- **Onboarding wizard & tenant config (V2 spec):** [onboarding_revamp.md](onboarding_revamp.md)
 
 ## Features
 
 ### Accounts
 
 - **Legacy** (`ui_lloji = legacy_fixed`): Kosovo + Albania UI, `gjendje_kosove` / `gjendje_shqiperi` on products, country-based actions and summary.
-- **Dynamic** (new sign-ups): custom locations (`lokacioni`, emoji + name in UI), `gjendje` stock per location, N-column desktop dashboard with location picker menu and inline add
+- **Dynamic** (new sign-ups): custom locations; onboarding wizard collects location count/names + price tracking (`tenant_config.track_price`); dashboard hides price/total UI when `track_price = false`
 
 ### Auth & core flows
 
 - **Emri** + password login and sign-up on one screen (`/login`); legacy users can also sign in with their email in the Emri field; errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
-- Dynamic onboarding: add at least one location at `/onboarding/locations` before the dashboard; add more from the **action card location picker** (**+ Shto**) without visiting settings
-- Location `kodi` is server-derived (UI shows emoji + name only)
+- **Dynamic onboarding wizard** (`/onboarding`): five screens — welcome → location count (1–20) → all location name rows with emoji picker → pricing (Me çmime / Vetëm sasi) → confirm. Navy/blue app styling (`styles/features/onboarding-wizard.css`). **← Kthehu** on every step after welcome; **Kthehu te hyrja** on welcome logs out. Saves `track_price` on screen 4, creates locations + `onboarding_complete` on confirm.
+- **Post-onboarding tutorial** (desktop + mobile): one-time spotlight overlay; persisted in `tenant_config.tutorial_seen` via `POST /api/tenant-config/tutorial-seen` (not localStorage)
+- Location `kodi` is server-derived (UI shows emoji + name only); edit locations at `/settings/locations` (includes read-only tenant config summary)
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)
 - **Historiku** — paginated batches, server filters (type, date) + client filters (location checkboxes for dynamic, Ora, Pershkrimi, Totali, Produkte); edit and delete with stock rollback
@@ -148,7 +151,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 | Export | Legacy | Dynamic |
 | --- | --- | --- |
 | Products `.xlsx` | Kodi, Emri, Gjendje Kosove, Gjendje Shqiperi | Kodi, Emri, one column per location |
-| Permbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** (movement lines) + **Permbledhje** (per-location Hyrje/Dalje pivot) |
+| Permbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** + **Permbledhje** sheets; omits price/value columns when `track_price = false` |
 
 ### Desktop vs mobile
 

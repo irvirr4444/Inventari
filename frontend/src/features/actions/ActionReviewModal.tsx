@@ -9,7 +9,8 @@ import { LlojiBadge } from '../history/historyBadges'
 import { ActionMetaDisplay } from './ActionMetaDisplay'
 import { formatActionDateTime } from '../../lib/actionMeta'
 
-const REVIEW_TABLE_COL_WIDTHS = ['42%', '22%', '16%', '20%'] as const
+const REVIEW_TABLE_COL_WIDTHS_FULL = ['42%', '22%', '16%', '20%'] as const
+const REVIEW_TABLE_COL_WIDTHS_NO_PRICE = ['55%', '25%', '20%'] as const
 const REVIEW_VISIBLE_ROWS = 10
 
 function ReviewTableColgroup(props: { widths: readonly string[] }) {
@@ -35,11 +36,14 @@ export function ActionReviewModal(
     onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
     onCancel: () => void
     onConfirm: () => void
+    showPrice?: boolean
   } & (
     | { country: Country; location?: never }
     | { location: { emri: string; flagEmoji?: string | null }; country?: never }
   ),
 ) {
+  const showPrice = props.showPrice ?? true
+  const columnWidths = showPrice ? REVIEW_TABLE_COL_WIDTHS_FULL : REVIEW_TABLE_COL_WIDTHS_NO_PRICE
   const displayItems = props.items.filter((i) => i.kodi_produktit.trim())
   const showScrollHint = displayItems.length > REVIEW_VISIBLE_ROWS
   const placeholderRowCount =
@@ -104,13 +108,13 @@ export function ActionReviewModal(
 
         <div className="action-review-body">
           <table className="table table-fixed action-review-table action-review-table-head">
-            <ReviewTableColgroup widths={REVIEW_TABLE_COL_WIDTHS} />
+            <ReviewTableColgroup widths={columnWidths} />
             <thead>
               <tr>
                 <th>Produkti</th>
-                <th>Cmimi/Njesi</th>
+                {showPrice ? <th>Cmimi/Njesi</th> : null}
                 <th>Sasia</th>
-                <th style={{ textAlign: 'right' }}>Totali</th>
+                {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
               </tr>
             </thead>
           </table>
@@ -118,7 +122,7 @@ export function ActionReviewModal(
             className={`action-review-rows${showScrollHint ? ' is-scrollable' : ''}`}
           >
             <table className="table table-fixed action-review-table action-review-table-body">
-              <ReviewTableColgroup widths={REVIEW_TABLE_COL_WIDTHS} />
+              <ReviewTableColgroup widths={columnWidths} />
               <tbody>
                 {displayItems.map((it) => {
                   const product = productByKodi.get(it.kodi_produktit)
@@ -135,18 +139,20 @@ export function ActionReviewModal(
                           {label}
                         </span>
                       </td>
-                      <td>
-                        <NumericInput
-                          className="input"
-                          step="0.01"
-                          min={0}
-                          value={it.cmimi_njesi}
-                          onChange={(v) => props.onUpdateItem(it.key, 'cmimi_njesi', v)}
-                          placeholder="0.00"
-                          disabled={props.loading}
-                          style={{ width: '100%' }}
-                        />
-                      </td>
+                      {showPrice ? (
+                        <td>
+                          <NumericInput
+                            className="input"
+                            step="0.01"
+                            min={0}
+                            value={it.cmimi_njesi}
+                            onChange={(v) => props.onUpdateItem(it.key, 'cmimi_njesi', v)}
+                            placeholder="0.00"
+                            disabled={props.loading}
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                      ) : null}
                       <td>
                         <NumericInput
                           className="input"
@@ -158,9 +164,11 @@ export function ActionReviewModal(
                           style={{ width: '100%' }}
                         />
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="num">{fmt(lineTotal)}</span>
-                      </td>
+                      {showPrice ? (
+                        <td style={{ textAlign: 'right' }}>
+                          <span className="num">{fmt(lineTotal)}</span>
+                        </td>
+                      ) : null}
                     </tr>
                   )
                 })}
@@ -171,9 +179,9 @@ export function ActionReviewModal(
                     aria-hidden="true"
                   >
                     <td />
+                    {showPrice ? <td /> : null}
                     <td />
-                    <td />
-                    <td />
+                    {showPrice ? <td /> : null}
                   </tr>
                 ))}
               </tbody>
@@ -191,9 +199,11 @@ export function ActionReviewModal(
         </div>
 
         <div className="action-review-footer">
-          <div className="history-expanded-total">
-            Totali i veprimit: <strong className="num">{fmt(props.total)}</strong>
-          </div>
+          {showPrice ? (
+            <div className="history-expanded-total">
+              Totali i veprimit: <strong className="num">{fmt(props.total)}</strong>
+            </div>
+          ) : null}
           <div className="action-review-actions">
             <button
               type="button"

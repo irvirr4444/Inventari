@@ -10,6 +10,9 @@ import { DynamicPermbledhjeTab } from './tabs/DynamicPermbledhjeTab'
 import { DynamicProdukteTab } from './tabs/DynamicProdukteTab'
 import { DynamicTransferTab } from './tabs/DynamicTransferTab'
 import { DynamicVeprimeTab } from './tabs/DynamicVeprimeTab'
+import { markTutorialSeen } from '../../../lib/api/tenantConfig'
+import { useAuth } from '../../../lib/auth/AuthProvider'
+import { TutorialOverlay } from '../../onboarding/TutorialOverlay'
 import './dynamic-mobile.css'
 
 const TAB_TITLES: Record<TabId, string> = {
@@ -22,10 +25,29 @@ const TAB_TITLES: Record<TabId, string> = {
 
 const CTA_TABS: TabId[] = ['veprime', 'transfer']
 
-export function DynamicMobileApp(props: { onLogout: () => void }) {
+export function DynamicMobileApp(props: {
+  onLogout: () => void
+  showTutorial?: boolean
+}) {
   const [tab, setTab] = React.useState<TabId>('veprime')
   const [header, setHeader] = React.useState<MobileHeaderState>({ kind: 'tab' })
   const { snackbar, notify } = useSnackbar()
+  const { refreshSession } = useAuth()
+  const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
+
+  const dismissTutorial = React.useCallback(async () => {
+    setTutorialOpen(false)
+    try {
+      await markTutorialSeen()
+      await refreshSession()
+    } catch {
+      /* local dismiss */
+    }
+  }, [refreshSession])
+
+  React.useEffect(() => {
+    if (props.showTutorial) setTutorialOpen(true)
+  }, [props.showTutorial])
 
   React.useEffect(() => {
     setHeader({ kind: 'tab' })
@@ -68,16 +90,38 @@ export function DynamicMobileApp(props: { onLogout: () => void }) {
         {tab === 'permblehdje' && <DynamicPermbledhjeTab />}
       </main>
 
-      <BottomNavPortal active={tab} onChange={setTab} />
+      <BottomNavPortal
+        active={tab}
+        tutorialOpen={tutorialOpen}
+        onTutorialInterrupt={() => void dismissTutorial()}
+        onChange={setTab}
+      />
       <Snackbar snackbar={snackbar} />
+      {tutorialOpen ? (
+        <TutorialOverlay
+          isMobile
+          onMobileTabChange={setTab}
+          onDismiss={() => void dismissTutorial()}
+        />
+      ) : null}
     </div>
   )
 }
 
-function BottomNavPortal(props: { active: TabId; onChange: (tab: TabId) => void }) {
+function BottomNavPortal(props: {
+  active: TabId
+  onChange: (tab: TabId) => void
+  tutorialOpen?: boolean
+  onTutorialInterrupt?: () => void
+  className?: string
+}) {
   if (typeof document === 'undefined') return null
+  const handleChange = (tab: TabId) => {
+    if (props.tutorialOpen) props.onTutorialInterrupt?.()
+    props.onChange(tab)
+  }
   return createPortal(
-    <BottomNav active={props.active} onChange={props.onChange} className="dynamic-mobile-bottom-nav" />,
+    <BottomNav active={props.active} onChange={handleChange} className="dynamic-mobile-bottom-nav" />,
     document.body,
   )
 }

@@ -12,10 +12,12 @@ const FORM_ID = 'mobile-product-picker-form'
 function ProductPickerForm(props: {
   products: Produkti[]
   existingKodis: string[]
+  showPrice?: boolean
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
   onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
   onClose: () => void
 }) {
+  const showPrice = props.showPrice ?? true
   const [search, setSearch] = React.useState('')
   const [kodi, setKodi] = React.useState(props.initial?.kodi_produktit ?? '')
   const [price, setPrice] = React.useState(props.initial?.cmimi_njesi ?? '')
@@ -55,7 +57,7 @@ function ProductPickerForm(props: {
       setError('Sasia duhet te jete > 0.')
       return
     }
-    if (Number(price) < 0) {
+    if (showPrice && Number(price) < 0) {
       setError('Cmimi/Njesi duhet te jete >= 0.')
       return
     }
@@ -66,7 +68,7 @@ function ProductPickerForm(props: {
       setError('Ky produkt eshte tashme ne liste.')
       return
     }
-    props.onSave({ kodi_produktit: kodi, cmimi_njesi: price, sasia: qty })
+    props.onSave({ kodi_produktit: kodi, cmimi_njesi: showPrice ? price : '0', sasia: qty })
     props.onClose()
   }
 
@@ -129,18 +131,20 @@ function ProductPickerForm(props: {
       </div>
 
       <div className="mobile-picker-fields">
-        <div className="mobile-field-row">
-          <div>
-            <label className="mobile-label">Cmimi/Njesi</label>
-            <NumericInput
-              className="mobile-input"
-              step="0.01"
-              min={0}
-              value={price}
-              onChange={setPrice}
-              placeholder="0.00"
-            />
-          </div>
+        <div className={`mobile-field-row${showPrice ? '' : ' mobile-field-row-single'}`}>
+          {showPrice ? (
+            <div>
+              <label className="mobile-label">Cmimi/Njesi</label>
+              <NumericInput
+                className="mobile-input"
+                step="0.01"
+                min={0}
+                value={price}
+                onChange={setPrice}
+                placeholder="0.00"
+              />
+            </div>
+          ) : null}
           <div>
             <label className="mobile-label">Sasia</label>
             <NumericInput
@@ -163,6 +167,7 @@ export function ProductPickerSheet(props: {
   title: string
   products: Produkti[]
   existingKodis: string[]
+  showPrice?: boolean
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
   onClose: () => void
   onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
@@ -190,6 +195,7 @@ export function ProductPickerSheet(props: {
           key={formKey}
           products={props.products}
           existingKodis={props.existingKodis}
+          showPrice={props.showPrice}
           initial={props.initial}
           onSave={props.onSave}
           onClose={props.onClose}

@@ -1,13 +1,20 @@
+import * as React from 'react'
 import { Snackbar } from '../../components/Snackbar'
 import { useDynamicDashboardPage } from '../../pages/useDynamicDashboardPage'
 import { DynamicActionEntryPanel } from './DynamicActionEntryPanel'
 import { DynamicDashboardModals } from './DynamicDashboardModals'
 import { DynamicProductsPanel } from './DynamicProductsPanel'
 import { DynamicSummaryPanel } from './DynamicSummaryPanel'
+import { TutorialOverlay } from '../onboarding/TutorialOverlay'
 
-export function DynamicDashboardPage() {
+export function DynamicDashboardPage(props: { showTutorial?: boolean }) {
   const d = useDynamicDashboardPage()
   const summaryData = d.summaryQuery.data as Record<string, typeof d.emptySummary> | undefined
+  const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
+
+  React.useEffect(() => {
+    if (props.showTutorial) setTutorialOpen(true)
+  }, [props.showTutorial])
 
   return (
     <div className="dashboard-stack">
@@ -71,6 +78,9 @@ export function DynamicDashboardPage() {
 
       <DynamicDashboardModals d={d} />
       <Snackbar snackbar={d.snackbar} />
+      {tutorialOpen ? (
+        <TutorialOverlay onDismiss={() => setTutorialOpen(false)} />
+      ) : null}
     </div>
   )
 }

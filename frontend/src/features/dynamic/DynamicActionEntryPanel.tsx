@@ -6,6 +6,7 @@ import type { ActionItemDraft } from '../../types/actionItem'
 import { ActionItemsTable } from '../actions/ActionItemsTable'
 import { ActionMetaFields } from '../actions/ActionMetaFields'
 import { DynamicLocationSelect } from './DynamicLocationSelect'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 
 export function DynamicActionEntryPanel(props: {
   lokacioniId: string
@@ -32,8 +33,10 @@ export function DynamicActionEntryPanel(props: {
   hideNavActions?: boolean
   hideInlineSubmit?: boolean
 }) {
+  const { trackPrice } = useTenantConfig()
+
   return (
-    <div className="card action-card">
+    <div className="card action-card" data-tutorial="action-card">
       <div className="action-header">
         <div className="action-header-top">
           <h2 className="action-header-title">Regjistro Veprim</h2>
@@ -45,6 +48,7 @@ export function DynamicActionEntryPanel(props: {
                 onChange={props.onLokacioniChange}
                 allowAdd
                 onNotify={props.onNotify}
+                dataTutorial="location-picker"
               />
             </div>
             <div className="action-header-control action-header-control-date">
@@ -88,7 +92,7 @@ export function DynamicActionEntryPanel(props: {
           <div className="spacer" />
           {!props.hideNavActions ? (
             <>
-              <button type="button" className="btn sm transfer-mode-btn" onClick={props.onOpenTransfer}>
+              <button type="button" className="btn sm transfer-mode-btn" onClick={props.onOpenTransfer} data-tutorial="transfer-btn">
             <svg
               aria-hidden="true"
               width="14"
@@ -107,7 +111,7 @@ export function DynamicActionEntryPanel(props: {
             </svg>
             Transfero
           </button>
-          <button type="button" className="btn ghost sm history-btn" onClick={props.onOpenHistory}>
+          <button type="button" className="btn ghost sm history-btn" onClick={props.onOpenHistory} data-tutorial="history-btn">
             <svg
               aria-hidden="true"
               width="14"
@@ -133,6 +137,7 @@ export function DynamicActionEntryPanel(props: {
           products={props.products}
           onUpdate={props.onUpdateItem}
           onRemove={props.onRemoveItem}
+          showPrice={trackPrice}
         />
 
         <div className="row action-footer">
@@ -140,10 +145,12 @@ export function DynamicActionEntryPanel(props: {
             + Shto produkt
           </button>
           <div className="spacer" />
-          <div className="row action-total" style={{ gap: 8 }}>
-            <span className="muted">Total:</span>
-            <span className="num-lg">{fmt(props.total)}</span>
-          </div>
+          {trackPrice ? (
+            <div className="row action-total" style={{ gap: 8 }}>
+              <span className="muted">Total:</span>
+              <span className="num-lg">{fmt(props.total)}</span>
+            </div>
+          ) : null}
           {!props.hideInlineSubmit ? (
             <button
               type="submit"

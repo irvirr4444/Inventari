@@ -31,14 +31,17 @@ export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
   produkteMax: '',
 }
 
-export function hasActiveClientFilters(filters: HistoryClientFilters): boolean {
+export function hasActiveClientFilters(
+  filters: HistoryClientFilters,
+  options?: { trackPrice?: boolean },
+): boolean {
+  const trackPrice = options?.trackPrice ?? true
   return (
     filters.locationIds.length > 0 ||
     filters.oraFrom.trim() !== '' ||
     filters.oraDeri.trim() !== '' ||
     filters.pershkriminQuery.trim() !== '' ||
-    filters.totaliMin !== '' ||
-    filters.totaliMax !== '' ||
+    (trackPrice && (filters.totaliMin !== '' || filters.totaliMax !== '')) ||
     filters.produkteMin !== '' ||
     filters.produkteMax !== ''
   )
@@ -62,7 +65,9 @@ function parseBound(value: number | ''): number | null {
 export function applyHistoryClientFilters(
   batches: ActionBatch[],
   filters: HistoryClientFilters,
+  options?: { trackPrice?: boolean },
 ): ActionBatch[] {
+  const trackPrice = options?.trackPrice ?? true
   const oraFrom = normalizeOraInput(filters.oraFrom)
   const oraDeri = normalizeOraInput(filters.oraDeri)
   const pershkriminQuery = filters.pershkriminQuery.trim().toLowerCase()
@@ -73,7 +78,7 @@ export function applyHistoryClientFilters(
 
   const hasOraFilter = oraFrom !== undefined || oraDeri !== undefined
   const hasPershkrimiFilter = pershkriminQuery !== ''
-  const hasTotaliFilter = totaliMin !== null || totaliMax !== null
+  const hasTotaliFilter = trackPrice && (totaliMin !== null || totaliMax !== null)
   const hasProdukteFilter = produkteMin !== null || produkteMax !== null
   const locationFilter = filters.locationIds
 
@@ -105,8 +110,10 @@ export function applyHistoryClientFilters(
       if (!text.includes(pershkriminQuery)) return false
     }
 
-    if (totaliMin !== null && batch.totali < totaliMin) return false
-    if (totaliMax !== null && batch.totali > totaliMax) return false
+    if (trackPrice) {
+      if (totaliMin !== null && batch.totali < totaliMin) return false
+      if (totaliMax !== null && batch.totali > totaliMax) return false
+    }
     if (produkteMin !== null && batch.item_count < produkteMin) return false
     if (produkteMax !== null && batch.item_count > produkteMax) return false
 

@@ -19,6 +19,7 @@ import {
 import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
@@ -42,6 +43,7 @@ export function DynamicHistoryModal(props: {
   const { products, onClose, onNotify, variant = 'modal' } = props
   const qc = useQueryClient()
   const { user } = useAuth()
+  const { trackPrice } = useTenantConfig()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja)
 
@@ -159,11 +161,13 @@ export function DynamicHistoryModal(props: {
 
   const actions = listQuery.data?.actions ?? []
   const filteredActions = React.useMemo(
-    () => applyHistoryClientFilters(actions, clientFilters),
-    [actions, clientFilters],
+    () => applyHistoryClientFilters(actions, clientFilters, { trackPrice }),
+    [actions, clientFilters, trackPrice],
   )
   const showClearLink =
-    hasActiveServerFilters(filters) || hasActiveClientFilters(clientFilters)
+    hasActiveServerFilters(filters) ||
+    hasActiveClientFilters(clientFilters, { trackPrice })
+  const tableColCount = trackPrice ? HISTORY_TABLE_COL_COUNT : HISTORY_TABLE_COL_COUNT - 1
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
@@ -219,6 +223,7 @@ export function DynamicHistoryModal(props: {
               onClientFilterChange={updateClientFilters}
               onClearAll={clearAllFilters}
               showClearLink={showClearLink}
+              showTotali={trackPrice}
             />
           </div>
 
@@ -232,7 +237,7 @@ export function DynamicHistoryModal(props: {
                 <col className="history-col-lloji" />
                 <col className="history-col-shteti" />
                 <col className="history-col-products" />
-                <col className="history-col-totali" />
+                {trackPrice ? <col className="history-col-totali" /> : null}
                 <col className="history-col-actions" />
               </colgroup>
               <thead>
@@ -244,7 +249,7 @@ export function DynamicHistoryModal(props: {
                   <th className="history-col-lloji">Lloji</th>
                   <th className="history-col-shteti">Lokacioni</th>
                   <th className="history-col-products">Produkte</th>
-                  <th className="history-col-totali">Totali</th>
+                  {trackPrice ? <th className="history-col-totali">Totali</th> : null}
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
@@ -253,7 +258,7 @@ export function DynamicHistoryModal(props: {
               ) : listQuery.isError ? (
                 <tbody>
                   <tr>
-                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
+                    <td colSpan={tableColCount} className="history-empty-cell">
                       <p className="muted">
                         {listQuery.error instanceof Error
                           ? listQuery.error.message
@@ -265,7 +270,7 @@ export function DynamicHistoryModal(props: {
               ) : actions.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
+                    <td colSpan={tableColCount} className="history-empty-cell">
                       <p className="muted">Nuk u gjet asnje veprim.</p>
                     </td>
                   </tr>
@@ -273,7 +278,7 @@ export function DynamicHistoryModal(props: {
               ) : filteredActions.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={HISTORY_TABLE_COL_COUNT} className="history-empty-cell">
+                    <td colSpan={tableColCount} className="history-empty-cell">
                       <p className="muted">Asnjë rezultat</p>
                     </td>
                   </tr>
@@ -308,9 +313,11 @@ export function DynamicHistoryModal(props: {
                             <DynamicLocationCell action={action} />
                           </td>
                           <td className="history-col-products">{action.item_count}</td>
-                          <td className="history-col-totali">
-                            <span className="num">{fmtEuro(action.totali)}</span>
-                          </td>
+                          {trackPrice ? (
+                            <td className="history-col-totali">
+                              <span className="num">{fmtEuro(action.totali)}</span>
+                            </td>
+                          ) : null}
                           <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
@@ -338,7 +345,7 @@ export function DynamicHistoryModal(props: {
                         </tr>
                         {expanded && (
                           <tr className="history-expanded-row">
-                            <td colSpan={HISTORY_TABLE_COL_COUNT}>
+                            <td colSpan={tableColCount}>
                               <ExpandedActionDetail actionId={action.id} />
                             </td>
                           </tr>

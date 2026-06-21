@@ -12,6 +12,7 @@ function parseNumericFilter(value: string): number | '' {
 type HistoriAdvancedFiltersPanelProps = {
   open: boolean
   draft: HistoryClientFilters
+  showTotali?: boolean
   onDraftChange: (patch: Partial<HistoryClientFilters>) => void
   onApply: () => void
   onClear: () => void
@@ -19,6 +20,7 @@ type HistoriAdvancedFiltersPanelProps = {
 
 export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelProps) {
   const { open, draft, onDraftChange, onApply, onClear } = props
+  const showTotali = props.showTotali ?? true
 
   return (
     <div
@@ -67,39 +69,41 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
           />
         </div>
 
-        <div className="mobile-advanced-filters-section">
-          <div className="mobile-section-label">Totali (€)</div>
-          <div className="mobile-advanced-filters-grid">
-            <div>
-              <label className="mobile-label" htmlFor="histori-filter-totali-min">
-                Min
-              </label>
-              <NumericInput
-                id="histori-filter-totali-min"
-                className="mobile-input"
-                value={draft.totaliMin}
-                placeholder="Min"
-                min={0}
-                step="0.01"
-                onChange={(v) => onDraftChange({ totaliMin: parseNumericFilter(v) })}
-              />
-            </div>
-            <div>
-              <label className="mobile-label" htmlFor="histori-filter-totali-max">
-                Max
-              </label>
-              <NumericInput
-                id="histori-filter-totali-max"
-                className="mobile-input"
-                value={draft.totaliMax}
-                placeholder="Max"
-                min={0}
-                step="0.01"
-                onChange={(v) => onDraftChange({ totaliMax: parseNumericFilter(v) })}
-              />
+        {showTotali ? (
+          <div className="mobile-advanced-filters-section">
+            <div className="mobile-section-label">Totali (€)</div>
+            <div className="mobile-advanced-filters-grid">
+              <div>
+                <label className="mobile-label" htmlFor="histori-filter-totali-min">
+                  Min
+                </label>
+                <NumericInput
+                  id="histori-filter-totali-min"
+                  className="mobile-input"
+                  value={draft.totaliMin}
+                  placeholder="Min"
+                  min={0}
+                  step="0.01"
+                  onChange={(v) => onDraftChange({ totaliMin: parseNumericFilter(v) })}
+                />
+              </div>
+              <div>
+                <label className="mobile-label" htmlFor="histori-filter-totali-max">
+                  Max
+                </label>
+                <NumericInput
+                  id="histori-filter-totali-max"
+                  className="mobile-input"
+                  value={draft.totaliMax}
+                  placeholder="Max"
+                  min={0}
+                  step="0.01"
+                  onChange={(v) => onDraftChange({ totaliMax: parseNumericFilter(v) })}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="mobile-advanced-filters-section">
           <div className="mobile-section-label">Produkte</div>

@@ -19,6 +19,7 @@ import { insertVeprimet } from '../repositories/veprimiRepository.js'
 import { insertVeprimBatch } from '../repositories/veprimBatchRepository.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 import { resolveLokacioniIdForCountry } from './legacyDtoService.js'
+import { getTrackPriceForTenant } from './tenantConfigService.js'
 
 export function validateTransfer(body: NormalizedActionBody) {
   if (body.lloji !== 'Transfer') return
@@ -217,6 +218,15 @@ export async function createAction(
   const body = opts?.dynamic
     ? normalizeDynamicActionBody(parsedBody as Parameters<typeof normalizeDynamicActionBody>[0])
     : normalizeActionBody(parsedBody as Parameters<typeof normalizeActionBody>[0])
+
+  if (opts?.dynamic) {
+    const trackPrice = await getTrackPriceForTenant(supabase, user.id)
+    if (!trackPrice) {
+      for (const item of body.items) {
+        item.cmimi_njesi = 0
+      }
+    }
+  }
 
   validateTransfer(body)
 

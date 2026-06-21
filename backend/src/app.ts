@@ -15,6 +15,7 @@ import { registerAnalyticsRoutes } from './routes/analytics.js'
 import { registerExportRoutes } from './routes/exports.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerLokacionetRoutes } from './routes/lokacionet.js'
+import { registerTenantConfigRoutes } from './routes/tenantConfig.js'
 import { createSupabaseAdmin } from './supabase.js'
 import { AppError, isAppError, mapZodError } from './errors.js'
 
@@ -104,6 +105,7 @@ export async function buildApp() {
   registerAnalyticsRoutes(app, supabase)
   registerExportRoutes(app, supabase)
   registerLokacionetRoutes(app, supabase)
+  registerTenantConfigRoutes(app, supabase)
 
   if (fs.existsSync(FRONTEND_DIST_DIR)) {
     await app.register(fastifyStatic, {

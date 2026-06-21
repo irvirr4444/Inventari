@@ -97,7 +97,10 @@ type DynamicProductFormModalProps =
       product: DynamicProdukti
       locations: Lokacioni[]
       saving: boolean
-      onSave: (input: { product: DynamicProdukti; stock: Record<string, number> }) => void
+      onSave: (input: {
+        product: DynamicProdukti
+        stock: Record<string, number>
+      }) => void
       onClose: () => void
     }
 

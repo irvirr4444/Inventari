@@ -11,6 +11,7 @@ import {
   formatExportTimestamp,
 } from './inventariExcel.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
+import { getTenantConfigRow } from '../repositories/tenantConfigRepository.js'
 import { listProduktet, listGjendjeForProducts } from '../repositories/produktiRepository.js'
 import {
   fetchDynamicExportActions,
@@ -158,21 +159,38 @@ async function exportDynamicInventariXlsx(
   const lokacionet = await listLokacionetByOwner(supabase, user.id)
   const lokacioniById = new Map(lokacionet.map((l) => [l.id, l.emri]))
   const actions = await fetchDynamicExportActions(supabase, user.id, query)
+  const tenantConfig = await getTenantConfigRow(supabase, user.id)
+  const trackPrice = tenantConfig?.track_price ?? true
 
   const workbook = new ExcelJS.Workbook()
   const movements = workbook.addWorksheet('Veprime')
-  movements.addRow(['Data', 'Lloji', 'Lokacioni', 'Kodi', 'Cmimi', 'Sasia', 'Totali'])
+
+  const movementHeaders = trackPrice
+    ? ['Data', 'Lloji', 'Lokacioni', 'Kodi', 'Cmimi', 'Sasia', 'Totali']
+    : ['Data', 'Lloji', 'Lokacioni', 'Kodi', 'Sasia']
+
+  movements.addRow(movementHeaders)
 
   for (const row of actions) {
-    movements.addRow([
-      row.data,
-      row.lloji,
-      lokacioniById.get(row.lokacioni_id ?? '') ?? '',
-      row.kodi_produktit,
-      row.cmimi_njesi,
-      row.sasia,
-      row.totali,
-    ])
+    if (trackPrice) {
+      movements.addRow([
+        row.data,
+        row.lloji,
+        lokacioniById.get(row.lokacioni_id ?? '') ?? '',
+        row.kodi_produktit,
+        row.cmimi_njesi,
+        row.sasia,
+        row.totali,
+      ])
+    } else {
+      movements.addRow([
+        row.data,
+        row.lloji,
+        lokacioniById.get(row.lokacioni_id ?? '') ?? '',
+        row.kodi_produktit,
+        row.sasia,
+      ])
+    }
   }
 
   styleHeaderRow(movements)
@@ -191,16 +209,24 @@ async function exportDynamicInventariXlsx(
   )
 
   const pivot = workbook.addWorksheet('Permbledhje')
-  pivot.addRow(['Lokacioni', 'Hyrje Sasia', 'Hyrje Vlera', 'Dalje Sasia', 'Dalje Vlera'])
-  for (const loc of lokacionet) {
-    const s = summary[loc.id]
-    pivot.addRow([
-      loc.emri,
-      s?.in_qty ?? 0,
-      s?.in_value ?? 0,
-      s?.out_qty ?? 0,
-      s?.out_value ?? 0,
-    ])
+  if (trackPrice) {
+    pivot.addRow(['Lokacioni', 'Hyrje Sasia', 'Hyrje Vlera', 'Dalje Sasia', 'Dalje Vlera'])
+    for (const loc of lokacionet) {
+      const s = summary[loc.id]
+      pivot.addRow([
+        loc.emri,
+        s?.in_qty ?? 0,
+        s?.in_value ?? 0,
+        s?.out_qty ?? 0,
+        s?.out_value ?? 0,
+      ])
+    }
+  } else {
+    pivot.addRow(['Lokacioni', 'Hyrje Sasia', 'Dalje Sasia'])
+    for (const loc of lokacionet) {
+      const s = summary[loc.id]
+      pivot.addRow([loc.emri, s?.in_qty ?? 0, s?.out_qty ?? 0])
+    }
   }
   styleHeaderRow(pivot)
   applyBordersToDataRows(pivot, 2)

@@ -17,6 +17,7 @@ export function LocationPicker(props: {
   excludeIds?: string[]
   allowAdd?: boolean
   onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
+  dataTutorial?: string
 }) {
   const { activeLokacionet, refresh } = useLokacioni()
   const [menuOpen, setMenuOpen] = React.useState(false)
@@ -143,6 +144,7 @@ export function LocationPicker(props: {
             ref={triggerRef}
             type="button"
             className="btn location-pill active location-picker-trigger"
+            data-tutorial={props.dataTutorial}
             onClick={() => setMenuOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}

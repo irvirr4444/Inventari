@@ -11,12 +11,12 @@ import { useAuth } from './lib/auth/AuthProvider'
 import { useMobileClient } from './hooks/useMobileClient'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
-import { LocationsOnboardingPage } from './features/onboarding/LocationsOnboardingPage'
+import { OnboardingWizard } from './features/onboarding/OnboardingWizard'
 import { LocationsSettingsPage } from './features/settings/LocationsSettingsPage'
 import { DynamicDashboardPage } from './features/dynamic/DynamicDashboardPage'
 import { DynamicMobileApp } from './features/dynamic/mobile/DynamicMobileApp'
 import { MobileApp } from './mobile/MobileApp.tsx'
-import './mobile/styles/mobile.css'
+import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
 
 function AuthLoading() {
   return (
@@ -52,9 +52,15 @@ function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }
   )
 }
 
-function DynamicDashboardShell(props: { isMobile: boolean; onLogout: () => void }) {
+function DynamicDashboardShell(props: {
+  isMobile: boolean
+  onLogout: () => void
+  showTutorial?: boolean
+}) {
   if (props.isMobile) {
-    return <DynamicMobileApp onLogout={props.onLogout} />
+    return (
+      <DynamicMobileApp onLogout={props.onLogout} showTutorial={props.showTutorial} />
+    )
   }
 
   return (
@@ -65,7 +71,7 @@ function DynamicDashboardShell(props: { isMobile: boolean; onLogout: () => void 
         </button>
       </div>
       <main className="container">
-        <DynamicDashboardPage />
+        <DynamicDashboardPage showTutorial={props.showTutorial} />
       </main>
     </div>
   )
@@ -76,19 +82,27 @@ function ProtectedHome() {
   const { user, logout } = useAuth()
 
   if (!user) return <Navigate to="/login" replace />
-  if (!user.isLegacy && !user.has_locations) {
-    return <Navigate to="/onboarding/locations" replace />
+  if (shouldShowOnboarding(user)) {
+    return <Navigate to="/onboarding" replace />
   }
 
   const handleLogout = async () => {
     await logout()
   }
 
+  const showTutorial = shouldShowTutorial(user)
+
   if (user.uiLloji === 'legacy_fixed') {
     return <LegacyDashboardShell isMobile={isMobile} onLogout={handleLogout} />
   }
 
-  return <DynamicDashboardShell isMobile={isMobile} onLogout={handleLogout} />
+  return (
+    <DynamicDashboardShell
+      isMobile={isMobile}
+      onLogout={handleLogout}
+      showTutorial={showTutorial}
+    />
+  )
 }
 
 function PublicOnly(props: { children: React.ReactNode }) {
@@ -146,13 +160,14 @@ export default function App() {
           }
         />
         <Route
-          path="/onboarding/locations"
+          path="/onboarding"
           element={
             <RequireAuth>
-              <LocationsOnboardingPage />
+              <OnboardingWizard />
             </RequireAuth>
           }
         />
+        <Route path="/onboarding/locations" element={<Navigate to="/onboarding" replace />} />
         <Route
           path="/settings/locations"
           element={

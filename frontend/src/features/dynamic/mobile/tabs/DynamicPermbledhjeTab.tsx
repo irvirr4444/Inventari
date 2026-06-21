@@ -1,5 +1,6 @@
 import type { CountrySummary as CountrySummaryData } from '@inventari/shared'
 import { useSummaryDateRange } from '../../../../hooks/useSummaryQuery'
+import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { exportUrl } from '../../../../lib/api'
 import { fmt, fmtInt } from '../../../../lib/format'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
@@ -11,6 +12,7 @@ function LocationSummarySection(props: {
   name: string
   loading: boolean
   summary: CountrySummaryData
+  trackPrice: boolean
 }) {
   if (props.loading) return <SkeletonRow count={2} />
 
@@ -27,23 +29,28 @@ function LocationSummarySection(props: {
         <span>Hyrje (sasi)</span>
         <span className="mobile-num">{fmtInt(props.summary.in_qty)}</span>
       </div>
-      <div className="mobile-summary-row">
-        <span>Hyrje (vlerë)</span>
-        <span className="mobile-num">{fmt(props.summary.in_value)} €</span>
-      </div>
+      {props.trackPrice ? (
+        <div className="mobile-summary-row">
+          <span>Hyrje (vlerë)</span>
+          <span className="mobile-num">{fmt(props.summary.in_value)} €</span>
+        </div>
+      ) : null}
       <div className="mobile-summary-row">
         <span>Dalje (sasi)</span>
         <span className="mobile-num">{fmtInt(props.summary.out_qty)}</span>
       </div>
-      <div className="mobile-summary-row">
-        <span>Dalje (vlerë)</span>
-        <span className="mobile-num">{fmt(props.summary.out_value)} €</span>
-      </div>
+      {props.trackPrice ? (
+        <div className="mobile-summary-row">
+          <span>Dalje (vlerë)</span>
+          <span className="mobile-num">{fmt(props.summary.out_value)} €</span>
+        </div>
+      ) : null}
     </section>
   )
 }
 
 export function DynamicPermbledhjeTab() {
+  const { trackPrice } = useTenantConfig()
   const { from, setFrom, to, setTo, query, emptySummary } = useSummaryDateRange()
   const { activeLokacionet } = useLokacioni()
   const summaryLocations = activeLokacionet
@@ -92,18 +99,22 @@ export function DynamicPermbledhjeTab() {
                   <span>Hyrje (sasi)</span>
                   <span className="mobile-num">{fmtInt(s.in_qty)}</span>
                 </div>
-                <div className="mobile-summary-row">
-                  <span>Hyrje (vlerë)</span>
-                  <span className="mobile-num">{fmt(s.in_value)} €</span>
-                </div>
+                {trackPrice ? (
+                  <div className="mobile-summary-row">
+                    <span>Hyrje (vlerë)</span>
+                    <span className="mobile-num">{fmt(s.in_value)} €</span>
+                  </div>
+                ) : null}
                 <div className="mobile-summary-row">
                   <span>Dalje (sasi)</span>
                   <span className="mobile-num">{fmtInt(s.out_qty)}</span>
                 </div>
-                <div className="mobile-summary-row">
-                  <span>Dalje (vlerë)</span>
-                  <span className="mobile-num">{fmt(s.out_value)} €</span>
-                </div>
+                {trackPrice ? (
+                  <div className="mobile-summary-row">
+                    <span>Dalje (vlerë)</span>
+                    <span className="mobile-num">{fmt(s.out_value)} €</span>
+                  </div>
+                ) : null}
               </div>
             )
           })}
@@ -116,6 +127,7 @@ export function DynamicPermbledhjeTab() {
             name={loc.emri}
             loading={false}
             summary={summaryData[loc.id] ?? emptySummary}
+            trackPrice={trackPrice}
           />
         ))
       )}

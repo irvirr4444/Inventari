@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { mapSupabaseError } from '../errors.js'
 
 const PRODUCT_SELECT =
-  'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,pronari_id,created_at,updated_at'
+  'id,kodi,emri,gjendje_kosove,gjendje_shqiperi,njesi_matese,pronari_id,created_at,updated_at'
 
 export type ProduktiRow = {
   id: string
@@ -10,6 +10,7 @@ export type ProduktiRow = {
   emri: string
   gjendje_kosove: number
   gjendje_shqiperi: number
+  njesi_matese: string | null
   pronari_id: string
   created_at?: string
   updated_at?: string
@@ -75,6 +76,7 @@ export async function insertProdukti(
     emri: string
     gjendje_kosove?: number
     gjendje_shqiperi?: number
+    njesi_matese?: string | null
   },
 ): Promise<ProduktiRow> {
   const { data, error } = await supabase
@@ -85,6 +87,7 @@ export async function insertProdukti(
       emri: input.emri,
       gjendje_kosove: input.gjendje_kosove ?? 0,
       gjendje_shqiperi: input.gjendje_shqiperi ?? 0,
+      njesi_matese: input.njesi_matese ?? null,
     })
     .select(PRODUCT_SELECT)
     .single()
@@ -97,7 +100,9 @@ export async function updateProdukti(
   supabase: SupabaseClient,
   tenantId: string,
   id: string,
-  patch: Partial<Pick<ProduktiRow, 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'>>,
+  patch: Partial<
+    Pick<ProduktiRow, 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi' | 'njesi_matese'>
+  >,
 ): Promise<ProduktiRow> {
   const { data, error } = await supabase
     .from('produkti')

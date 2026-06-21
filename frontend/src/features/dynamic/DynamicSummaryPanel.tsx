@@ -5,6 +5,7 @@ import { exportUrl } from '../../lib/api'
 import { fmt, fmtInt } from '../../lib/format'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { locationBadge } from '../../lib/lokacioni/LokacioniProvider'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 
 const emptySummary: CountrySummaryData = {
   in_qty: 0,
@@ -18,12 +19,13 @@ function SummaryMiniCard(props: {
   label: string
   quantity: number
   value: number
+  showPrice: boolean
 }) {
   return (
     <div className={`summary-card compact ${props.tone}`}>
       <div className="summary-label">{props.label}</div>
       <div className="summary-value">{fmtInt(props.quantity)}</div>
-      <div className="summary-sub">{fmt(props.value)} €</div>
+      {props.showPrice ? <div className="summary-sub">{fmt(props.value)} €</div> : null}
     </div>
   )
 }
@@ -31,6 +33,7 @@ function SummaryMiniCard(props: {
 function LocationSummaryCard(props: {
   location: Lokacioni
   summary: CountrySummaryData
+  showPrice: boolean
 }) {
   return (
     <section className="summary-country">
@@ -41,15 +44,17 @@ function LocationSummaryCard(props: {
       <div className="summary-mini-grid">
         <SummaryMiniCard
           tone="success"
-          label="Hyrje"
+          label="Hyrje (sasi)"
           quantity={props.summary.in_qty}
           value={props.summary.in_value}
+          showPrice={props.showPrice}
         />
         <SummaryMiniCard
           tone="danger"
-          label="Dalje"
+          label="Dalje (sasi)"
           quantity={props.summary.out_qty}
           value={props.summary.out_value}
+          showPrice={props.showPrice}
         />
       </div>
     </section>
@@ -66,10 +71,11 @@ export function DynamicSummaryPanel(props: {
   isFetching: boolean
   error: unknown
 }) {
+  const { trackPrice } = useTenantConfig()
   const useTable = props.locations.length > 3
 
   return (
-    <div className="card summary-panel summary-panel-dynamic">
+    <div className="card summary-panel summary-panel-dynamic" data-tutorial="summary-panel">
       <div className="row summary-header">
         <h3>Permbledhje</h3>
         <div className="spacer" />
@@ -115,8 +121,8 @@ export function DynamicSummaryPanel(props: {
               <thead>
                 <tr>
                   <th>Lokacioni</th>
-                  <th>Hyrje</th>
-                  <th>Dalje</th>
+                  <th>Hyrje (sasi)</th>
+                  <th>Dalje (sasi)</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,10 +136,16 @@ export function DynamicSummaryPanel(props: {
                         </span>
                       </td>
                       <td className="num">
-                        {fmtInt(s.in_qty)} <span className="muted">({fmt(s.in_value)} €)</span>
+                        {fmtInt(s.in_qty)}
+                        {trackPrice ? (
+                          <span className="muted"> ({fmt(s.in_value)} €)</span>
+                        ) : null}
                       </td>
                       <td className="num">
-                        {fmtInt(s.out_qty)} <span className="muted">({fmt(s.out_value)} €)</span>
+                        {fmtInt(s.out_qty)}
+                        {trackPrice ? (
+                          <span className="muted"> ({fmt(s.out_value)} €)</span>
+                        ) : null}
                       </td>
                     </tr>
                   )
@@ -148,6 +160,7 @@ export function DynamicSummaryPanel(props: {
                 key={loc.id}
                 location={loc}
                 summary={props.summaryByLocation[loc.id] ?? emptySummary}
+                showPrice={trackPrice}
               />
             ))}
           </div>

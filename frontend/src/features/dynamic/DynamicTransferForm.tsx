@@ -7,6 +7,7 @@ import type { ActionItemDraft } from '../../types/actionItem'
 import { ActionItemsTable } from '../actions/ActionItemsTable'
 import { ActionMetaFields } from '../actions/ActionMetaFields'
 import { DynamicLocationSelect } from './DynamicLocationSelect'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 
 export function DynamicTransferForm(props: {
   from: string
@@ -32,6 +33,8 @@ export function DynamicTransferForm(props: {
   onSubmit: (e: React.FormEvent) => void
   hideInlineSubmit?: boolean
 }) {
+  const { trackPrice } = useTenantConfig()
+
   const updateFrom = (next: string) => {
     props.onFromChange(next)
   }
@@ -80,6 +83,7 @@ export function DynamicTransferForm(props: {
         products={props.products}
         onUpdate={props.onUpdateItem}
         onRemove={props.onRemoveItem}
+        showPrice={trackPrice}
       />
 
       {!props.hideInlineSubmit ? (
@@ -88,10 +92,12 @@ export function DynamicTransferForm(props: {
             + Shto produkt
           </button>
           <div className="spacer" />
-          <div className="row action-total" style={{ gap: 8 }}>
-            <span className="muted">Total:</span>
-            <span className="num-lg">{fmt(props.total)}</span>
-          </div>
+          {trackPrice ? (
+            <div className="row action-total" style={{ gap: 8 }}>
+              <span className="muted">Total:</span>
+              <span className="num-lg">{fmt(props.total)}</span>
+            </div>
+          ) : null}
           <button
             type="submit"
             className="btn primary action-submit"

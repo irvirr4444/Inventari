@@ -5,8 +5,12 @@ import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
 
-const ACTION_TABLE_COL_WIDTHS = ['35%', '20%', '15%', '18%', '12%'] as const
 const ACTION_VISIBLE_ROWS = 2
+
+function resolveColumnWidths(showPrice: boolean) {
+  if (showPrice) return ['35%', '20%', '15%', '18%', '12%'] as const
+  return ['55%', '30%', '15%'] as const
+}
 
 function ActionTableColgroup(props: { widths: readonly string[] }) {
   return (
@@ -23,7 +27,10 @@ export function ActionItemsTable(props: {
   products: ProductListItem[]
   onUpdate: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onRemove: (key: string) => void
+  showPrice?: boolean
 }) {
+  const showPrice = props.showPrice ?? true
+  const columnWidths = resolveColumnWidths(showPrice)
   const showScrollHint = props.items.length > ACTION_VISIBLE_ROWS
 
   return (
@@ -31,23 +38,24 @@ export function ActionItemsTable(props: {
       <div className="action-table-hscroll table-scroll">
         <div className="action-table-inner">
           <table className="table table-fixed action-table action-table-head">
-            <ActionTableColgroup widths={ACTION_TABLE_COL_WIDTHS} />
+            <ActionTableColgroup widths={columnWidths} />
             <thead>
               <tr>
                 <th>Produkti</th>
-                <th>Cmimi/Njesi</th>
+                {showPrice ? <th>Cmimi/Njesi</th> : null}
                 <th>Sasia</th>
-                <th style={{ textAlign: 'right' }}>Totali</th>
+                {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
                 <th />
               </tr>
             </thead>
           </table>
           <div className="action-rows-scroll">
             <table className="table table-fixed action-table action-table-body">
-              <ActionTableColgroup widths={ACTION_TABLE_COL_WIDTHS} />
+              <ActionTableColgroup widths={columnWidths} />
               <tbody>
                 {props.items.map((it) => {
                   const lineTotal = (Number(it.cmimi_njesi) || 0) * effectiveSasia(it.sasia)
+
                   return (
                     <tr key={it.key}>
                       <td>
@@ -61,17 +69,19 @@ export function ActionItemsTable(props: {
                           placeholder="Kerko sipas kodit ose emrit…"
                         />
                       </td>
-                      <td>
-                        <NumericInput
-                          className="input"
-                          step="0.01"
-                          min={0}
-                          value={it.cmimi_njesi}
-                          onChange={(v) => props.onUpdate(it.key, 'cmimi_njesi', v)}
-                          placeholder="0.00"
-                          style={{ width: '100%' }}
-                        />
-                      </td>
+                      {showPrice ? (
+                        <td>
+                          <NumericInput
+                            className="input"
+                            step="0.01"
+                            min={0}
+                            value={it.cmimi_njesi}
+                            onChange={(v) => props.onUpdate(it.key, 'cmimi_njesi', v)}
+                            placeholder="0.00"
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                      ) : null}
                       <td>
                         <NumericInput
                           className="input"
@@ -82,9 +92,11 @@ export function ActionItemsTable(props: {
                           style={{ width: '100%' }}
                         />
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="num">{fmt(lineTotal)}</span>
-                      </td>
+                      {showPrice ? (
+                        <td style={{ textAlign: 'right' }}>
+                          <span className="num">{fmt(lineTotal)}</span>
+                        </td>
+                      ) : null}
                       <td style={{ textAlign: 'right' }}>
                         <button
                           type="button"

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getActionBatch, type DynamicProdukti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
+import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { DynamicActionEditForm } from './DynamicActionEditForm'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
@@ -14,6 +15,7 @@ export function DynamicActionEditModal(props: {
   onError: (message: string) => void
 }) {
   const { user } = useAuth()
+  const { trackPrice } = useTenantConfig()
   const detailQuery = useQuery({
     queryKey: queryKeys.actionBatch(user?.id, props.actionId),
     queryFn: () => getActionBatch(props.actionId),
@@ -50,6 +52,7 @@ export function DynamicActionEditModal(props: {
             key={`${props.actionId}-${detailQuery.dataUpdatedAt}`}
             detail={detailQuery.data}
             products={props.products}
+            trackPrice={trackPrice}
             disabled={detailQuery.isFetching}
             onSaveComplete={props.onSaveComplete}
             onError={props.onError}

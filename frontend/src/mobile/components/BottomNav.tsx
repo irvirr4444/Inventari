@@ -8,12 +8,12 @@ import {
   TabVeprimeIcon,
 } from '../../components/icons'
 
-const TABS: { id: TabId; label: string; Icon: () => React.JSX.Element }[] = [
-  { id: 'veprime', label: 'Veprime', Icon: TabVeprimeIcon },
-  { id: 'transfer', label: 'Transfer', Icon: TabTransferIcon },
-  { id: 'produkte', label: 'Produkte', Icon: TabProdukteIcon },
-  { id: 'histori', label: 'Histori', Icon: TabHistoriIcon },
-  { id: 'permblehdje', label: 'Permbledhje', Icon: TabPermbledhjeIcon },
+const TABS: { id: TabId; label: string; Icon: () => React.JSX.Element; tutorialId?: string }[] = [
+  { id: 'veprime', label: 'Veprime', Icon: TabVeprimeIcon, tutorialId: 'tab-veprime' },
+  { id: 'transfer', label: 'Transfer', Icon: TabTransferIcon, tutorialId: 'tab-transfer' },
+  { id: 'produkte', label: 'Produkte', Icon: TabProdukteIcon, tutorialId: 'tab-produkte' },
+  { id: 'histori', label: 'Histori', Icon: TabHistoriIcon, tutorialId: 'tab-histori' },
+  { id: 'permblehdje', label: 'Permbledhje', Icon: TabPermbledhjeIcon, tutorialId: 'tab-permbledhje' },
 ]
 
 export function BottomNav(props: {
@@ -26,13 +26,14 @@ export function BottomNav(props: {
       className={`mobile-bottom-nav${props.className ? ` ${props.className}` : ''}`}
       aria-label="Navigimi kryesor"
     >
-      {TABS.map(({ id, label, Icon }) => (
+      {TABS.map(({ id, label, Icon, tutorialId }) => (
         <button
           key={id}
           type="button"
           className={`mobile-bottom-nav-item${props.active === id ? ' active' : ''}`}
           onClick={() => props.onChange(id)}
           aria-current={props.active === id ? 'page' : undefined}
+          data-tutorial={tutorialId}
         >
           <Icon />
           <span className="mobile-tab-label">{label}</span>

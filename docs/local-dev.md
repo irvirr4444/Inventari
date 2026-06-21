@@ -42,11 +42,11 @@ npm run dev
 | Legacy admin | **Hyr** | `login_email` from `.env` or `Legacy User` | `login_password` from `.env` |
 | New dynamic user | **Regjistrohu** | A unique name (not an email) | Min 8 characters |
 
-After a new sign-up, you must add at least one location on `/onboarding/locations` and click **Vazhdo** before the dashboard loads.
+After a new sign-up, complete the 5-screen onboarding wizard at `/onboarding`: welcome → location count (1–20) → all location names with emoji picker → pricing → confirm. Uses the same navy/blue styling as login. **← Kthehu** on steps 2–5; **Kthehu te hyrja** on welcome. First dashboard visit shows the tutorial once (`tenant_config.tutorial_seen`). Existing dynamic users backfilled by migrations 14–15 skip the wizard.
 
 **Common mistake:** using **Regjistrohu** with your email creates a new account and traps you on onboarding. Use **Hyr** for the legacy admin.
 
-**Stuck on onboarding?** Click **Kthehu te hyrja** on the onboarding screen, then use **Hyr** with your legacy email or `Legacy User`.
+**Stuck on onboarding?** **Kthehu te hyrja** (welcome) or **← Kthehu** (later steps), then use **Hyr** with your legacy email or `Legacy User`.
 
 ### Phone testing (same Wi‑Fi)
 
@@ -71,6 +71,8 @@ For multi-tenant auth, run in the Supabase SQL Editor:
 1. `docs/sql/07_perdorues_lokacioni.sql`
 2. `docs/sql/APPLY_08_through_11.sql`
 3. `docs/sql/13_perdorues_emri_unique.sql` — required for Emri-based sign-up (nullable email, unique names)
+4. `docs/sql/14_tenant_config.sql` — initial tenant tracking config; backfills existing dynamic users
+5. `docs/sql/15_tenant_config_v2.sql` — V2 simplification (`track_price` only, `tutorial_seen`, `onboarding_complete`)
 
 Then once:
 
@@ -88,7 +90,9 @@ Other schema files (fresh projects):
 | Problem | Fix |
 | --- | --- |
 | `EADDRINUSE` on port 3001 | Stop the old backend (`Ctrl+C`), then `npm run dev` again |
-| Stuck on “Si quhen lokacionet e tua?” | Wrong account — click **Kthehu te hyrja**, then use **Hyr** with legacy email |
+| Stuck on onboarding wizard | Wrong account — **Kthehu te hyrja** (welcome) or **← Kthehu**, then **Hyr** with legacy email |
+| `tenant_config` / onboarding API errors | Run `docs/sql/14_tenant_config.sql` then `15_tenant_config_v2.sql` in Supabase |
+| Tutorial missing after onboarding | Check `tenant_config.tutorial_seen` for the user; tutorial is DB-backed (not localStorage) |
 | Sign-up fails: `null value in column "email"` | Run `docs/sql/13_perdorues_emri_unique.sql` |
 | Sign-up with email rejected | Expected — use **Hyr** for email login, not **Regjistrohu** |
 | Backend health check | Open `http://localhost:3001/api/health` |

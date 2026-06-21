@@ -106,7 +106,7 @@ export function LoginPage() {
           password: trimmedPassword,
         })
         await refreshSession()
-        navigate('/onboarding/locations', { replace: true })
+        navigate('/onboarding', { replace: true })
       }
     } catch (err) {
       showError(mapAuthError(err, mode))

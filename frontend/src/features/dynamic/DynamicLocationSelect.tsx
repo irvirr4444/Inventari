@@ -6,6 +6,7 @@ export function DynamicLocationSelect(props: {
   excludeIds?: string[]
   allowAdd?: boolean
   onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
+  dataTutorial?: string
 }) {
   return (
     <LocationPicker
@@ -14,6 +15,7 @@ export function DynamicLocationSelect(props: {
       excludeIds={props.excludeIds}
       allowAdd={props.allowAdd}
       onNotify={props.onNotify}
+      dataTutorial={props.dataTutorial}
     />
   )
 }

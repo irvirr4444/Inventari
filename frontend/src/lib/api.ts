@@ -21,6 +21,7 @@ export type ProductListItem = {
 }
 
 export type DynamicProdukti = ProductListItem & {
+  njesi_matese?: string | null
   stock: Array<{ lokacioni_id: string; sasia: number }>
   created_at?: string
   updated_at?: string
@@ -71,6 +72,7 @@ export async function createProduct(input: {
   emri: string
   gjendje_kosove?: number
   gjendje_shqiperi?: number
+  njesi_matese?: string | null
 }): Promise<Produkti> {
   const res = await http<{ data: Produkti }>(`/products`, {
     method: 'POST',
@@ -100,6 +102,7 @@ export async function updateDynamicProduct(
   patch: {
     kodi?: string
     emri?: string
+    njesi_matese?: string | null
     stock?: Array<{ lokacioni_id: string; sasia: number }>
   },
 ): Promise<DynamicProdukti> {

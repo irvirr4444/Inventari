@@ -38,6 +38,7 @@ import { MobileCountryField } from '../components/MobileCountryField'
 import { SkeletonRow } from '../components/SkeletonRow'
 import { OraInput } from '../../components/OraInput'
 import type { MobileHeaderState } from '../types'
+import { ActionItemShenim } from '../../features/actions/ActionItemShenim'
 
 function MobileLlojiBadge(props: { lloji: ActionBatchDetail['lloji'] }) {
   const cls =
@@ -70,6 +71,7 @@ function HistoriEditProductRow(props: {
   canRemove: boolean
   onDraftChange: (patch: Partial<HistoryEditRow['draft']>) => void
   onRemove: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const product = props.products.find((p) => p.kodi === props.draft.kodi_produktit)
@@ -117,17 +119,26 @@ function HistoriEditProductRow(props: {
       </div>
       <div className="mobile-history-edit-card-footer">
         <span className="mobile-row-card-total">Totali: {fmtEuro(lineTotal(props.draft))}</span>
-        {props.canRemove ? (
-          <button
-            type="button"
-            className="mobile-icon-btn"
-            aria-label="Fshi produktin"
+        <div className="mobile-row-card-actions">
+          <ActionItemShenim
+            value={props.draft.shenim}
+            onChange={(value) => props.onDraftChange({ shenim: value })}
+            onNotify={props.onNotify}
             disabled={props.disabled}
-            onClick={props.onRemove}
-          >
-            <DeleteIcon />
-          </button>
-        ) : null}
+            className="mobile-icon-btn"
+          />
+          {props.canRemove ? (
+            <button
+              type="button"
+              className="mobile-icon-btn"
+              aria-label="Fshi produktin"
+              disabled={props.disabled}
+              onClick={props.onRemove}
+            >
+              <DeleteIcon />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <ProductPickerSheet
@@ -160,6 +171,7 @@ function HistoriBatchEditView(props: {
   onMetaChange: (meta: HistoryBatchMetaDraft) => void
   onRowsChange: (rows: HistoryEditRow[]) => void
   onSave: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const productsByKodi = sortProductsByKodi(props.products)
 
@@ -285,6 +297,7 @@ function HistoriBatchEditView(props: {
                 canRemove={props.rows.length > 1}
                 onDraftChange={(patch) => updateRow(row.key, patch)}
                 onRemove={() => removeRow(row.key)}
+                onNotify={props.onNotify}
               />
             ))}
           </div>
@@ -463,6 +476,7 @@ export function HistoriBatchDetail(props: {
           onMetaChange={setEditMeta}
           onRowsChange={setEditRows}
           onSave={() => saveMut.mutate()}
+          onNotify={props.onNotify}
         />
 
         <BottomSheet
@@ -525,14 +539,17 @@ export function HistoriBatchDetail(props: {
 
       <div className="mobile-list-stack">
         {detail.items.map((item) => (
-          <div key={item.id} className="mobile-row-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-            <div className="mobile-row-card-title">
-              {productLabel(item.emri_produktit, item.kodi_produktit)}
+          <div key={item.id} className="mobile-row-card mobile-row-card-readonly">
+            <div className="mobile-row-card-body">
+              <div className="mobile-row-card-title">
+                {productLabel(item.emri_produktit, item.kodi_produktit)}
+              </div>
+              <div className="mobile-row-card-sub">
+                {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
+              </div>
+              <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
             </div>
-            <div className="mobile-row-card-sub">
-              {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
-            </div>
-            <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
+            <ActionItemShenim value={item.shenim ?? ''} readOnly className="mobile-icon-btn" />
           </div>
         ))}
       </div>

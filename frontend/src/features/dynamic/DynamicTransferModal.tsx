@@ -27,6 +27,7 @@ export function DynamicTransferModal(props: {
   onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onClose: () => void
   onSubmit: (e: React.FormEvent) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   return (
     <Modal
@@ -56,6 +57,7 @@ export function DynamicTransferModal(props: {
         onAddItem={props.onAddItem}
         onRemoveItem={props.onRemoveItem}
         onUpdateItem={props.onUpdateItem}
+        onNotify={props.onNotify}
         onSubmit={props.onSubmit}
       />
     </Modal>

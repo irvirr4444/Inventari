@@ -14,6 +14,7 @@ import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
+import { ActionItemShenim } from '../actions/ActionItemShenim'
 import {
   batchMetaChanged,
   historyItemsChanged,
@@ -24,6 +25,7 @@ type ItemDraft = {
   kodi_produktit: string
   cmimi_njesi: string
   sasia: string
+  shenim: string
 }
 
 function draftsFromItems(items: HistoryActionItem[]): Record<string, ItemDraft> {
@@ -34,6 +36,7 @@ function draftsFromItems(items: HistoryActionItem[]): Record<string, ItemDraft> 
         kodi_produktit: item.kodi_produktit,
         cmimi_njesi: String(item.cmimi_njesi),
         sasia: String(item.sasia),
+        shenim: item.shenim ?? '',
       },
     ]),
   )
@@ -62,6 +65,7 @@ export function ActionEditForm(props: {
   disabled: boolean
   onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const [data, setData] = React.useState(props.detail.data)
   const [ora, setOra] = React.useState(formatDisplayTime(props.detail.ora))
@@ -151,7 +155,8 @@ export function ActionEditForm(props: {
           return (
             draft.kodi_produktit !== item.kodi_produktit ||
             Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
-            Number(draft.sasia) !== item.sasia
+            Number(draft.sasia) !== item.sasia ||
+            draft.shenim.trim() !== (item.shenim?.trim() ?? '')
           )
         })
 
@@ -161,6 +166,7 @@ export function ActionEditForm(props: {
             kodi_produktit: draft.kodi_produktit,
             cmimi_njesi: Number(draft.cmimi_njesi) || 0,
             sasia: Number(draft.sasia) || 0,
+            shenim: draft.shenim.trim() ? draft.shenim.trim() : null,
           })
           if (batch_id) {
             migratedId = batch_id
@@ -352,7 +358,16 @@ export function ActionEditForm(props: {
                           />
                         </td>
                         <td className="history-subtable-money">
-                          <span className="num">{fmtEuro(lineTotal(draft))}</span>
+                          <div className="action-row-actions">
+                            <span className="num">{fmtEuro(lineTotal(draft))}</span>
+                            <ActionItemShenim
+                              value={draft.shenim}
+                              onChange={(value) => updateDraft(item.id, { shenim: value })}
+                              onNotify={props.onNotify}
+                              disabled={busy}
+                              stacked
+                            />
+                          </div>
                         </td>
                       </tr>
                     )

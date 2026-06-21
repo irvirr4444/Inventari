@@ -26,6 +26,7 @@ export function ActionEntryPanel(props: {
   onSubmit: (e: React.FormEvent) => void
   onOpenTransfer: () => void
   onOpenHistory: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   return (
     <div className="card action-card">
@@ -127,6 +128,7 @@ export function ActionEntryPanel(props: {
           products={props.products}
           onUpdate={props.onUpdateItem}
           onRemove={props.onRemoveItem}
+          onNotify={props.onNotify}
         />
 
         <div className="row action-footer">

@@ -66,7 +66,9 @@ function TransferCountrySelectSheet(props: {
   )
 }
 
-export function TransferTab(props: { notify: (message: string, variant?: 'success' | 'default') => void }) {
+export function TransferTab(props: {
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
+}) {
   const productsQuery = useProductsQuery()
   const products = productsQuery.data ?? []
   const entry = useTransferEntry({ products, notify: props.notify })
@@ -172,6 +174,8 @@ export function TransferTab(props: { notify: (message: string, variant?: 'succes
                 products={products}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
+                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
+                onNotify={props.notify}
               />
             ))}
           </div>

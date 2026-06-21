@@ -19,6 +19,7 @@ export type HistoryItemDraft = {
   kodi_produktit: string
   cmimi_njesi: string
   sasia: string
+  shenim: string
 }
 
 export type HistoryEditRow = {
@@ -48,6 +49,7 @@ export function rowsFromDetail(items: HistoryActionItem[]): HistoryEditRow[] {
       kodi_produktit: item.kodi_produktit,
       cmimi_njesi: String(item.cmimi_njesi),
       sasia: String(item.sasia),
+      shenim: item.shenim ?? '',
     },
   }))
 }
@@ -56,7 +58,7 @@ export function createEmptyEditRow(): HistoryEditRow {
   return {
     key: randomId(),
     isNew: true,
-    draft: { kodi_produktit: '', cmimi_njesi: '', sasia: '1' },
+    draft: { kodi_produktit: '', cmimi_njesi: '', sasia: '1', shenim: '' },
   }
 }
 
@@ -69,10 +71,13 @@ export function batchTotal(rows: HistoryEditRow[]): number {
 }
 
 export function itemChanged(item: HistoryActionItem, draft: HistoryItemDraft): boolean {
+  const draftShenim = draft.shenim.trim()
+  const itemShenim = item.shenim?.trim() ?? ''
   return (
     draft.kodi_produktit !== item.kodi_produktit ||
     Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
-    Number(draft.sasia) !== item.sasia
+    Number(draft.sasia) !== item.sasia ||
+    draftShenim !== itemShenim
   )
 }
 
@@ -96,7 +101,8 @@ function rowsEqual(a: HistoryEditRow[], b: HistoryEditRow[]): boolean {
     return (
       d.kodi_produktit === od.kodi_produktit &&
       d.cmimi_njesi === od.cmimi_njesi &&
-      d.sasia === od.sasia
+      d.sasia === od.sasia &&
+      d.shenim === od.shenim
     )
   })
 }
@@ -201,6 +207,7 @@ export async function saveHistoryBatchEdits(input: {
         kodi_produktit: row.draft.kodi_produktit,
         cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
         sasia: Number(row.draft.sasia) || 0,
+        ...(row.draft.shenim.trim() ? { shenim: row.draft.shenim.trim() } : {}),
       })
     }
   }
@@ -215,6 +222,7 @@ export async function saveHistoryBatchEdits(input: {
           kodi_produktit: row.draft.kodi_produktit,
           cmimi_njesi: Number(row.draft.cmimi_njesi) || 0,
           sasia: Number(row.draft.sasia) || 0,
+          shenim: row.draft.shenim.trim() ? row.draft.shenim.trim() : null,
         }),
       )
     }
@@ -246,6 +254,7 @@ export function draftsFromItems(items: HistoryActionItem[]): Record<string, Hist
         kodi_produktit: item.kodi_produktit,
         cmimi_njesi: String(item.cmimi_njesi),
         sasia: String(item.sasia),
+        shenim: item.shenim ?? '',
       },
     ]),
   )

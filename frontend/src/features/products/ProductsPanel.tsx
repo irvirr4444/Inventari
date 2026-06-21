@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { HoverTooltip } from '../../components/HoverTooltip'
 import { ErrorAlert } from '../../components/ErrorAlert'
 import { exportProductsUrl, type Produkti } from '../../lib/api'
 import { fmtInt } from '../../lib/format'
@@ -242,10 +243,10 @@ export function ProductsPanel(props: {
                     <div className="product-actions">
                       <button
                         type="button"
-                        className="btn sm"
+                        className="btn sm hover-tooltip"
+                        data-tooltip="Bej ndryshime"
                         onClick={() => props.onEditProduct(p)}
                         aria-label="Ndrysho produktin"
-                        title="Ndrysho"
                       >
                         <svg
                           aria-hidden="true"
@@ -262,14 +263,14 @@ export function ProductsPanel(props: {
                           <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
                       </button>
-                      <button
-                        type="button"
-                        className="btn danger sm"
-                        onClick={() => props.onDeleteProduct(p)}
-                        disabled={props.deletePending}
-                        aria-label="Fshij produktin"
-                        title="Fshij"
-                      >
+                      <HoverTooltip label="Fshij">
+                        <button
+                          type="button"
+                          className="btn danger sm"
+                          onClick={() => props.onDeleteProduct(p)}
+                          disabled={props.deletePending}
+                          aria-label="Fshij produktin"
+                        >
                         <svg
                           aria-hidden="true"
                           width="14"
@@ -288,6 +289,7 @@ export function ProductsPanel(props: {
                           <path d="M14 11v6" />
                         </svg>
                       </button>
+                      </HoverTooltip>
                     </div>
                   </td>
                 </tr>

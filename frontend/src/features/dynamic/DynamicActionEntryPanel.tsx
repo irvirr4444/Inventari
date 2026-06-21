@@ -137,6 +137,7 @@ export function DynamicActionEntryPanel(props: {
           products={props.products}
           onUpdate={props.onUpdateItem}
           onRemove={props.onRemoveItem}
+          onNotify={props.onNotify}
           showPrice={trackPrice}
         />
 

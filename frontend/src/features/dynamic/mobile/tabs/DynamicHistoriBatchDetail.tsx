@@ -36,6 +36,7 @@ import {
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
 import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
 import type { MobileHeaderState } from '../../../../mobile/types'
+import { ActionItemShenim } from '../../../../features/actions/ActionItemShenim'
 import {
   DynamicLocationField,
   DynamicLocationPickerSheet,
@@ -72,6 +73,7 @@ function DynamicHistoriEditProductRow(props: {
   showPrice: boolean
   onDraftChange: (patch: Partial<HistoryEditRow['draft']>) => void
   onRemove: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const product = props.products.find((p) => p.kodi === props.draft.kodi_produktit)
@@ -123,17 +125,26 @@ function DynamicHistoriEditProductRow(props: {
         ) : (
           <span />
         )}
-        {props.canRemove ? (
-          <button
-            type="button"
-            className="mobile-icon-btn"
-            aria-label="Fshi produktin"
+        <div className="mobile-row-card-actions">
+          <ActionItemShenim
+            value={props.draft.shenim}
+            onChange={(value) => props.onDraftChange({ shenim: value })}
+            onNotify={props.onNotify}
             disabled={props.disabled}
-            onClick={props.onRemove}
-          >
-            <DeleteIcon />
-          </button>
-        ) : null}
+            className="mobile-icon-btn"
+          />
+          {props.canRemove ? (
+            <button
+              type="button"
+              className="mobile-icon-btn"
+              aria-label="Fshi produktin"
+              disabled={props.disabled}
+              onClick={props.onRemove}
+            >
+              <DeleteIcon />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <ProductPickerSheet
@@ -169,6 +180,7 @@ function DynamicHistoriBatchEditView(props: {
   onMetaChange: (meta: DynamicHistoryBatchMetaDraft) => void
   onRowsChange: (rows: HistoryEditRow[]) => void
   onSave: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const [fromOpen, setFromOpen] = React.useState(false)
   const [toOpen, setToOpen] = React.useState(false)
@@ -293,6 +305,7 @@ function DynamicHistoriBatchEditView(props: {
                 showPrice={props.showPrice}
                 onDraftChange={(patch) => updateRow(row.key, patch)}
                 onRemove={() => removeRow(row.key)}
+                onNotify={props.onNotify}
               />
             ))}
           </div>
@@ -495,6 +508,7 @@ export function DynamicHistoriBatchDetail(props: {
           onMetaChange={setEditMeta}
           onRowsChange={setEditRows}
           onSave={() => saveMut.mutate()}
+          onNotify={props.onNotify}
         />
 
         <BottomSheet
@@ -553,26 +567,25 @@ export function DynamicHistoriBatchDetail(props: {
 
       <div className="mobile-list-stack">
         {detail.items.map((item) => (
-          <div
-            key={item.id}
-            className="mobile-row-card"
-            style={{ flexDirection: 'column', alignItems: 'stretch' }}
-          >
-            <div className="mobile-row-card-title">
-              {productLabel(item.emri_produktit, item.kodi_produktit)}
-            </div>
-            <div className="mobile-row-card-sub">
+          <div key={item.id} className="mobile-row-card mobile-row-card-readonly">
+            <div className="mobile-row-card-body">
+              <div className="mobile-row-card-title">
+                {productLabel(item.emri_produktit, item.kodi_produktit)}
+              </div>
+              <div className="mobile-row-card-sub">
+                {trackPrice ? (
+                  <>
+                    {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
+                  </>
+                ) : (
+                  <>{item.sasia} cop</>
+                )}
+              </div>
               {trackPrice ? (
-                <>
-                  {fmtEuro(item.cmimi_njesi)} × {item.sasia} cop
-                </>
-              ) : (
-                <>{item.sasia} cop</>
-              )}
+                <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
+              ) : null}
             </div>
-            {trackPrice ? (
-              <div className="mobile-row-card-total">Total: {fmtEuro(item.totali)}</div>
-            ) : null}
+            <ActionItemShenim value={item.shenim ?? ''} readOnly className="mobile-icon-btn" />
           </div>
         ))}
       </div>

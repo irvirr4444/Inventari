@@ -4,6 +4,7 @@ import {
   BatchLlojiSchema,
   CountrySchema,
   ActionBatchPatchSchema,
+  ActionItemPatchSchema,
   ERR_BATCH_NOT_FOUND,
   ERR_DUPLICATE_PRODUCT_IN_ACTION,
   ERR_LAST_PRODUCT_LINE,
@@ -69,6 +70,7 @@ type VeprimRow = {
   cmimi_njesi: number | string
   sasia: number
   totali: number | string
+  shenim?: string | null
   created_at: string
 }
 
@@ -132,6 +134,7 @@ type BatchItemInput = {
   kodi_produktit: string
   cmimi_njesi: number
   sasia: number
+  shenim?: string | null
 }
 
 function buildBatchItemInsertRows(
@@ -146,6 +149,7 @@ function buildBatchItemInsertRows(
     kodi_produktit: item.kodi_produktit,
     cmimi_njesi: item.cmimi_njesi,
     sasia: item.sasia,
+    shenim: item.shenim?.trim() ? item.shenim.trim() : null,
     pronari_id: tenantId,
   }
 
@@ -292,6 +296,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       cmimi_njesi: Number(row.cmimi_njesi),
       sasia: Number(row.sasia),
       totali: Number(row.totali),
+      shenim: row.shenim ?? null,
     }))
 
     let lokacioniById: Map<string, LokacioniRow> | undefined
@@ -513,15 +518,14 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const params = z
       .object({ id: z.string().min(1), itemId: z.string().uuid() })
       .parse(req.params)
-    const body = z
-      .object({
-        kodi_produktit: z.string().min(1).optional(),
-        cmimi_njesi: z.number().nonnegative().optional(),
-        sasia: z.number().int().positive().optional(),
-      })
-      .parse(req.body ?? {})
+    const body = ActionItemPatchSchema.parse(req.body ?? {})
 
-    if (!body.kodi_produktit && body.cmimi_njesi === undefined && body.sasia === undefined) {
+    if (
+      !body.kodi_produktit &&
+      body.cmimi_njesi === undefined &&
+      body.sasia === undefined &&
+      body.shenim === undefined
+    ) {
       reply.code(400)
       return { error: ERR_NO_UPDATE_FIELDS }
     }
@@ -566,6 +570,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         sasia: nextSasia,
       }
       if (body.kodi_produktit) patch.kodi_produktit = nextKodi
+      if (body.shenim !== undefined) patch.shenim = body.shenim
 
       try {
         await patchVeprimi(supabase, tenantId, row.id, patch)
@@ -583,6 +588,14 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     kodi_produktit: z.string().min(1),
     cmimi_njesi: z.number().nonnegative(),
     sasia: z.number().int().positive(),
+    shenim: z
+      .string()
+      .max(200)
+      .optional()
+      .transform((value) => {
+        const trimmed = value?.trim() ?? ''
+        return trimmed || undefined
+      }),
   })
 
   app.post('/api/action-batches/:id/items', async (req, reply) => {

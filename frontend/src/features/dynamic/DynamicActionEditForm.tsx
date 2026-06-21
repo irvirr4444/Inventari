@@ -6,6 +6,7 @@ import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
+import { ActionItemShenim } from '../actions/ActionItemShenim'
 import {
   dynamicMetaFromDetail,
   saveDynamicHistoryBatchEdits,
@@ -36,6 +37,7 @@ export function DynamicActionEditForm(props: {
   trackPrice?: boolean
   onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const showPrice = props.trackPrice ?? true
   const [meta, setMeta] = React.useState<DynamicHistoryBatchMetaDraft>(() =>
@@ -196,9 +198,28 @@ export function DynamicActionEditForm(props: {
                     </td>
                     {showPrice ? (
                       <td style={{ textAlign: 'right' }}>
-                        <span className="num">{fmtEuro(lineTotal)}</span>
+                        <div className="action-row-actions">
+                          <span className="num">{fmtEuro(lineTotal)}</span>
+                          <ActionItemShenim
+                            value={row.draft.shenim}
+                            onChange={(value) => updateRow(row.key, { shenim: value })}
+                            onNotify={props.onNotify}
+                            disabled={busy}
+                            stacked
+                          />
+                        </div>
                       </td>
-                    ) : null}
+                    ) : (
+                      <td>
+                        <ActionItemShenim
+                          value={row.draft.shenim}
+                          onChange={(value) => updateRow(row.key, { shenim: value })}
+                          onNotify={props.onNotify}
+                          disabled={busy}
+                          stacked
+                        />
+                      </td>
+                    )}
                   </tr>
                 )
               })}

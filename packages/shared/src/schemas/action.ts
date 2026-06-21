@@ -25,10 +25,34 @@ const PershkrimiInputSchema = z
     return trimmed || undefined
   })
 
+const ShenimInputSchema = z
+  .string()
+  .max(200)
+  .optional()
+  .transform((value) => {
+    const trimmed = value?.trim() ?? ''
+    return trimmed || undefined
+  })
+
 export const ActionItemSchema = z.object({
   kodi_produktit: z.string().min(1),
   cmimi_njesi: z.number().nonnegative(),
   sasia: z.number().int().positive(),
+  shenim: ShenimInputSchema.optional(),
+})
+
+export const ActionItemPatchSchema = z.object({
+  kodi_produktit: z.string().min(1).optional(),
+  cmimi_njesi: z.number().nonnegative().optional(),
+  sasia: z.number().int().positive().optional(),
+  shenim: z
+    .union([z.string().max(200), z.null()])
+    .optional()
+    .transform((value) => {
+      if (value === null) return null
+      const trimmed = value?.trim() ?? ''
+      return trimmed || undefined
+    }),
 })
 export type ActionItemInput = z.infer<typeof ActionItemSchema>
 

@@ -96,6 +96,11 @@ type VeprimInsertRow = {
   kodi_produktit: string
   cmimi_njesi: number
   sasia: number
+  shenim?: string | null
+}
+
+function itemShenim(it: ActionItemInput): string | null {
+  return it.shenim?.trim() ? it.shenim.trim() : null
 }
 
 export function buildVeprimRows(
@@ -123,6 +128,7 @@ export function buildVeprimRows(
               kodi_produktit: it.kodi_produktit,
               cmimi_njesi: it.cmimi_njesi,
               sasia: it.sasia,
+              shenim: itemShenim(it),
             },
             {
               lloji: 'Hyrje' as const,
@@ -132,6 +138,7 @@ export function buildVeprimRows(
               kodi_produktit: it.kodi_produktit,
               cmimi_njesi: it.cmimi_njesi,
               sasia: it.sasia,
+              shenim: itemShenim(it),
             },
           ])
         : body.items.map((it) => ({
@@ -142,6 +149,7 @@ export function buildVeprimRows(
             kodi_produktit: it.kodi_produktit,
             cmimi_njesi: it.cmimi_njesi,
             sasia: it.sasia,
+            shenim: itemShenim(it),
           }))
     return { rows, mirrorRows: [] }
   }
@@ -172,6 +180,7 @@ export function buildVeprimRows(
             kodi_produktit: it.kodi_produktit,
             cmimi_njesi: it.cmimi_njesi,
             sasia: it.sasia,
+            shenim: itemShenim(it),
           },
           {
             lloji: 'Hyrje' as const,
@@ -181,6 +190,7 @@ export function buildVeprimRows(
             kodi_produktit: it.kodi_produktit,
             cmimi_njesi: it.cmimi_njesi,
             sasia: it.sasia,
+            shenim: itemShenim(it),
           },
         ])
       : body.items.map((it) => ({
@@ -191,6 +201,7 @@ export function buildVeprimRows(
           kodi_produktit: it.kodi_produktit,
           cmimi_njesi: it.cmimi_njesi,
           sasia: it.sasia,
+          shenim: itemShenim(it),
         }))
 
   const mirrorRows: VeprimInsertRow[] =
@@ -203,6 +214,7 @@ export function buildVeprimRows(
           kodi_produktit: it.kodi_produktit,
           cmimi_njesi: it.cmimi_njesi,
           sasia: it.sasia,
+          shenim: itemShenim(it),
         }))
       : []
 

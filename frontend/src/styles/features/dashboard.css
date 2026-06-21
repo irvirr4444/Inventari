@@ -284,6 +284,106 @@
   border-bottom: none;
 }
 
+.action-table-actions-cell {
+  text-align: right;
+  overflow: visible;
+}
+
+.action-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 100%;
+}
+
+.action-table-body .action-item-shenim-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.action-table-body .action-item-shenim-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.action-row-actions .btn.action-row-remove-btn {
+  font-size: 22px;
+  line-height: 1;
+  padding: 0 6px;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+.action-item-shenim-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  margin: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.action-item-shenim-btn:hover:not(:disabled):not(.is-inert) {
+  color: var(--text);
+}
+
+.action-item-shenim-btn.has-note {
+  color: var(--success);
+}
+
+.action-item-shenim-btn.is-inert {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.action-item-shenim-btn .note-icon-filled {
+  color: var(--success);
+}
+
+.action-review-product-row,
+.history-product-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.action-review-product-row .action-review-product,
+.history-product-row .history-product-cell {
+  flex: 1;
+  min-width: 0;
+}
+
+.shenim-popup-modal {
+  width: min(360px, calc(100vw - 32px));
+}
+
+.shenim-popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shenim-popup-textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+}
+
+.shenim-popup-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 .table-scroll .products-table {
   min-width: 0;
 }

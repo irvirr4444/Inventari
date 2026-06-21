@@ -4,6 +4,8 @@ import type { ActionItemDraft } from '../../types/actionItem'
 import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
 import { ProductSearchSelect } from '../../components/ProductSearchSelect'
+import { HoverTooltip } from '../../components/HoverTooltip'
+import { ActionItemShenim } from './ActionItemShenim'
 
 const ACTION_VISIBLE_ROWS = 2
 
@@ -27,6 +29,7 @@ export function ActionItemsTable(props: {
   products: ProductListItem[]
   onUpdate: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onRemove: (key: string) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
   showPrice?: boolean
 }) {
   const showPrice = props.showPrice ?? true
@@ -97,22 +100,31 @@ export function ActionItemsTable(props: {
                           <span className="num">{fmt(lineTotal)}</span>
                         </td>
                       ) : null}
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn ghost sm"
-                          onClick={() => props.onRemove(it.key)}
-                          disabled={props.items.length <= 1}
-                          aria-label="Fshij produktin nga veprimi"
-                          title={
-                            props.items.length <= 1
-                              ? 'Duhet te kesh te pakten 1 produkt'
-                              : 'Fshij'
-                          }
-                          style={{ fontSize: 22, lineHeight: 1, padding: '4px 10px' }}
-                        >
-                          ×
-                        </button>
+                      <td className="action-table-actions-cell">
+                        <div className="action-row-actions">
+                          <ActionItemShenim
+                            value={it.shenim}
+                            onChange={(value) => props.onUpdate(it.key, 'shenim', value)}
+                            onNotify={props.onNotify}
+                          />
+                          <HoverTooltip
+                            label={
+                              props.items.length <= 1
+                                ? 'Duhet te kesh te pakten 1 produkt'
+                                : 'Hiq produktin'
+                            }
+                          >
+                            <button
+                              type="button"
+                              className="btn ghost sm action-row-remove-btn"
+                              onClick={() => props.onRemove(it.key)}
+                              disabled={props.items.length <= 1}
+                              aria-label="Hiq produktin nga veprimi"
+                            >
+                              ×
+                            </button>
+                          </HoverTooltip>
+                        </div>
                       </td>
                     </tr>
                   )

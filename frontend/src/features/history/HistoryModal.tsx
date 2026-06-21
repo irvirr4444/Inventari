@@ -37,7 +37,7 @@ const PAGE_SIZE = 8
 export function HistoryModal(props: {
   products: Produkti[]
   onClose: () => void
-  onNotify?: (message: string, variant?: 'success' | 'default') => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { products, onClose, onNotify } = props
   const qc = useQueryClient()
@@ -307,7 +307,8 @@ export function HistoryModal(props: {
                           <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
-                              className="btn sm ghost history-row-action-btn"
+                              className="btn sm ghost history-row-action-btn hover-tooltip"
+                              data-tooltip="Bej ndryshime"
                               aria-label="Ndrysho veprimin"
                               onClick={() => {
                                 setEditActionId(action.id)
@@ -318,7 +319,8 @@ export function HistoryModal(props: {
                             </button>
                             <button
                               type="button"
-                              className="btn sm danger history-row-action-btn"
+                              className="btn sm danger history-row-action-btn hover-tooltip"
+                              data-tooltip="Fshij"
                               aria-label="Fshi veprimin"
                               onClick={() => {
                                 setDeleteTarget(action)
@@ -406,6 +408,7 @@ export function HistoryModal(props: {
           onClose={() => setEditActionId(null)}
           onSaveComplete={(result) => handleEditSaveComplete(editActionId, result)}
           onError={setError}
+          onNotify={onNotify}
         />
       )}
 

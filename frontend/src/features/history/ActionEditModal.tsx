@@ -11,6 +11,7 @@ export function ActionEditModal(props: {
   onClose: () => void
   onSaveComplete: (result: HistoryEditSaveResult) => void
   onError: (message: string) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { user } = useAuth()
   const detailQuery = useQuery({
@@ -52,6 +53,7 @@ export function ActionEditModal(props: {
             disabled={detailQuery.isFetching}
             onSaveComplete={props.onSaveComplete}
             onError={props.onError}
+            onNotify={props.onNotify}
           />
         ) : null}
       </div>

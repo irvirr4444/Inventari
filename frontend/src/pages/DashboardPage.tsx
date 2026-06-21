@@ -35,6 +35,7 @@ export function DashboardPage() {
         onSubmit={d.submitAction}
         onOpenTransfer={d.openTransferDialog}
         onOpenHistory={() => d.setHistoryOpen(true)}
+        onNotify={d.notify}
       />
 
       <div className="dashboard-grid">
@@ -87,6 +88,7 @@ export function DashboardPage() {
           onAddItem={d.transferItemsState.addItem}
           onRemoveItem={d.transferItemsState.removeItem}
           onUpdateItem={d.transferItemsState.updateItem}
+          onNotify={d.notify}
           onClose={() => {
             d.setTransferDialogOpen(false)
             d.setTransferError(null)
@@ -155,6 +157,7 @@ export function DashboardPage() {
           total={d.actionItemsState.total}
           loading={d.actionMutation.isPending}
           onUpdateItem={d.actionItemsState.updateItem}
+          onNotify={d.notify}
           onCancel={() => d.setConfirmActionOpen(false)}
           onConfirm={() => {
             const result = validateActionItems(d.actionItemsState.items)

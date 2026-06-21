@@ -12,6 +12,7 @@ type ItemDraft = {
   kodi_produktit: string
   cmimi_njesi: string
   sasia: string
+  shenim: string
 }
 
 export function batchMetaChanged(
@@ -50,10 +51,13 @@ export function historyItemsChanged(
   return items.some((item) => {
     const draft = drafts[item.id]
     if (!draft) return false
+    const draftShenim = draft.shenim.trim()
+    const itemShenim = item.shenim?.trim() ?? ''
     return (
       draft.kodi_produktit !== item.kodi_produktit ||
       Number(draft.cmimi_njesi) !== item.cmimi_njesi ||
-      Number(draft.sasia) !== item.sasia
+      Number(draft.sasia) !== item.sasia ||
+      draftShenim !== itemShenim
     )
   })
 }

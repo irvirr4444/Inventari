@@ -23,6 +23,7 @@ export type VeprimRow = {
   cmimi_njesi: number | string
   sasia: number
   totali: number | string
+  shenim?: string | null
   created_at: string
 }
 
@@ -263,6 +264,7 @@ export async function loadLegacyBatchDetail(
       cmimi_njesi: Number(row.cmimi_njesi),
       sasia: Number(row.sasia),
       totali: Number(row.totali),
+      shenim: row.shenim ?? null,
     })),
     mirrored_to_albania: mirrored,
   }
@@ -449,6 +451,7 @@ export async function updateLegacyBatchItem(
     kodi_produktit?: string
     cmimi_njesi?: number
     sasia?: number
+    shenim?: string | null
   },
 ) {
   const resolved = await resolveLegacyBatch(supabase, tenantId, batchId)
@@ -477,6 +480,7 @@ export async function updateLegacyBatchItem(
       sasia: nextSasia,
     }
     if (body.kodi_produktit) patch.kodi_produktit = nextKodi
+    if (body.shenim !== undefined) patch.shenim = body.shenim
 
     try {
       await patchVeprimi(supabase, tenantId, row.id, patch)
@@ -492,6 +496,7 @@ type LegacyItemInput = {
   kodi_produktit: string
   cmimi_njesi: number
   sasia: number
+  shenim?: string | null
 }
 
 function buildLegacyItemInsertRows(
@@ -506,6 +511,7 @@ function buildLegacyItemInsertRows(
     kodi_produktit: item.kodi_produktit,
     cmimi_njesi: item.cmimi_njesi,
     sasia: item.sasia,
+    shenim: item.shenim?.trim() ? item.shenim.trim() : null,
     pronari_id: tenantId,
     created_at: batch.rows[0]?.created_at ?? new Date().toISOString(),
   }

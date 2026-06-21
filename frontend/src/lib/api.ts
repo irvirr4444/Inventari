@@ -126,7 +126,7 @@ export async function createActionBatch(input: {
   data?: string
   ora?: string
   pershkrimi?: string
-  items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
+  items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number; shenim?: string }>
 }): Promise<{
   data: Veprimi[]
   meta?: {
@@ -161,7 +161,7 @@ export async function createDynamicActionBatch(input: {
   data?: string
   ora?: string
   pershkrimi?: string
-  items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number }>
+  items: Array<{ kodi_produktit: string; cmimi_njesi: number; sasia: number; shenim?: string }>
 }): Promise<{
   data: Veprimi[]
   meta?: {
@@ -207,6 +207,7 @@ export type HistoryActionItem = {
   cmimi_njesi: number
   sasia: number
   totali: number
+  shenim?: string | null
 }
 
 export type ActionBatchDetail = ActionBatch & {
@@ -265,6 +266,7 @@ export async function updateActionBatchItem(
     kodi_produktit?: string
     cmimi_njesi?: number
     sasia?: number
+    shenim?: string | null
   },
 ): Promise<{ batch_id?: string }> {
   const res = await http<{ ok: true; batch_id?: string }>(
@@ -283,6 +285,7 @@ export async function createActionBatchItem(
     kodi_produktit: string
     cmimi_njesi: number
     sasia: number
+    shenim?: string
   },
 ): Promise<{ item_id: string }> {
   const res = await http<{ ok: true; item_id: string }>(

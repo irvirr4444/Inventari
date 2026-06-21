@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useActionItems, validateActionItems } from './useActionItems'
-import { effectiveSasia } from '../types/actionItem'
+import { toActionItemPayload } from '../types/actionItem'
 import { createDynamicActionBatch } from '../lib/api'
 import { todayISODate } from '../lib/dates'
 import { productLabel } from '../lib/format'
@@ -64,11 +64,7 @@ export function useDynamicTransferEntry(options: {
         pershkrimi: transferPershkrimi.trim() || undefined,
         items: itemsState.items
           .filter((i) => i.kodi_produktit.trim())
-          .map((i) => ({
-            kodi_produktit: i.kodi_produktit.trim(),
-            cmimi_njesi: Number(i.cmimi_njesi) || 0,
-            sasia: effectiveSasia(i.sasia),
-          })),
+          .map(toActionItemPayload),
       }),
     onSuccess: (result) => {
       setTransferError(null)

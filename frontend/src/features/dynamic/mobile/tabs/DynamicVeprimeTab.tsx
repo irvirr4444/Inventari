@@ -153,6 +153,8 @@ export function DynamicVeprimeTab(props: {
                 products={pickerProducts}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
+                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
+                onNotify={props.notify}
               />
             ))}
           </div>

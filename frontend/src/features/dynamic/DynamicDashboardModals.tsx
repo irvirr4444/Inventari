@@ -44,6 +44,7 @@ export function DynamicDashboardModals(props: {
           onAddItem={d.transferItemsState.addItem}
           onRemoveItem={d.transferItemsState.removeItem}
           onUpdateItem={d.transferItemsState.updateItem}
+          onNotify={d.notify}
           onClose={() => {
             d.setTransferDialogOpen(false)
             d.setTransferError(null)
@@ -121,6 +122,7 @@ export function DynamicDashboardModals(props: {
           total={d.actionItemsState.total}
           loading={d.actionMutation.isPending}
           onUpdateItem={d.actionItemsState.updateItem}
+          onNotify={d.notify}
           onCancel={() => d.setConfirmActionOpen(false)}
           onConfirm={() => {
             const result = validateActionItems(d.actionItemsState.items)

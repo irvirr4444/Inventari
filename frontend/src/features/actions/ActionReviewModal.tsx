@@ -7,6 +7,7 @@ import { NumericInput } from '../../components/NumericInput'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { LlojiBadge } from '../history/historyBadges'
 import { ActionMetaDisplay } from './ActionMetaDisplay'
+import { ActionItemShenim } from './ActionItemShenim'
 import { formatActionDateTime } from '../../lib/actionMeta'
 
 const REVIEW_TABLE_COL_WIDTHS_FULL = ['42%', '22%', '16%', '20%'] as const
@@ -36,6 +37,7 @@ export function ActionReviewModal(
     onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
     onCancel: () => void
     onConfirm: () => void
+    onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
     showPrice?: boolean
   } & (
     | { country: Country; location?: never }
@@ -135,9 +137,18 @@ export function ActionReviewModal(
                   return (
                     <tr key={it.key}>
                       <td>
-                        <span className="action-review-product" title={label}>
-                          {label}
-                        </span>
+                        <div className="action-review-product-row">
+                          <span className="action-review-product" title={label}>
+                            {label}
+                          </span>
+                          <ActionItemShenim
+                            value={it.shenim}
+                            onChange={(value) => props.onUpdateItem(it.key, 'shenim', value)}
+                            onNotify={props.onNotify}
+                            disabled={props.loading}
+                            stacked
+                          />
+                        </div>
                       </td>
                       {showPrice ? (
                         <td>

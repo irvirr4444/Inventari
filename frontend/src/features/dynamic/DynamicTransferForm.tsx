@@ -31,6 +31,7 @@ export function DynamicTransferForm(props: {
   onRemoveItem: (key: string) => void
   onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onSubmit: (e: React.FormEvent) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
   hideInlineSubmit?: boolean
 }) {
   const { trackPrice } = useTenantConfig()
@@ -83,6 +84,7 @@ export function DynamicTransferForm(props: {
         products={props.products}
         onUpdate={props.onUpdateItem}
         onRemove={props.onRemoveItem}
+        onNotify={props.onNotify}
         showPrice={trackPrice}
       />
 

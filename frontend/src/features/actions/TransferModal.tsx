@@ -31,6 +31,7 @@ export function TransferModal(props: {
   onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
   onClose: () => void
   onSubmit: (e: React.FormEvent) => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const updateFrom = (next: Country) => {
     props.onFromChange(next)
@@ -85,6 +86,7 @@ export function TransferModal(props: {
           products={props.products}
           onUpdate={props.onUpdateItem}
           onRemove={props.onRemoveItem}
+          onNotify={props.onNotify}
         />
 
         <div className="row action-footer" style={{ marginTop: 16 }}>

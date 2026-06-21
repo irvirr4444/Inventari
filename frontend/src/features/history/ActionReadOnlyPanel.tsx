@@ -1,5 +1,6 @@
 import { fmtEuro, productLabel } from '../../lib/format'
 import type { ActionBatchDetail } from '../../lib/api'
+import { ActionItemShenim } from '../actions/ActionItemShenim'
 
 export function ActionReadOnlyPanel(props: { detail: ActionBatchDetail }) {
   const total = props.detail.items.reduce((sum, it) => sum + it.totali, 0)
@@ -24,9 +25,12 @@ export function ActionReadOnlyPanel(props: { detail: ActionBatchDetail }) {
           {props.detail.items.map((item) => (
             <tr key={item.id}>
               <td>
-                <span className="history-product-cell">
-                  {productLabel(item.emri_produktit, item.kodi_produktit)}
-                </span>
+                <div className="history-product-row">
+                  <span className="history-product-cell">
+                    {productLabel(item.emri_produktit, item.kodi_produktit)}
+                  </span>
+                  <ActionItemShenim value={item.shenim ?? ''} readOnly />
+                </div>
               </td>
               <td className="history-subtable-money">{fmtEuro(item.cmimi_njesi)}</td>
               <td className="history-subtable-qty">{item.sasia}</td>

@@ -37,7 +37,7 @@ const PAGE_SIZE = 8
 export function DynamicHistoryModal(props: {
   products: DynamicProdukti[]
   onClose: () => void
-  onNotify?: (message: string, variant?: 'success' | 'default') => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
   variant?: 'modal' | 'embedded'
 }) {
   const { products, onClose, onNotify, variant = 'modal' } = props
@@ -321,7 +321,8 @@ export function DynamicHistoryModal(props: {
                           <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
-                              className="btn sm ghost history-row-action-btn"
+                              className="btn sm ghost history-row-action-btn hover-tooltip"
+                              data-tooltip="Bej ndryshime"
                               aria-label="Ndrysho veprimin"
                               onClick={() => {
                                 setEditActionId(action.id)
@@ -332,7 +333,8 @@ export function DynamicHistoryModal(props: {
                             </button>
                             <button
                               type="button"
-                              className="btn sm danger history-row-action-btn"
+                              className="btn sm danger history-row-action-btn hover-tooltip"
+                              data-tooltip="Fshij"
                               aria-label="Fshi veprimin"
                               onClick={() => {
                                 setDeleteTarget(action)
@@ -430,6 +432,7 @@ export function DynamicHistoryModal(props: {
           onClose={() => setEditActionId(null)}
           onSaveComplete={(result) => handleEditSaveComplete(editActionId, result)}
           onError={setError}
+          onNotify={onNotify}
         />
       )}
 

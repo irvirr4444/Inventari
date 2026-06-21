@@ -14,6 +14,7 @@ export type VeprimiRow = {
   totali?: number
   batch_id: string | null
   pronari_id: string
+  shenim?: string | null
   created_at?: string
 }
 
@@ -29,6 +30,7 @@ export async function insertVeprimet(
     cmimi_njesi: number
     sasia: number
     batch_id: string | null
+    shenim?: string | null
   }>,
 ): Promise<VeprimiRow[]> {
   const insertRows = rows.map((row) => ({

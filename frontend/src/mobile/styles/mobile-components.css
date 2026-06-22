@@ -73,8 +73,10 @@
 .mobile-sheet-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: none;
   padding: 0 var(--mobile-space-md) var(--mobile-space-md);
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .mobile-sheet-footer {
@@ -504,6 +506,8 @@
   display: flex;
   gap: var(--mobile-space-sm);
   overflow-x: auto;
+  overscroll-behavior: none;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
   scrollbar-width: none;
@@ -956,6 +960,8 @@
   gap: 4px;
   max-height: 200px;
   overflow-y: auto;
+  overscroll-behavior: none;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-light);
   border-radius: 12px;

@@ -1,3 +1,5 @@
+@import '../../../styles/scroll-containment.css';
+
 /* Dynamic mobile — bottom nav uses shared tokens in mobile-layout.css */
 
 .mobile-bottom-nav.dynamic-mobile-bottom-nav {
@@ -138,6 +140,8 @@
   flex-wrap: nowrap;
   gap: 8px;
   overflow-x: auto;
+  overscroll-behavior: none;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
   margin-bottom: 4px;

@@ -63,6 +63,7 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   padding: var(--mobile-space-md);
   padding-left: max(var(--mobile-space-md), env(safe-area-inset-left));

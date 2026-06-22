@@ -4,6 +4,7 @@ import { productLabel, sortProductsByKodi } from '../../lib/format'
 import type { Produkti } from '../../lib/api'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
+import { useOverscrollLock } from '../../hooks/useOverscrollLock'
 import { BottomSheet } from './BottomSheet'
 import { SheetActionFooter } from './SheetActions'
 
@@ -23,6 +24,9 @@ function ProductPickerForm(props: {
   const [qty, setQty] = React.useState(props.initial?.sasia ?? '')
   const [error, setError] = React.useState<string | null>(null)
   const itemRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
+  const listRef = React.useRef<HTMLDivElement>(null)
+
+  useOverscrollLock(listRef)
 
   const sorted = React.useMemo(() => sortProductsByKodi(props.products), [props.products])
   const filtered = React.useMemo(() => {
@@ -89,7 +93,7 @@ function ProductPickerForm(props: {
         <div className="mobile-picker-empty">Zgjidh nje produkt nga lista</div>
       )}
 
-      <div className="mobile-picker-list">
+      <div ref={listRef} className="mobile-picker-list">
         {filtered.length === 0 ? (
           <div className="mobile-picker-empty">Nuk u gjet produkt.</div>
         ) : (

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
+import { useOverscrollLock } from '../../hooks/useOverscrollLock'
 
 type BottomSheetProps = {
   open: boolean
@@ -46,7 +47,10 @@ export function BottomSheet(props: BottomSheetProps) {
   const [dragY, setDragY] = React.useState(0)
   const [dragging, setDragging] = React.useState(false)
   const startY = React.useRef(0)
+  const bodyRef = React.useRef<HTMLDivElement>(null)
   const { overlayZ, sheetZ, ready } = useSheetLayer(props.open)
+
+  useOverscrollLock(bodyRef, props.open)
 
   useEnterToConfirm(props.onEnterConfirm ?? (() => {}), {
     enabled: props.open && Boolean(props.onEnterConfirm),
@@ -127,7 +131,7 @@ export function BottomSheet(props: BottomSheetProps) {
         <div className="mobile-sheet-header" id="mobile-sheet-title">
           {props.title}
         </div>
-        <div className="mobile-sheet-body">{props.children}</div>
+        <div ref={bodyRef} className="mobile-sheet-body">{props.children}</div>
         {props.footer ? <div className="mobile-sheet-footer">{props.footer}</div> : null}
       </div>
     </>,

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { LogOutIcon } from '../../../components/icons'
 import { Snackbar } from '../../../components/Snackbar'
 import { useSnackbar } from '../../../hooks/useSnackbar'
+import { useOverscrollLock } from '../../../hooks/useOverscrollLock'
 import { BottomNav } from '../../../mobile/components/BottomNav'
 import type { MobileHeaderState, TabId } from '../../../mobile/types'
 import { DynamicHistoriTab } from './tabs/DynamicHistoriTab'
@@ -33,8 +34,11 @@ export function DynamicMobileApp(props: {
   const [header, setHeader] = React.useState<MobileHeaderState>({ kind: 'tab' })
   const { snackbar, notify } = useSnackbar()
   const { refreshSession } = useAuth()
+  const contentRef = React.useRef<HTMLElement>(null)
   const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
   const [tutorialTarget, setTutorialTarget] = React.useState<string | null>(null)
+
+  useOverscrollLock(contentRef)
 
   const dismissTutorial = React.useCallback(async () => {
     setTutorialOpen(false)
@@ -83,7 +87,7 @@ export function DynamicMobileApp(props: {
         </button>
       </header>
 
-      <main className={contentClass}>
+      <main ref={contentRef} className={contentClass}>
         {tab === 'veprime' && <DynamicVeprimeTab notify={notify} />}
         {tab === 'transfer' && <DynamicTransferTab notify={notify} />}
         {tab === 'produkte' && <DynamicProdukteTab notify={notify} />}

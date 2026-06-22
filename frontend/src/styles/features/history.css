@@ -20,7 +20,6 @@
 .history-modal {
   max-width: min(1496px, calc(100vw - 32px));
   width: min(calc(96vw * 1.1), 1496px);
-  height: min(88vh, 920px);
   max-height: min(88vh, 920px);
   display: flex;
   flex-direction: column;
@@ -301,11 +300,34 @@
   position: relative;
   --history-table-row-height: 56px;
   --history-table-head-height: 42px;
-  min-height: calc(var(--history-table-row-height) * 8 + var(--history-table-head-height));
+  --history-visible-rows: 8;
 }
 
 .history-table-wrap--fixed-body {
-  max-height: calc(var(--history-table-row-height) * 8 + var(--history-table-head-height));
+  flex: 0 0 auto;
+  height: calc(
+    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
+  );
+  min-height: calc(
+    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
+  );
+  max-height: calc(
+    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
+  );
+  overflow: hidden;
+}
+
+.history-modal:has(.history-expanded-row) {
+  overflow-y: auto;
+}
+
+.history-table-wrap--fixed-body:has(.history-expanded-row) {
+  height: auto;
+  min-height: calc(
+    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
+  );
+  max-height: none;
+  overflow: visible;
 }
 
 .history-table-refresh-bar {
@@ -914,25 +936,63 @@
   min-width: 520px;
 }
 
+.history-subtable-col-product {
+  width: 28%;
+}
+
+.history-subtable-col-shenim {
+  width: 24%;
+}
+
+.history-subtable-col-price {
+  width: 16%;
+}
+
+.history-subtable-col-qty {
+  width: 12%;
+}
+
+.history-subtable-col-total {
+  width: 20%;
+}
+
 .history-subtable th,
 .history-subtable td {
   overflow: hidden;
   vertical-align: middle;
 }
 
-.history-subtable-money,
-.history-subtable-money .num {
+.history-subtable-text {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.history-subtable-text-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.history-subtable th.history-subtable-money,
+.history-subtable td.history-subtable-money,
+.history-subtable th.history-subtable-qty,
+.history-subtable td.history-subtable-qty {
   text-align: right;
   white-space: nowrap;
 }
 
-.history-subtable-money {
-  overflow: visible;
+.history-subtable-money .num,
+.history-subtable-qty .num {
+  display: inline-block;
+  width: 100%;
+  text-align: right;
 }
 
-.history-subtable-qty {
-  text-align: center;
-  white-space: nowrap;
+.history-subtable-money {
+  overflow: visible;
 }
 
 .history-subtable thead th {
@@ -1058,7 +1118,55 @@
 .history-pagination-controls {
   display: flex;
   align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-page-btn--edge {
+  min-width: 28px;
+  padding-inline: 6px;
+  letter-spacing: -0.06em;
+}
+
+.history-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 2px;
+  color: var(--muted);
+  user-select: none;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.history-pagination-jump {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.history-pagination-jump-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.history-pagination-jump-input {
+  width: 3.4em;
+  min-width: 0;
+  padding: 4px 6px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-pagination-jump-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .history-page-btn {

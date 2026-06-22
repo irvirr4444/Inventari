@@ -14,8 +14,8 @@ import { ActionMetaDisplay } from './ActionMetaDisplay'
 import { ActionItemShenim } from './ActionItemShenim'
 import { formatActionDateTime } from '../../lib/actionMeta'
 
-const REVIEW_TABLE_COL_WIDTHS_FULL = ['42%', '22%', '16%', '20%'] as const
-const REVIEW_TABLE_COL_WIDTHS_NO_PRICE = ['55%', '25%', '20%'] as const
+const REVIEW_TABLE_COL_WIDTHS_FULL = ['34%', '10%', '17%', '14%', '25%'] as const
+const REVIEW_TABLE_COL_WIDTHS_NO_PRICE = ['58%', '20%', '22%'] as const
 const REVIEW_VISIBLE_ROWS = 10
 
 function ReviewTableColgroup(props: { widths: readonly string[] }) {
@@ -127,6 +127,7 @@ export function ActionReviewModal(
             <thead>
               <tr>
                 <th>Produkti</th>
+                <th className="action-review-shenim-col">Shënim</th>
                 {showPrice ? <th>Cmimi/Njesi</th> : null}
                 <th>Sasia</th>
                 {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
@@ -150,18 +151,20 @@ export function ActionReviewModal(
                   return (
                     <tr key={it.key}>
                       <td>
-                        <div className="action-review-product-row">
-                          <span className="action-review-product" title={label}>
-                            {label}
-                          </span>
-                          <ActionItemShenim
-                            value={it.shenim}
-                            onChange={(value) => props.onUpdateItem(it.key, 'shenim', value)}
-                            onNotify={props.onNotify}
-                            disabled={props.loading}
-                            stacked
-                          />
-                        </div>
+                        <span className="action-review-product" title={label}>
+                          {label}
+                        </span>
+                      </td>
+                      <td className="action-review-shenim-cell">
+                        <ActionItemShenim
+                          value={it.shenim}
+                          onChange={(value) => props.onUpdateItem(it.key, 'shenim', value)}
+                          onNotify={props.onNotify}
+                          disabled={props.loading}
+                          stacked
+                          hideWhenEmpty
+                          variant="review"
+                        />
                       </td>
                       {showPrice ? (
                         <td>
@@ -202,6 +205,7 @@ export function ActionReviewModal(
                     className="action-review-placeholder-row"
                     aria-hidden="true"
                   >
+                    <td />
                     <td />
                     {showPrice ? <td /> : null}
                     <td />

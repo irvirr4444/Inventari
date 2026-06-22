@@ -195,6 +195,10 @@ export function ActionEditForm(props: {
 
   const busy = props.disabled || saveAllMut.isPending
   const showScrollHint = localItems.length > ACTION_VISIBLE_ROWS
+  const padRowCount =
+    localItems.length <= ACTION_VISIBLE_ROWS
+      ? ACTION_VISIBLE_ROWS - localItems.length
+      : 0
 
   return (
     <>
@@ -297,7 +301,9 @@ export function ActionEditForm(props: {
                 </tr>
               </thead>
             </table>
-            <div className="action-rows-scroll">
+            <div
+              className={`action-rows-scroll${showScrollHint ? '' : ' action-rows-scroll--fit'}`}
+            >
               <table className="table table-fixed history-subtable action-table action-table-body">
                 <HistoryEditColgroup />
                 <tbody>
@@ -354,6 +360,11 @@ export function ActionEditForm(props: {
                       </tr>
                     )
                   })}
+                  {Array.from({ length: padRowCount }).map((_, i) => (
+                    <tr key={`action-pad-${i}`} className="action-table-pad-row" aria-hidden="true">
+                      <td colSpan={4} />
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

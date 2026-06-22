@@ -18,3 +18,4 @@
 @import './features/tutorial-overlay.css';
 @import './components/stock-badges.css';
 @import './responsive.css';
+@import './scroll-containment.css';

@@ -1,7 +1,6 @@
-import { fmtEuro, productLabel } from '../../lib/format'
+import { fmtEuro, fmtInt, productLabel } from '../../lib/format'
 import type { ActionBatchDetail } from '../../lib/api'
 import { highlightMatch, shenimContainsTerm } from '../../lib/highlightMatch'
-import { ActionItemShenim } from '../actions/ActionItemShenim'
 
 export function ActionReadOnlyPanel(props: {
   detail: ActionBatchDetail
@@ -14,14 +13,16 @@ export function ActionReadOnlyPanel(props: {
     <div className="history-expanded-panel">
       <table className="table table-fixed history-subtable">
         <colgroup>
-          <col style={{ width: '38%' }} />
-          <col style={{ width: '22%' }} />
-          <col style={{ width: '12%' }} />
-          <col style={{ width: '28%' }} />
+          <col className="history-subtable-col-product" />
+          <col className="history-subtable-col-shenim" />
+          <col className="history-subtable-col-price" />
+          <col className="history-subtable-col-qty" />
+          <col className="history-subtable-col-total" />
         </colgroup>
         <thead>
           <tr>
             <th>Produkti</th>
+            <th className="history-subtable-text">Shënim</th>
             <th className="history-subtable-money">Cmimi/Njesi</th>
             <th className="history-subtable-qty">Sasia</th>
             <th className="history-subtable-money">Totali</th>
@@ -35,21 +36,31 @@ export function ActionReadOnlyPanel(props: {
 
             return (
               <tr key={item.id}>
-                <td>
-                  <div className="history-product-row">
-                    <span className="history-product-cell">
-                      {productLabel(item.emri_produktit, item.kodi_produktit)}
-                    </span>
-                    <ActionItemShenim value={item.shenim ?? ''} readOnly stacked />
-                    {showHighlight && shenimText ? (
-                      <div className="history-shenim-preview history-shenim-preview-inline">
-                        📝 {highlightMatch(shenimText, highlightShenim)}
-                      </div>
-                    ) : null}
-                  </div>
+                <td className="history-subtable-text">
+                  <span
+                    className="history-subtable-text-cell"
+                    title={productLabel(item.emri_produktit, item.kodi_produktit)}
+                  >
+                    {productLabel(item.emri_produktit, item.kodi_produktit)}
+                  </span>
                 </td>
-                <td className="history-subtable-money">{fmtEuro(item.cmimi_njesi)}</td>
-                <td className="history-subtable-qty">{item.sasia}</td>
+                <td className="history-subtable-text">
+                  {shenimText ? (
+                    <span className="history-subtable-text-cell" title={shenimText}>
+                      {showHighlight
+                        ? highlightMatch(shenimText, highlightShenim)
+                        : shenimText}
+                    </span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
+                <td className="history-subtable-money">
+                  <span className="num">{fmtEuro(item.cmimi_njesi)}</span>
+                </td>
+                <td className="history-subtable-qty">
+                  <span className="num">{fmtInt(item.sasia)}</span>
+                </td>
                 <td className="history-subtable-money">
                   <span className="num">{fmtEuro(item.totali)}</span>
                 </td>

@@ -33,6 +33,7 @@ import { HistoryBatchMetaDisplay } from './HistoryBatchMetaDisplay'
 import { HistoryFilterBar } from './HistoryFilterBar'
 import { HistoryModalTitleRow } from './HistoryModalTitleRow'
 import { HistorySkeletonTable, HISTORY_TABLE_COL_COUNT } from './HistorySkeletonTable'
+import { HistoryPagination } from './HistoryPagination'
 import {
   HISTORY_MODAL_PAGE_SIZE,
   HistoryTableEmptyBody,
@@ -168,14 +169,6 @@ export function HistoryModal(props: {
     hasActiveServerFilters(filters) || hasActiveClientFilters(clientFilters)
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const rangeEnd = Math.min(page * PAGE_SIZE, total)
-
-  const pageNumbers = React.useMemo(() => {
-    const pages: number[] = []
-    for (let i = 1; i <= totalPages; i += 1) pages.push(i)
-    return pages
-  }, [totalPages])
 
   const contentRef = React.useRef<HTMLDivElement>(null)
   useFocusModalOnOpen(contentRef, true)
@@ -350,53 +343,16 @@ export function HistoryModal(props: {
           )}
 
           {!isTableLoading && (
-            <div className={`history-pagination${total > 0 ? '' : ' history-pagination--empty'}`}>
-              <span className="history-pagination-summary">
-                {total > 0
-                  ? `Duke shfaqur ${rangeStart}–${rangeEnd} nga ${total} veprime`
-                  : 'Duke shfaqur 0 veprime'}
-              </span>
-              <div className="history-pagination-controls">
-                <button
-                  type="button"
-                  className="btn sm history-page-btn"
-                  disabled={page <= 1 || total === 0}
-                  aria-label="Faqja e meparshme"
-                  onClick={() => {
-                    setPage((p) => p - 1)
-                    clearExpanded()
-                  }}
-                >
-                  ‹
-                </button>
-                {pageNumbers.map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`btn sm history-page-btn${n === page ? ' active' : ''}`}
-                    disabled={total === 0}
-                    onClick={() => {
-                      setPage(n)
-                      clearExpanded()
-                    }}
-                  >
-                    {n}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className="btn sm history-page-btn"
-                  disabled={page >= totalPages || total === 0}
-                  aria-label="Faqja tjeter"
-                  onClick={() => {
-                    setPage((p) => p + 1)
-                    clearExpanded()
-                  }}
-                >
-                  ›
-                </button>
-              </div>
-            </div>
+            <HistoryPagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={PAGE_SIZE}
+              onPageChange={(nextPage) => {
+                setPage(nextPage)
+                clearExpanded()
+              }}
+            />
           )}
         </div>
       </div>

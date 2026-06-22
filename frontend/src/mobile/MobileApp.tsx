@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { LogOutIcon } from '../components/icons'
 import { Snackbar } from '../components/Snackbar'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { useOverscrollLock } from '../hooks/useOverscrollLock'
 import { BottomNav } from './components/BottomNav'
 import { HistoriTab } from './tabs/HistoriTab'
 import { PermbledhjeTab } from './tabs/PermbledhjeTab'
@@ -27,6 +28,9 @@ export function MobileApp(props: { onLogout: () => void }) {
   const [tab, setTab] = React.useState<TabId>('veprime')
   const [header, setHeader] = React.useState<MobileHeaderState>({ kind: 'tab' })
   const { snackbar, notify } = useSnackbar()
+  const contentRef = React.useRef<HTMLElement>(null)
+
+  useOverscrollLock(contentRef)
 
   React.useEffect(() => {
     setHeader({ kind: 'tab' })
@@ -60,7 +64,7 @@ export function MobileApp(props: { onLogout: () => void }) {
         </button>
       </header>
 
-      <main className={contentClass}>
+      <main ref={contentRef} className={contentClass}>
         {tab === 'veprime' && <VeprimeTab notify={notify} />}
         {tab === 'transfer' && <TransferTab notify={notify} />}
         {tab === 'produkte' && <ProdukteTab notify={notify} />}

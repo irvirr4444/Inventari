@@ -35,6 +35,11 @@ export function ActionItemsTable(props: {
   const showPrice = props.showPrice ?? true
   const columnWidths = resolveColumnWidths(showPrice)
   const showScrollHint = props.items.length > ACTION_VISIBLE_ROWS
+  const padRowCount =
+    props.items.length <= ACTION_VISIBLE_ROWS
+      ? ACTION_VISIBLE_ROWS - props.items.length
+      : 0
+  const colSpan = showPrice ? 5 : 3
 
   return (
     <div className="action-table-wrap">
@@ -52,7 +57,9 @@ export function ActionItemsTable(props: {
               </tr>
             </thead>
           </table>
-          <div className="action-rows-scroll">
+          <div
+            className={`action-rows-scroll${showScrollHint ? '' : ' action-rows-scroll--fit'}`}
+          >
             <table className="table table-fixed action-table action-table-body">
               <ActionTableColgroup widths={columnWidths} />
               <tbody>
@@ -128,6 +135,11 @@ export function ActionItemsTable(props: {
                     </tr>
                   )
                 })}
+                {Array.from({ length: padRowCount }).map((_, i) => (
+                  <tr key={`action-pad-${i}`} className="action-table-pad-row" aria-hidden="true">
+                    <td colSpan={colSpan} />
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

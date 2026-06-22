@@ -1,0 +1,59 @@
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL CONTAINMENT
+   Stop wheel / trackpad / touch scroll from chaining to a parent
+   when a nested scroller (table body, modal, sheet list, etc.) hits
+   its edge. Pair with attachOverscrollLock() on mobile for iOS.
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-overlay,
+.modal-content,
+.table-scroll,
+.action-table-hscroll,
+.action-rows-scroll,
+.history-table-wrap,
+.history-edit-modal,
+.products-table-wrap,
+.action-review-rows.is-scrollable,
+.product-search-options,
+.product-search-list-portal,
+.product-search-list-portal .product-search-options,
+.dynamic-stock-table,
+.summary-panel-scroll,
+.location-picker-menu-portal,
+.onboarding-locs-scroll,
+.mobile-app,
+.mobile-content,
+.mobile-sheet,
+.mobile-sheet-overlay,
+.mobile-sheet-body,
+.mobile-picker-list,
+.mobile-filter-chips,
+.mobile-filter-bar,
+.mobile-tab-panel--histori-list,
+.time-picker-column-scroll,
+.summary-panel-dynamic .summary-panel-scroll,
+.dynamic-mobile-location-chips,
+.date-picker-popover-portal {
+  overscroll-behavior: none;
+}
+
+/* Mobile: vertical sheet lists inside a scrolling sheet body */
+html.mobile-client .mobile-sheet-body .mobile-picker-list,
+html.mobile-client .mobile-sheet-body .mobile-picker-form,
+html.mobile-client .mobile-time-picker .time-picker-column-scroll {
+  overscroll-behavior: none;
+}
+
+html.mobile-client .mobile-sheet-body {
+  touch-action: pan-y;
+}
+
+html.mobile-client .mobile-picker-list,
+html.mobile-client .mobile-content {
+  touch-action: pan-y;
+}
+
+html.mobile-client .mobile-filter-chips,
+html.mobile-client .dynamic-mobile-location-chips {
+  touch-action: pan-x;
+}

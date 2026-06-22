@@ -30,12 +30,19 @@ export function ActionItemShenim(props: {
   disabled?: boolean
   stacked?: boolean
   className?: string
+  hideWhenEmpty?: boolean
+  variant?: 'default' | 'review'
 }) {
   const isMobile = useMobileClient()
   const [open, setOpen] = React.useState(false)
   const filled = Boolean(props.value.trim())
   const readOnly = props.readOnly ?? false
   const editable = Boolean(props.onChange) && !readOnly
+  const variant = props.variant ?? 'default'
+
+  if (props.hideWhenEmpty && !filled) {
+    return null
+  }
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -63,11 +70,15 @@ export function ActionItemShenim(props: {
   const button = (
     <button
       type="button"
-      className={
-        props.className
-          ? `action-item-shenim-btn${filled ? ' has-note' : ''}${inert ? ' is-inert' : ''} ${props.className}`
-          : `action-item-shenim-btn${filled ? ' has-note' : ''}${inert ? ' is-inert' : ''}`
-      }
+      className={[
+        'action-item-shenim-btn',
+        filled ? 'has-note' : '',
+        inert ? 'is-inert' : '',
+        variant === 'review' ? 'action-item-shenim-btn--review' : '',
+        props.className ?? '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       onClick={handleClick}
       disabled={props.disabled || inert}
       aria-label={

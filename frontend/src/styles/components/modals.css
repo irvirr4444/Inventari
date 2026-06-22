@@ -298,7 +298,6 @@
   max-height: calc(var(--review-row-height) * var(--review-visible-rows));
   overflow-y: hidden;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -340,6 +339,58 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+}
+
+.action-review-shenim-col {
+  text-align: center;
+}
+
+.action-review-shenim-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.action-item-shenim-btn--review {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1.5px solid rgba(47, 125, 246, 0.35);
+  border-radius: 10px;
+  background: rgba(47, 125, 246, 0.08);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(16, 32, 51, 0.08);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.action-item-shenim-btn--review svg {
+  width: 22px;
+  height: 22px;
+}
+
+.action-item-shenim-btn--review:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.14);
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(47, 125, 246, 0.18);
+  transform: translateY(-1px);
+}
+
+.action-item-shenim-btn--review.has-note {
+  border-color: rgba(52, 199, 89, 0.5);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.action-item-shenim-btn--review.has-note:hover:not(:disabled) {
+  border-color: var(--success);
+  background: rgba(52, 199, 89, 0.14);
+  color: var(--success);
+  box-shadow: 0 2px 8px rgba(52, 199, 89, 0.2);
 }
 
 .action-review-footer {

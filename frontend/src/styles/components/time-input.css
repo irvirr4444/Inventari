@@ -274,7 +274,6 @@
   overflow-y: auto;
   scroll-snap-type: y proximity;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding: 66px 0;

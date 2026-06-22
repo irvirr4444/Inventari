@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --action-row-height: 62px;
+  --action-row-height: 69px;
   --action-visible-rows: 2;
 }
 
@@ -240,7 +240,6 @@
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
-  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -263,17 +262,38 @@
 
 .action-table-hscroll {
   overflow-x: auto;
-  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
 
 .action-rows-scroll {
   height: calc(var(--action-row-height) * var(--action-visible-rows));
   min-height: calc(var(--action-row-height) * var(--action-visible-rows));
+  max-height: calc(var(--action-row-height) * var(--action-visible-rows));
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+.action-rows-scroll--fit {
+  overflow-y: hidden;
+}
+
+.action-table-body tbody > tr {
+  height: var(--action-row-height);
+}
+
+.action-table-body tbody > tr > td {
+  height: var(--action-row-height);
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.action-table-pad-row:hover {
+  background: transparent;
+}
+
+.action-table-pad-row td {
+  padding: 0;
 }
 
 .action-rows-scroll-hint {
@@ -406,7 +426,6 @@
   min-height: 0;
   overflow-x: hidden !important;
   overflow-y: auto !important;
-  overscroll-behavior-y: none;
 }
 
 .products-table thead {

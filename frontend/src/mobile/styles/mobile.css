@@ -4,6 +4,7 @@
 @import './mobile-layout.css';
 @import './mobile-components.css';
 @import './mobile-snackbar.css';
+@import '../../styles/scroll-containment.css';
 
 html.mobile-client {
   width: 100%;

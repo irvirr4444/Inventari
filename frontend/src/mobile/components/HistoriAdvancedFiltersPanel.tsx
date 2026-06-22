@@ -1,13 +1,7 @@
 import type { HistoryClientFilters } from '../../lib/historyClientFilters'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
-
-function parseNumericFilter(value: string): number | '' {
-  const trimmed = value.trim()
-  if (trimmed === '') return ''
-  const n = Number(trimmed)
-  return Number.isFinite(n) ? n : ''
-}
+import { parseNumericFilterValue } from '../../lib/numericInput'
 
 type HistoriAdvancedFiltersPanelProps = {
   open: boolean
@@ -80,11 +74,12 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
                 <NumericInput
                   id="histori-filter-totali-min"
                   className="mobile-input"
+                  hideZero={false}
                   value={draft.totaliMin}
                   placeholder="Min"
                   min={0}
                   step="0.01"
-                  onChange={(v) => onDraftChange({ totaliMin: parseNumericFilter(v) })}
+                  onChange={(v) => onDraftChange({ totaliMin: parseNumericFilterValue(v) })}
                 />
               </div>
               <div>
@@ -94,11 +89,12 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
                 <NumericInput
                   id="histori-filter-totali-max"
                   className="mobile-input"
+                  hideZero={false}
                   value={draft.totaliMax}
                   placeholder="Max"
                   min={0}
                   step="0.01"
-                  onChange={(v) => onDraftChange({ totaliMax: parseNumericFilter(v) })}
+                  onChange={(v) => onDraftChange({ totaliMax: parseNumericFilterValue(v) })}
                 />
               </div>
             </div>
@@ -115,11 +111,12 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
               <NumericInput
                 id="histori-filter-produkte-min"
                 className="mobile-input"
+                hideZero={false}
                 value={draft.produkteMin}
                 placeholder="Min"
                 min={0}
                 step={1}
-                onChange={(v) => onDraftChange({ produkteMin: parseNumericFilter(v) })}
+                onChange={(v) => onDraftChange({ produkteMin: parseNumericFilterValue(v) })}
               />
             </div>
             <div>
@@ -129,11 +126,12 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
               <NumericInput
                 id="histori-filter-produkte-max"
                 className="mobile-input"
+                hideZero={false}
                 value={draft.produkteMax}
                 placeholder="Max"
                 min={0}
                 step={1}
-                onChange={(v) => onDraftChange({ produkteMax: parseNumericFilter(v) })}
+                onChange={(v) => onDraftChange({ produkteMax: parseNumericFilterValue(v) })}
               />
             </div>
           </div>

@@ -1,5 +1,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 
 type BottomSheetProps = {
@@ -8,6 +10,8 @@ type BottomSheetProps = {
   onClose: () => void
   children: React.ReactNode
   footer?: React.ReactNode
+  onEnterConfirm?: () => void
+  enterConfirmDisabled?: boolean
 }
 
 const SHEET_BASE_Z = 100
@@ -43,6 +47,19 @@ export function BottomSheet(props: BottomSheetProps) {
   const startY = React.useRef(0)
   const { overlayZ, sheetZ, ready } = useSheetLayer(props.open)
 
+  useEnterToConfirm(props.onEnterConfirm ?? (() => {}), {
+    enabled: props.open && Boolean(props.onEnterConfirm),
+    disabled: props.enterConfirmDisabled,
+  })
+
+  const closeSheet = () => {
+    setDragY(0)
+    setDragging(false)
+    props.onClose()
+  }
+
+  useEscapeToClose(closeSheet, { enabled: props.open })
+
   React.useEffect(() => {
     if (!props.open) return
     const prev = document.body.style.overflow
@@ -51,12 +68,6 @@ export function BottomSheet(props: BottomSheetProps) {
       document.body.style.overflow = prev
     }
   }, [props.open])
-
-  const closeSheet = () => {
-    setDragY(0)
-    setDragging(false)
-    props.onClose()
-  }
 
   if (typeof document === 'undefined') return null
 

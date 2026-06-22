@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { useEscapeToClose } from '../hooks/useEscapeToClose'
 import type { ProductListItem } from '../lib/api'
 import { productLabel, sortProductsByKodi } from '../lib/format'
 import { filterProductsByQuery } from '../lib/products'
@@ -84,6 +85,8 @@ export function ProductSearchSelect(props: {
     setActiveIndex(0)
   }, [])
 
+  useEscapeToClose(closeMenu, { enabled: open })
+
   const openMenu = React.useCallback(() => {
     if (props.disabled) return
     const trigger = inputRef.current
@@ -136,10 +139,6 @@ export function ProductSearchSelect(props: {
       closeMenu()
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeMenu()
-        return
-      }
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         setActiveIndex((i) => Math.min(i + 1, Math.max(0, selectableProducts.length - 1)))

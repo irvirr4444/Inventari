@@ -4,13 +4,10 @@ import { useActionItems, validateActionItems } from './useActionItems'
 import { toActionItemPayload } from '../types/actionItem'
 import { createDynamicActionBatch } from '../lib/api'
 import { todayISODate } from '../lib/dates'
-import { productLabel } from '../lib/format'
 import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
-import type { DynamicProdukti } from '../lib/api'
 
 export function useDynamicTransferEntry(options: {
-  products: DynamicProdukti[]
   activeLokacionet: Array<{ id: string; emri: string }>
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
   initialFrom?: string
@@ -30,17 +27,7 @@ export function useDynamicTransferEntry(options: {
   const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
-  const duplicateProductMessage = React.useCallback(
-    (kodi: string) => {
-      const product = options.products.find((p) => p.kodi === kodi)
-      return product
-        ? `Ky produkt eshte tashme ne liste: ${productLabel(product.emri, product.kodi)}`
-        : 'Ky produkt eshte tashme ne liste'
-    },
-    [options.products],
-  )
-
-  const itemsState = useActionItems((kodi) => options.notify(duplicateProductMessage(kodi)))
+  const itemsState = useActionItems()
 
   const setFrom = (next: string) => {
     setTransferFrom(next)

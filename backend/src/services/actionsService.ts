@@ -46,7 +46,17 @@ export async function validateStock(
   items: ActionItemInput[],
   opts: { shteti?: Country; lokacioni_id?: string },
 ) {
-  const codes = [...new Set(items.map((it) => it.kodi_produktit))]
+  const qtyByCode = new Map<string, number>()
+  for (const it of items) {
+    qtyByCode.set(it.kodi_produktit, (qtyByCode.get(it.kodi_produktit) ?? 0) + it.sasia)
+  }
+  const aggregated = [...qtyByCode.entries()].map(([kodi_produktit, sasia]) => ({
+    kodi_produktit,
+    sasia,
+    cmimi_njesi: 0,
+  }))
+
+  const codes = [...qtyByCode.keys()]
   const products = await findProduktetByKodi(supabase, tenantId, codes)
   const byCode = new Map(products.map((p) => [p.kodi, p]))
 
@@ -63,7 +73,7 @@ export async function validateStock(
         stockByProduct.set(row.produkti_id, Number(row.sasia))
       }
     }
-    for (const it of items) {
+    for (const it of aggregated) {
       const p = byCode.get(it.kodi_produktit)
       if (!p) throw new AppError(400, `Produkti ${it.kodi_produktit} nuk u gjet.`)
       const current = stockByProduct.get(p.id) ?? 0
@@ -75,7 +85,7 @@ export async function validateStock(
   }
 
   const shteti = opts.shteti!
-  for (const it of items) {
+  for (const it of aggregated) {
     const p = byCode.get(it.kodi_produktit)
     if (!p) {
       throw new AppError(400, `Produkti ${it.kodi_produktit} nuk u gjet.`)

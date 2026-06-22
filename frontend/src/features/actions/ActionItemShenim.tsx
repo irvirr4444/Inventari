@@ -44,7 +44,7 @@ export function ActionItemShenim(props: {
       setOpen(true)
       return
     }
-    if (readOnly && filled && isMobile) {
+    if (readOnly && filled) {
       setOpen(true)
     }
   }

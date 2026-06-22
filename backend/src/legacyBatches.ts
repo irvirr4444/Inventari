@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { buildMatchedItems, shenimMatches } from './batchShenimFilter.js'
 import {
   deleteVeprimiByIds,
   fetchLegacyVeprimet,
@@ -48,6 +49,7 @@ type ListFilters = {
   shteti?: Country
   dateFrom?: string
   dateTo?: string
+  shenim?: string
 }
 
 function rowSecond(row: VeprimRow) {
@@ -165,13 +167,14 @@ export function groupLegacyVeprimRows(rows: VeprimRow[]): LegacyBatch[] {
   return batches
 }
 
+function legacyDisplayRows(batch: LegacyBatch) {
+  return batch.key.lloji === 'Transfer'
+    ? batch.rows.filter((r) => r.lloji === 'Dalje' && r.shteti === batch.key.shteti)
+    : batch.rows.filter((r) => r.lloji === batch.key.lloji && r.shteti === batch.key.shteti)
+}
+
 function legacyBatchMeta(batch: LegacyBatch) {
-  const displayRows =
-    batch.key.lloji === 'Transfer'
-      ? batch.rows.filter((r) => r.lloji === 'Dalje' && r.shteti === batch.key.shteti)
-      : batch.rows.filter(
-          (r) => r.lloji === batch.key.lloji && r.shteti === batch.key.shteti,
-        )
+  const displayRows = legacyDisplayRows(batch)
 
   const totali = displayRows.reduce((sum, r) => sum + Number(r.totali ?? 0), 0)
   const created_at = batch.rows.reduce(
@@ -220,6 +223,38 @@ export async function fetchLegacyActionBatches(
   let grouped = groupLegacyVeprimRows((data ?? []) as VeprimRow[])
   if (filters.lloji === 'Transfer') {
     grouped = grouped.filter((b) => b.key.lloji === 'Transfer')
+  }
+
+  const shenimQuery = filters.shenim?.trim() || undefined
+
+  if (shenimQuery) {
+    const matchingCodes = new Set<string>()
+    const matchesByBatchId = new Map<string, VeprimRow[]>()
+
+    for (const batch of grouped) {
+      const displayRows = legacyDisplayRows(batch)
+      const matching = displayRows.filter((r) => shenimMatches(r.shenim, shenimQuery))
+      if (matching.length === 0) continue
+      matchesByBatchId.set(batch.id, matching)
+      for (const row of matching) matchingCodes.add(row.kodi_produktit)
+    }
+
+    const products = await fetchProduktiNamesByKodi(supabase, tenantId, [...matchingCodes])
+    const namesByCode = new Map(products.map((p) => [p.kodi, p.emri]))
+
+    return grouped
+      .filter((batch) => matchesByBatchId.has(batch.id))
+      .map((batch) => {
+        const meta = legacyBatchMeta(batch)
+        if (!matchesFilters(meta, filters)) return null
+        const matched_items = buildMatchedItems(
+          matchesByBatchId.get(batch.id) ?? [],
+          shenimQuery,
+          namesByCode,
+        )
+        return { ...meta, matched_items }
+      })
+      .filter((b): b is NonNullable<typeof b> => b !== null)
   }
 
   return grouped.map(legacyBatchMeta).filter((b) => matchesFilters(b, filters))
@@ -467,12 +502,6 @@ export async function updateLegacyBatchItem(
   const nextCmimi = body.cmimi_njesi ?? Number(primary.cmimi_njesi)
   const nextSasia = body.sasia ?? Number(primary.sasia)
 
-  const displayRows = batch.rows.filter((r) => isLegacyDisplayRow(batch, r))
-  const duplicate = displayRows.some(
-    (r) => r.id !== primary.id && r.kodi_produktit === nextKodi,
-  )
-  if (duplicate) return { error: 'Produkti ekziston tashme ne kete veprim.' as const }
-
   const targets = [primary, ...findLegacySiblingRows(batch, bucketRows, primary)]
   for (const row of targets) {
     const patch: Record<string, unknown> = {
@@ -550,9 +579,6 @@ export async function createLegacyBatchItem(
   if ('error' in resolved) return resolved
 
   const { batch, bucketRows } = resolved
-  const displayRows = batch.rows.filter((r) => isLegacyDisplayRow(batch, r))
-  const duplicate = displayRows.some((r) => r.kodi_produktit === item.kodi_produktit)
-  if (duplicate) return { error: 'Produkti ekziston tashme ne kete veprim.' as const }
 
   let insertRows: Record<string, unknown>[]
   try {

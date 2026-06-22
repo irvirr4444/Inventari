@@ -124,12 +124,6 @@ export function validateHistoryBatchEdits(rows: HistoryEditRow[]): string | null
     }
   }
 
-  const kodis = rows.map((row) => row.draft.kodi_produktit).filter(Boolean)
-  const duplicate = kodis.find((kodi, i) => kodis.indexOf(kodi) !== i)
-  if (duplicate) {
-    return 'Produkti është zgjedhur dy herë.'
-  }
-
   return null
 }
 

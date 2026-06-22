@@ -27,11 +27,10 @@ export function useDashboardPage() {
 
   const summary = useSummaryDateRange()
 
-  const actionEntry = useActionEntry({ products, notify })
+  const actionEntry = useActionEntry({ notify })
 
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false)
   const transferEntry = useTransferEntry({
-    products,
     notify,
     initialFrom: country,
     onSuccess: () => setTransferDialogOpen(false),

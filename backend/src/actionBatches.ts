@@ -6,7 +6,6 @@ import {
   ActionBatchPatchSchema,
   ActionItemPatchSchema,
   ERR_BATCH_NOT_FOUND,
-  ERR_DUPLICATE_PRODUCT_IN_ACTION,
   ERR_LAST_PRODUCT_LINE,
   ERR_MIRROR_COUNTRY_CHANGE,
   ERR_NO_UPDATE_FIELDS,
@@ -17,6 +16,7 @@ import {
   type BatchLloji,
   type Country,
 } from '@inventari/shared'
+import { buildMatchedItems, shenimMatches } from './batchShenimFilter.js'
 import { z } from 'zod'
 import { findSiblingRows, isDisplayRow, isMirroredBatch } from './batchDomain.js'
 import { AppError } from './errors.js'
@@ -197,8 +197,11 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         shteti: CountrySchema.optional(),
         dateFrom: z.string().optional(),
         dateTo: z.string().optional(),
+        shenim: z.string().optional(),
       })
       .parse((req.query ?? {}) as Record<string, unknown>)
+
+    const shenimQuery = query.shenim?.trim() || undefined
 
     let lokacioniById: Map<string, LokacioniRow> | undefined
     if (!isLegacy) {
@@ -232,9 +235,38 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         }
       }
 
-      batchedActions = batchList.map((batch) =>
-        aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById),
-      )
+      if (shenimQuery) {
+        const matchingCodes = new Set<string>()
+        const matchesByBatchId = new Map<string, VeprimRow[]>()
+
+        for (const batch of batchList) {
+          const rows = rowsByBatch.get(batch.id) ?? []
+          const displayRows = rows.filter((r) => isDisplayRow(batch, r))
+          const matching = displayRows.filter((r) => shenimMatches(r.shenim, shenimQuery))
+          if (matching.length === 0) continue
+          matchesByBatchId.set(batch.id, matching)
+          for (const row of matching) matchingCodes.add(row.kodi_produktit)
+        }
+
+        const products = await fetchProduktiNamesByKodi(supabase, tenantId, [...matchingCodes])
+        const namesByCode = new Map(products.map((p) => [p.kodi, p.emri]))
+
+        batchedActions = batchList
+          .filter((batch) => matchesByBatchId.has(batch.id))
+          .map((batch) => {
+            const base = aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById)
+            const matched_items = buildMatchedItems(
+              matchesByBatchId.get(batch.id) ?? [],
+              shenimQuery,
+              namesByCode,
+            )
+            return { ...base, matched_items }
+          })
+      } else {
+        batchedActions = batchList.map((batch) =>
+          aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById),
+        )
+      }
     } catch (error) {
       const err = error as { message?: string; code?: string }
       if (!err.message?.includes('veprim_batch') && err.code !== '42P01') {
@@ -247,6 +279,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       shteti: query.shteti,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
+      shenim: shenimQuery,
     })
 
     const { actions, total } = mergeAndPaginateActions(
@@ -554,15 +587,6 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     const nextCmimi = body.cmimi_njesi ?? Number(primary.cmimi_njesi)
     const nextSasia = body.sasia ?? Number(primary.sasia)
 
-    const displayRows = rows.filter((r) => isDisplayRow(batch, r))
-    const duplicate = displayRows.some(
-      (r) => r.id !== primary.id && r.kodi_produktit === nextKodi,
-    )
-    if (duplicate) {
-      reply.code(400)
-      return { error: ERR_DUPLICATE_PRODUCT_IN_ACTION }
-    }
-
     const targets = [primary, ...findSiblingRows(batch, rows, primary)]
     for (const row of targets) {
       const patch: Record<string, unknown> = {
@@ -618,15 +642,21 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     const { batch, rows } = loaded
     const displayRows = rows.filter((r) => isDisplayRow(batch, r))
-    const duplicate = displayRows.some((r) => r.kodi_produktit === body.kodi_produktit)
-    if (duplicate) {
-      reply.code(400)
-      return { error: ERR_DUPLICATE_PRODUCT_IN_ACTION }
-    }
 
     if (batch.lloji === 'Dalje' || batch.lloji === 'Transfer') {
+      const existingQty = displayRows
+        .filter((r) => r.kodi_produktit === body.kodi_produktit)
+        .reduce((sum, r) => sum + Number(r.sasia), 0)
       try {
-        await validateStock(supabase, tenantId, [body], { shteti: batch.shteti })
+        await validateStock(
+          supabase,
+          tenantId,
+          [{ ...body, sasia: existingQty + body.sasia }],
+          {
+            shteti: batch.shteti,
+            lokacioni_id: batch.lokacioni_id ?? undefined,
+          },
+        )
       } catch (e) {
         reply.code(e instanceof AppError ? e.statusCode : 400)
         return { error: e instanceof AppError ? e.message : 'Gabim gjate validimit.' }

@@ -25,7 +25,7 @@ export function validateActionItems(items: ActionItemDraft[]): ActionItemsValida
   return { ok: true, items: clean }
 }
 
-export function useActionItems(onDuplicate?: (kodi: string) => void) {
+export function useActionItems() {
   const [items, setItems] = React.useState<ActionItemDraft[]>([createEmptyActionItem()])
 
   const reset = React.useCallback(() => {
@@ -42,19 +42,9 @@ export function useActionItems(onDuplicate?: (kodi: string) => void) {
 
   const updateItem = React.useCallback(
     (key: string, field: keyof ActionItemDraft, value: string | number) => {
-      if (
-        field === 'kodi_produktit' &&
-        typeof value === 'string' &&
-        value &&
-        items.some((x) => x.key !== key && x.kodi_produktit === value)
-      ) {
-        onDuplicate?.(value)
-        return
-      }
-
       setItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
     },
-    [items, onDuplicate],
+    [],
   )
 
   const total = React.useMemo(

@@ -42,13 +42,11 @@ export function useDynamicDashboardPage() {
 
   const actionEntry = useDynamicActionEntry({
     lokacioniId,
-    products,
     notify,
   })
 
   const [transferDialogOpen, setTransferDialogOpen] = React.useState(false)
   const transferEntry = useDynamicTransferEntry({
-    products,
     activeLokacionet: sortedLocations,
     notify,
     initialFrom: lokacioniId,

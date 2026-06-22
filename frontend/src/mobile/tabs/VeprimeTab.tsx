@@ -21,14 +21,13 @@ export function VeprimeTab(props: {
   const { country, setCountry } = useCountry()
   const productsQuery = useProductsQuery()
   const products = productsQuery.data ?? []
-  const entry = useActionEntry({ products, notify: props.notify })
+  const entry = useActionEntry({ notify: props.notify })
 
   const [countryOpen, setCountryOpen] = React.useState(false)
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [editingKey, setEditingKey] = React.useState<string | null>(null)
 
   const filledItems = entry.itemsState.items.filter((i) => i.kodi_produktit.trim())
-  const existingKodis = filledItems.map((i) => i.kodi_produktit)
   const editingItem = editingKey
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
@@ -168,7 +167,6 @@ export function VeprimeTab(props: {
         open={pickerOpen}
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
         products={products}
-        existingKodis={existingKodis}
         initial={
           editingItem
             ? {

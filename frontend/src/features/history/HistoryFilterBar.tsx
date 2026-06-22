@@ -1,15 +1,11 @@
 import type { Country } from '../../lib/country'
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
+import { parseNumericFilterValue } from '../../lib/numericInput'
+import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
-
-function parseNumericFilter(value: string): number | '' {
-  const trimmed = value.trim()
-  if (trimmed === '') return ''
-  const n = Number(trimmed)
-  return Number.isFinite(n) ? n : ''
-}
+import { HistoryFilterClearButton } from './HistoryFilterClearButton'
 
 type HistoryFilterBarProps = {
   serverFilters: HistoryServerFilters
@@ -32,6 +28,7 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
 
   return (
     <div className="history-filters-bar">
+      <div className="history-filters-primary">
       <div className="history-filter-group history-filter-group-selects">
         <div className="history-filter-field">
           <span className="history-filter-group-label">Veprime</span>
@@ -75,12 +72,14 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
         <div className="history-filter-pair history-filter-pair-dates">
           <DateInput
             className="history-filter-date"
+            clearable
             value={serverFilters.dateFrom ?? ''}
             placeholder="Nga"
             onChange={(v) => onServerFilterChange({ dateFrom: v || undefined })}
           />
           <DateInput
             className="history-filter-date"
+            clearable
             value={serverFilters.dateTo ?? ''}
             placeholder="Deri"
             onChange={(v) => onServerFilterChange({ dateTo: v || undefined })}
@@ -95,12 +94,14 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
         <div className="history-filter-pair history-filter-pair-ora">
           <OraInput
             wrapperClassName="history-filter-ora-wrap"
+            clearable
             value={clientFilters.oraFrom}
             placeholder="Nga"
             onChange={(v) => onClientFilterChange({ oraFrom: v })}
           />
           <OraInput
             wrapperClassName="history-filter-ora-wrap"
+            clearable
             value={clientFilters.oraDeri}
             placeholder="Deri"
             onChange={(v) => onClientFilterChange({ oraDeri: v })}
@@ -110,73 +111,84 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
 
       <div className="history-filter-sep" aria-hidden="true" />
 
-      <div className="history-filter-group history-filter-group-labeled history-filter-group-pershkrimi">
-        <span className="history-filter-group-label">Pershkrimi</span>
-        <input
-          type="text"
-          className="input history-filter-pershkrimi"
-          value={clientFilters.pershkriminQuery}
-          placeholder="Kërko…"
-          onChange={(e) => onClientFilterChange({ pershkriminQuery: e.target.value })}
-        />
-      </div>
-
-      <div className="history-filter-sep" aria-hidden="true" />
-
-      <div className="history-filter-group history-filter-group-labeled">
+      <div className="history-filter-group history-filter-group-labeled history-filter-group-totali">
         <span className="history-filter-group-label">Totali (€)</span>
         <div className="history-filter-pair">
           <NumericInput
             className="input history-filter-num"
+            clearable
+            hideZero={false}
             value={clientFilters.totaliMin}
             placeholder="Min"
             min={0}
             step="0.01"
-            onChange={(v) => onClientFilterChange({ totaliMin: parseNumericFilter(v) })}
+            onChange={(v) => onClientFilterChange({ totaliMin: parseNumericFilterValue(v) })}
           />
           <NumericInput
             className="input history-filter-num"
+            clearable
+            hideZero={false}
             value={clientFilters.totaliMax}
             placeholder="Max"
             min={0}
             step="0.01"
-            onChange={(v) => onClientFilterChange({ totaliMax: parseNumericFilter(v) })}
+            onChange={(v) => onClientFilterChange({ totaliMax: parseNumericFilterValue(v) })}
           />
         </div>
       </div>
 
-      <div className="history-filter-group history-filter-group-labeled">
+      <div className="history-filter-group history-filter-group-labeled history-filter-group-produkte">
         <span className="history-filter-group-label">Produkte</span>
         <div className="history-filter-pair">
           <NumericInput
             className="input history-filter-num"
+            clearable
+            hideZero={false}
             value={clientFilters.produkteMin}
             placeholder="Min"
             min={0}
             step={1}
-            onChange={(v) => onClientFilterChange({ produkteMin: parseNumericFilter(v) })}
+            onChange={(v) => onClientFilterChange({ produkteMin: parseNumericFilterValue(v) })}
           />
           <NumericInput
             className="input history-filter-num"
+            clearable
+            hideZero={false}
             value={clientFilters.produkteMax}
             placeholder="Max"
             min={0}
             step={1}
-            onChange={(v) => onClientFilterChange({ produkteMax: parseNumericFilter(v) })}
+            onChange={(v) => onClientFilterChange({ produkteMax: parseNumericFilterValue(v) })}
           />
         </div>
       </div>
+      </div>
 
-      {showClearLink && (
-        <button
-          type="button"
-          className="history-filter-clear"
-          aria-label="Pastro filtrat"
-          onClick={onClearAll}
-        >
-          × Pastro filtrat
-        </button>
-      )}
+      <div className="history-filters-search-row">
+        <div className="history-filter-group history-filter-group-labeled history-filter-search">
+          <span className="history-filter-group-label">Pershkrimi</span>
+          <DebouncedSearchInput
+            className="input history-filter-pershkrimi"
+            clearable
+            value={clientFilters.pershkriminQuery}
+            placeholder="Kërko…"
+            onChange={(v) => onClientFilterChange({ pershkriminQuery: v })}
+          />
+        </div>
+
+        <div className="history-filter-group history-filter-group-labeled history-filter-search">
+          <span className="history-filter-group-label">Shenim (produkt)</span>
+          <DebouncedSearchInput
+            className="input history-filter-pershkrimi"
+            clearable
+            value={serverFilters.shenim ?? ''}
+            placeholder="Kërko…"
+            onChange={(v) => onServerFilterChange({ shenim: v || undefined })}
+          />
+        </div>
+
+        {showClearLink ? <HistoryFilterClearButton onClick={onClearAll} /> : null}
+      </div>
     </div>
   )
 }

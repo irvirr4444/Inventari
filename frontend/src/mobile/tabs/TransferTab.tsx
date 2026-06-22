@@ -71,7 +71,7 @@ export function TransferTab(props: {
 }) {
   const productsQuery = useProductsQuery()
   const products = productsQuery.data ?? []
-  const entry = useTransferEntry({ products, notify: props.notify })
+  const entry = useTransferEntry({ notify: props.notify })
 
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [editingKey, setEditingKey] = React.useState<string | null>(null)
@@ -79,7 +79,6 @@ export function TransferTab(props: {
   const [toOpen, setToOpen] = React.useState(false)
 
   const filledItems = entry.itemsState.items.filter((i) => i.kodi_produktit.trim())
-  const existingKodis = filledItems.map((i) => i.kodi_produktit)
   const editingItem = editingKey
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
@@ -214,7 +213,6 @@ export function TransferTab(props: {
         open={pickerOpen}
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
         products={products}
-        existingKodis={existingKodis}
         initial={
           editingItem
             ? {

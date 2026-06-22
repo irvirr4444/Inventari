@@ -4,7 +4,10 @@ import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { ActionReadOnlyPanel } from './ActionReadOnlyPanel'
 
-export function ExpandedActionDetail(props: { actionId: string }) {
+export function ExpandedActionDetail(props: {
+  actionId: string
+  highlightShenim?: string
+}) {
   const { user } = useAuth()
   const detailQuery = useQuery({
     queryKey: queryKeys.actionBatch(user?.id, props.actionId),
@@ -34,7 +37,12 @@ export function ExpandedActionDetail(props: { actionId: string }) {
   }
 
   if (detailQuery.data) {
-    return <ActionReadOnlyPanel detail={detailQuery.data} />
+    return (
+      <ActionReadOnlyPanel
+        detail={detailQuery.data}
+        highlightShenim={props.highlightShenim}
+      />
+    )
   }
 
   return null

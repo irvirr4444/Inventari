@@ -67,7 +67,6 @@ function buildEditSnapshot(batch: ActionBatchDetail): DynamicEditSnapshot {
 function DynamicHistoriEditProductRow(props: {
   draft: HistoryEditRow['draft']
   products: Produkti[]
-  otherKodis: string[]
   disabled: boolean
   canRemove: boolean
   showPrice: boolean
@@ -151,7 +150,6 @@ function DynamicHistoriEditProductRow(props: {
         open={pickerOpen}
         title="Zgjedh produktin"
         products={props.products}
-        existingKodis={props.otherKodis}
         showPrice={props.showPrice}
         initial={{
           kodi_produktit: props.draft.kodi_produktit,
@@ -296,10 +294,6 @@ function DynamicHistoriBatchEditView(props: {
                 key={row.key}
                 draft={row.draft}
                 products={productsByKodi}
-                otherKodis={props.rows
-                  .filter((x) => x.key !== row.key)
-                  .map((x) => x.draft.kodi_produktit)
-                  .filter(Boolean)}
                 disabled={props.busy}
                 canRemove={props.rows.length > 1}
                 showPrice={props.showPrice}

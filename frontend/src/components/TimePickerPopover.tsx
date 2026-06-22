@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { normalizeOraInput } from '@inventari/shared'
+import { useEnterToConfirm } from '../hooks/useEnterToConfirm'
 import {
   TIME_HOURS,
   TIME_MINUTES,
@@ -115,6 +116,10 @@ export function TimePickerPopover(props: {
   const minuteLoopItems = React.useMemo(() => buildLoopedPickerItems(TIME_MINUTES), [])
 
   const preview = combineOraParts(hour, minute)
+  const previewRef = React.useRef(preview)
+  previewRef.current = preview
+
+  useEnterToConfirm(() => props.onConfirm(previewRef.current), { enabled: true })
 
   const scrollToSelectedValue = React.useCallback(
     (

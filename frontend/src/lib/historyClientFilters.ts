@@ -7,6 +7,7 @@ export type HistoryServerFilters = {
   shteti?: Country
   dateFrom?: string
   dateTo?: string
+  shenim?: string
 }
 
 export type HistoryClientFilters = {
@@ -52,7 +53,8 @@ export function hasActiveServerFilters(filters: HistoryServerFilters): boolean {
     filters.lloji !== undefined ||
     filters.shteti !== undefined ||
     filters.dateFrom !== undefined ||
-    filters.dateTo !== undefined
+    filters.dateTo !== undefined ||
+    (filters.shenim?.trim() ?? '') !== ''
   )
 }
 

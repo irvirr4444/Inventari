@@ -33,7 +33,6 @@ export function DynamicTransferTab(props: {
   const productsQuery = useDynamicProductsQuery()
   const products = productsQuery.data ?? []
   const entry = useDynamicTransferEntry({
-    products,
     activeLokacionet: sortedLocations,
     notify: props.notify,
     initialFrom,
@@ -45,7 +44,6 @@ export function DynamicTransferTab(props: {
   const [toOpen, setToOpen] = React.useState(false)
 
   const filledItems = entry.itemsState.items.filter((i) => i.kodi_produktit.trim())
-  const existingKodis = filledItems.map((i) => i.kodi_produktit)
   const editingItem = editingKey
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
@@ -195,7 +193,6 @@ export function DynamicTransferTab(props: {
         open={pickerOpen}
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
         products={pickerProducts}
-        existingKodis={existingKodis}
         showPrice={trackPrice}
         initial={
           editingItem

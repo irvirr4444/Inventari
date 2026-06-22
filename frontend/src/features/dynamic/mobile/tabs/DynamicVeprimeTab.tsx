@@ -39,14 +39,13 @@ export function DynamicVeprimeTab(props: {
 
   const productsQuery = useDynamicProductsQuery()
   const products = productsQuery.data ?? []
-  const entry = useDynamicActionEntry({ lokacioniId, products, notify: props.notify })
+  const entry = useDynamicActionEntry({ lokacioniId, notify: props.notify })
 
   const [locationOpen, setLocationOpen] = React.useState(false)
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const [editingKey, setEditingKey] = React.useState<string | null>(null)
 
   const filledItems = entry.itemsState.items.filter((i) => i.kodi_produktit.trim())
-  const existingKodis = filledItems.map((i) => i.kodi_produktit)
   const editingItem = editingKey
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
@@ -189,7 +188,6 @@ export function DynamicVeprimeTab(props: {
         open={pickerOpen}
         title={editingKey ? 'Ndrysho produktin' : 'Shto produkt'}
         products={pickerProducts}
-        existingKodis={existingKodis}
         showPrice={trackPrice}
         initial={
           editingItem

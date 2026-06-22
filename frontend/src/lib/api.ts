@@ -181,6 +181,12 @@ export async function createDynamicActionBatch(input: {
   })
 }
 
+export type ActionBatchMatchedItem = {
+  id: string
+  productLabel: string
+  shenim: string
+}
+
 export type ActionBatch = {
   id: string
   lloji: 'Hyrje' | 'Dalje' | 'Transfer'
@@ -198,6 +204,7 @@ export type ActionBatch = {
   totali: number
   created_at: string
   item_count: number
+  matched_items?: ActionBatchMatchedItem[]
 }
 
 export type HistoryActionItem = {
@@ -222,6 +229,7 @@ export async function listActionBatches(params: {
   shteti?: Country
   dateFrom?: string
   dateTo?: string
+  shenim?: string
 }): Promise<{ actions: ActionBatch[]; total: number }> {
   const qs = new URLSearchParams()
   if (params.page) qs.set('page', String(params.page))
@@ -230,6 +238,7 @@ export async function listActionBatches(params: {
   if (params.shteti) qs.set('shteti', params.shteti)
   if (params.dateFrom) qs.set('dateFrom', params.dateFrom)
   if (params.dateTo) qs.set('dateTo', params.dateTo)
+  if (params.shenim?.trim()) qs.set('shenim', params.shenim.trim())
   return http<{ actions: ActionBatch[]; total: number }>(`/action-batches?${qs.toString()}`)
 }
 

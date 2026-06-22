@@ -66,9 +66,6 @@ export function ActionItemsTable(props: {
                           products={props.products}
                           value={it.kodi_produktit}
                           onChange={(kodi) => props.onUpdate(it.key, 'kodi_produktit', kodi)}
-                          disabledKodis={props.items
-                            .filter((x) => x.key !== it.key && x.kodi_produktit)
-                            .map((x) => x.kodi_produktit)}
                           placeholder="Kerko sipas kodit ose emrit…"
                         />
                       </td>

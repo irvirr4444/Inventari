@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useLocation } from 'react-router-dom'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import type { TabId } from '../../mobile/types'
 import { markTutorialSeen } from '../../lib/api/tenantConfig'
 import { useAuth } from '../../lib/auth/AuthProvider'
@@ -131,6 +132,10 @@ export function TutorialOverlay(props: {
     }
     props.onDismiss()
   }, [props, refreshSession])
+
+  useEscapeToClose(() => {
+    void finish()
+  })
 
   React.useEffect(() => {
     if (!props.isMobile) {

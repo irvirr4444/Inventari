@@ -47,6 +47,10 @@ export function ShenimPopup(props: {
         rows={3}
         readOnly={readOnly}
         disabled={readOnly}
+        onKeyDown={(e) => {
+          if (readOnly || e.key !== 'Enter' || e.shiftKey) return
+          e.preventDefault()
+        }}
       />
     </div>
   )
@@ -79,7 +83,13 @@ export function ShenimPopup(props: {
 
   if (isMobile) {
     return (
-      <BottomSheet open={props.open} title="Shenim" onClose={props.onClose} footer={footer}>
+      <BottomSheet
+        open={props.open}
+        title="Shenim"
+        onClose={props.onClose}
+        footer={footer}
+        onEnterConfirm={readOnly ? undefined : handleSave}
+      >
         {body}
       </BottomSheet>
     )
@@ -93,6 +103,7 @@ export function ShenimPopup(props: {
       stacked={props.stacked}
       className="shenim-popup-modal"
       footer={footer}
+      onEnterConfirm={readOnly ? undefined : handleSave}
     >
       {body}
     </Modal>

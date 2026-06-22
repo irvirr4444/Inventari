@@ -2,8 +2,10 @@ import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { formatDisplayTime } from '../lib/actionMeta'
 import { useMobileClient } from '../hooks/useMobileClient'
+import { useEscapeToClose } from '../hooks/useEscapeToClose'
 import { TimePickerSheet } from '../mobile/components/TimePickerSheet'
 import { TimePickerPopover } from './TimePickerPopover'
+import { InputClearButton } from './InputClearButton'
 import { parseOraDigits } from './timePickerUtils'
 
 const POPOVER_ESTIMATED_HEIGHT = 340
@@ -68,6 +70,7 @@ type OraInputProps = Omit<
   placeholder?: string
   wrapperClassName?: string
   variant?: 'default' | 'compact'
+  clearable?: boolean
 }
 
 export function OraInput({
@@ -79,6 +82,7 @@ export function OraInput({
   disabled,
   id,
   variant = 'default',
+  clearable,
   ...rest
 }: OraInputProps) {
   const isMobile = useMobileClient()
@@ -105,6 +109,8 @@ export function OraInput({
     setOpen(false)
   }, [])
 
+  useEscapeToClose(closePicker, { enabled: open })
+
   const openPicker = React.useCallback(() => {
     if (disabled) return
     setOpen(true)
@@ -126,19 +132,14 @@ export function OraInput({
       if (popoverRef.current?.contains(target)) return
       setOpen(false)
     }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
     const onReposition = () => repositionPopover()
 
     document.addEventListener('mousedown', onDocMouseDown)
-    document.addEventListener('keydown', onKeyDown)
     window.addEventListener('resize', onReposition)
     window.addEventListener('scroll', onReposition, true)
 
     return () => {
       document.removeEventListener('mousedown', onDocMouseDown)
-      document.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('resize', onReposition)
       window.removeEventListener('scroll', onReposition, true)
     }
@@ -209,7 +210,20 @@ export function OraInput({
             <span className={displayValue ? 'time-input-value' : 'time-input-placeholder'}>
               {displayValue || placeholder}
             </span>
-            <ClockIcon />
+            {clearable ? (
+              <span className="time-input-trailing-slot">
+                {displayValue ? (
+                  <InputClearButton
+                    className="time-input-trailing-btn"
+                    onClick={() => onChange('')}
+                  />
+                ) : (
+                  <ClockIcon />
+                )}
+              </span>
+            ) : (
+              <ClockIcon />
+            )}
           </>
         )}
       </button>

@@ -8,7 +8,7 @@ import {
   type HistoryActionItem,
   type Produkti,
 } from '../../lib/api'
-import { fmtEuro, productLabel } from '../../lib/format'
+import { fmtEuro } from '../../lib/format'
 import { formatDisplayTime } from '../../lib/actionMeta'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
@@ -99,20 +99,6 @@ export function ActionEditForm(props: {
         if (Number(draft.sasia) <= 0) {
           throw new Error('Sasia duhet te jete > 0.')
         }
-      }
-
-      const kodis = localItems.map((item) => itemDrafts[item.id]?.kodi_produktit).filter(Boolean)
-      const duplicate = kodis.find((kodi, i) => kodis.indexOf(kodi) !== i)
-      if (duplicate) {
-        const dupItem = localItems.find((it) => itemDrafts[it.id]?.kodi_produktit === duplicate)
-        throw new Error(
-          dupItem
-            ? `Ky produkt eshte dy here ne liste: ${productLabel(
-                dupItem.emri_produktit,
-                dupItem.kodi_produktit,
-              )}`
-            : 'Produkti i njejte nuk mund te perseritet ne liste.',
-        )
       }
 
       const meta = { data, ora, pershkrimi, shteti, destination }
@@ -327,10 +313,6 @@ export function ActionEditForm(props: {
                             value={draft.kodi_produktit}
                             disabled={busy}
                             onChange={(kodi) => updateDraft(item.id, { kodi_produktit: kodi })}
-                            disabledKodis={localItems
-                              .filter((x) => x.id !== item.id)
-                              .map((x) => itemDrafts[x.id]?.kodi_produktit)
-                              .filter((k): k is string => Boolean(k))}
                             placeholder="Kerko sipas kodit ose emrit…"
                           />
                         </td>

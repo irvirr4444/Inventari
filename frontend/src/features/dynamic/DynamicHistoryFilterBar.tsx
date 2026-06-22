@@ -1,16 +1,11 @@
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
+import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { DateInput } from '../../components/DateInput'
 import { NumericInput } from '../../components/NumericInput'
 import { OraInput } from '../../components/OraInput'
+import { parseNumericFilterValue } from '../../lib/numericInput'
 import type { Lokacioni } from '../../lib/lokacioni/types'
-import { locationBadge } from '../../lib/lokacioni/LokacioniProvider'
-
-function parseNumericFilter(value: string): number | '' {
-  const trimmed = value.trim()
-  if (trimmed === '') return ''
-  const n = Number(trimmed)
-  return Number.isFinite(n) ? n : ''
-}
+import { HistoryFilterClearButton } from '../history/HistoryFilterClearButton'
 
 export function DynamicHistoryFilterBar(props: {
   serverFilters: HistoryServerFilters
@@ -22,25 +17,28 @@ export function DynamicHistoryFilterBar(props: {
   showClearLink: boolean
   showTotali?: boolean
 }) {
+  const {
+    serverFilters,
+    clientFilters,
+    onServerFilterChange,
+    onClientFilterChange,
+    onClearAll,
+    showClearLink,
+  } = props
   const showTotali = props.showTotali ?? true
-  const toggleLocation = (id: string) => {
-    const current = props.clientFilters.locationIds
-    const next = current.includes(id)
-      ? current.filter((x) => x !== id)
-      : [...current, id]
-    props.onClientFilterChange({ locationIds: next })
-  }
+  const selectedLocationId = clientFilters.locationIds[0] ?? ''
 
   return (
     <div className="history-filters-bar">
+      <div className="history-filters-primary">
       <div className="history-filter-group history-filter-group-selects">
         <div className="history-filter-field">
           <span className="history-filter-group-label">Veprime</span>
           <select
             className="select history-filter-select"
-            value={props.serverFilters.lloji ?? ''}
+            value={serverFilters.lloji ?? ''}
             onChange={(e) =>
-              props.onServerFilterChange({
+              onServerFilterChange({
                 lloji: (e.target.value || undefined) as HistoryServerFilters['lloji'],
               })
             }
@@ -51,23 +49,25 @@ export function DynamicHistoryFilterBar(props: {
             <option value="Transfer">Transfer</option>
           </select>
         </div>
-      </div>
-
-      <div className="history-filter-sep" aria-hidden="true" />
-
-      <div className="history-filter-group dynamic-history-locations">
-        <span className="history-filter-group-label">Lokacioni</span>
-        <div className="dynamic-history-location-checks">
-          {props.locations.map((loc) => (
-            <label key={loc.id} className="dynamic-history-location-check">
-              <input
-                type="checkbox"
-                checked={props.clientFilters.locationIds.includes(loc.id)}
-                onChange={() => toggleLocation(loc.id)}
-              />
-              <span>{locationBadge(loc)} {loc.emri}</span>
-            </label>
-          ))}
+        <div className="history-filter-field">
+          <span className="history-filter-group-label">Lokacioni</span>
+          <select
+            className="select history-filter-select"
+            value={selectedLocationId}
+            onChange={(e) =>
+              onClientFilterChange({
+                locationIds: e.target.value ? [e.target.value] : [],
+              })
+            }
+          >
+            <option value="">Te gjitha lokacionet</option>
+            {props.locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.flag_emoji ? `${loc.flag_emoji} ` : ''}
+                {loc.emri}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -78,100 +78,127 @@ export function DynamicHistoryFilterBar(props: {
         <div className="history-filter-pair history-filter-pair-dates">
           <DateInput
             className="history-filter-date"
-            value={props.serverFilters.dateFrom ?? ''}
+            clearable
+            value={serverFilters.dateFrom ?? ''}
             placeholder="Nga"
-            onChange={(v) => props.onServerFilterChange({ dateFrom: v || undefined })}
+            onChange={(v) => onServerFilterChange({ dateFrom: v || undefined })}
           />
           <DateInput
             className="history-filter-date"
-            value={props.serverFilters.dateTo ?? ''}
+            clearable
+            value={serverFilters.dateTo ?? ''}
             placeholder="Deri"
-            onChange={(v) => props.onServerFilterChange({ dateTo: v || undefined })}
+            onChange={(v) => onServerFilterChange({ dateTo: v || undefined })}
           />
         </div>
       </div>
 
       <div className="history-filter-sep" aria-hidden="true" />
 
-      <div className="history-filter-group history-filter-group-labeled">
+      <div className="history-filter-group history-filter-group-labeled history-filter-group-ora">
         <span className="history-filter-group-label">Ora</span>
-        <div className="history-filter-pair">
+        <div className="history-filter-pair history-filter-pair-ora">
           <OraInput
-            className="history-filter-ora"
-            value={props.clientFilters.oraFrom}
+            wrapperClassName="history-filter-ora-wrap"
+            clearable
+            value={clientFilters.oraFrom}
             placeholder="Nga"
-            onChange={(v) => props.onClientFilterChange({ oraFrom: v })}
+            onChange={(v) => onClientFilterChange({ oraFrom: v })}
           />
           <OraInput
-            className="history-filter-ora"
-            value={props.clientFilters.oraDeri}
+            wrapperClassName="history-filter-ora-wrap"
+            clearable
+            value={clientFilters.oraDeri}
             placeholder="Deri"
-            onChange={(v) => props.onClientFilterChange({ oraDeri: v })}
+            onChange={(v) => onClientFilterChange({ oraDeri: v })}
           />
         </div>
       </div>
 
-      <div className="history-filter-group history-filter-field">
-        <span className="history-filter-group-label">Pershkrimi</span>
-        <input
-          className="input history-filter-text"
-          value={props.clientFilters.pershkriminQuery}
-          placeholder="Kerko…"
-          onChange={(e) => props.onClientFilterChange({ pershkriminQuery: e.target.value })}
-        />
-      </div>
+      <div className="history-filter-sep" aria-hidden="true" />
 
       {showTotali ? (
-        <div className="history-filter-group history-filter-group-labeled">
-          <span className="history-filter-group-label">Totali</span>
-          <div className="history-filter-pair">
-            <NumericInput
-              className="history-filter-num"
-              value={props.clientFilters.totaliMin}
-              placeholder="Min"
-              onChange={(v) =>
-                props.onClientFilterChange({ totaliMin: parseNumericFilter(String(v)) })
-              }
-            />
-            <NumericInput
-              className="history-filter-num"
-              value={props.clientFilters.totaliMax}
-              placeholder="Max"
-              onChange={(v) =>
-                props.onClientFilterChange({ totaliMax: parseNumericFilter(String(v)) })
-              }
-            />
+        <>
+          <div className="history-filter-group history-filter-group-labeled history-filter-group-totali">
+            <span className="history-filter-group-label">Totali (€)</span>
+            <div className="history-filter-pair">
+              <NumericInput
+                className="input history-filter-num"
+                clearable
+                hideZero={false}
+                value={clientFilters.totaliMin}
+                placeholder="Min"
+                min={0}
+                step="0.01"
+                onChange={(v) => onClientFilterChange({ totaliMin: parseNumericFilterValue(v) })}
+              />
+              <NumericInput
+                className="input history-filter-num"
+                clearable
+                hideZero={false}
+                value={clientFilters.totaliMax}
+                placeholder="Max"
+                min={0}
+                step="0.01"
+                onChange={(v) => onClientFilterChange({ totaliMax: parseNumericFilterValue(v) })}
+              />
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
 
-      <div className="history-filter-group history-filter-group-labeled">
+      <div className="history-filter-group history-filter-group-labeled history-filter-group-produkte">
         <span className="history-filter-group-label">Produkte</span>
         <div className="history-filter-pair">
           <NumericInput
-            className="history-filter-num"
-            value={props.clientFilters.produkteMin}
+            className="input history-filter-num"
+            clearable
+            hideZero={false}
+            value={clientFilters.produkteMin}
             placeholder="Min"
-            onChange={(v) =>
-              props.onClientFilterChange({ produkteMin: parseNumericFilter(String(v)) })
-            }
+            min={0}
+            step={1}
+            onChange={(v) => onClientFilterChange({ produkteMin: parseNumericFilterValue(v) })}
           />
           <NumericInput
-            className="history-filter-num"
-            value={props.clientFilters.produkteMax}
+            className="input history-filter-num"
+            clearable
+            hideZero={false}
+            value={clientFilters.produkteMax}
             placeholder="Max"
-            onChange={(v) =>
-              props.onClientFilterChange({ produkteMax: parseNumericFilter(String(v)) })
-            }
+            min={0}
+            step={1}
+            onChange={(v) => onClientFilterChange({ produkteMax: parseNumericFilterValue(v) })}
           />
         </div>
       </div>
+      </div>
 
-      {props.showClearLink ? (
-        <button type="button" className="btn sm ghost history-clear-filters" onClick={props.onClearAll}>
-          Pastro filtrat
-        </button>
-      ) : null}
+      <div className="history-filters-search-row">
+        <div className="history-filter-group history-filter-group-labeled history-filter-search">
+          <span className="history-filter-group-label">Pershkrimi</span>
+          <DebouncedSearchInput
+            className="input history-filter-pershkrimi"
+            clearable
+            value={clientFilters.pershkriminQuery}
+            placeholder="Kërko…"
+            onChange={(v) => onClientFilterChange({ pershkriminQuery: v })}
+          />
+        </div>
+
+        <div className="history-filter-group history-filter-group-labeled history-filter-search">
+          <span className="history-filter-group-label">Shenim (produkt)</span>
+          <DebouncedSearchInput
+            className="input history-filter-pershkrimi"
+            clearable
+            value={serverFilters.shenim ?? ''}
+            placeholder="Kërko…"
+            onChange={(v) => onServerFilterChange({ shenim: v || undefined })}
+          />
+        </div>
+
+        {showClearLink ? <HistoryFilterClearButton onClick={onClearAll} /> : null}
+      </div>
     </div>
   )
 }

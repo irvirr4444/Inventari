@@ -1,8 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import * as React from 'react'
 import { getActionBatch, type DynamicProdukti } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
+import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { DynamicActionEditForm } from './DynamicActionEditForm'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
@@ -21,13 +24,21 @@ export function DynamicActionEditModal(props: {
     queryKey: queryKeys.actionBatch(user?.id, props.actionId),
     queryFn: () => getActionBatch(props.actionId),
   })
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  useFocusModalOnOpen(contentRef, Boolean(detailQuery.data), detailQuery.dataUpdatedAt)
+  useEscapeToClose(props.onClose)
 
   return (
     <div
       className="modal-overlay history-edit-overlay"
       onClick={(e) => handleOverlayDismiss(e, props.onClose)}
     >
-      <div className="modal-content history-edit-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={contentRef}
+        className="modal-content history-edit-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="history-edit-modal-header">
           <h3>Ndrysho Veprimin</h3>
           <button

@@ -46,9 +46,18 @@ export function LocationAddModal(props: {
     }
   }
 
+  const formRef = React.useRef<HTMLFormElement>(null)
+
   return (
-    <Modal open={props.open} title="Shto lokacion" onClose={props.onClose} stacked>
-      <form onSubmit={submit}>
+    <Modal
+      open={props.open}
+      title="Shto lokacion"
+      onClose={props.onClose}
+      stacked
+      onEnterConfirm={() => formRef.current?.requestSubmit()}
+      enterConfirmDisabled={saving || !emri.trim()}
+    >
+      <form ref={formRef} onSubmit={submit}>
         <div className="form-group" style={{ marginBottom: 14 }}>
           <span className="label">Ikona</span>
           <LocationEmojiPicker

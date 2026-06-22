@@ -606,6 +606,10 @@ textarea {
   font: inherit;
 }
 
+.numeric-input {
+  font-variant-numeric: tabular-nums;
+}
+
 .input,
 .select {
   border: 1px solid var(--border);

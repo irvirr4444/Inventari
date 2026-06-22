@@ -11,7 +11,6 @@ const FORM_ID = 'mobile-product-picker-form'
 
 function ProductPickerForm(props: {
   products: Produkti[]
-  existingKodis: string[]
   showPrice?: boolean
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
   onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
@@ -61,13 +60,6 @@ function ProductPickerForm(props: {
       setError('Cmimi/Njesi duhet te jete >= 0.')
       return
     }
-    const duplicate = props.existingKodis.some(
-      (k) => k === kodi && k !== props.initial?.kodi_produktit,
-    )
-    if (duplicate) {
-      setError('Ky produkt eshte tashme ne liste.')
-      return
-    }
     props.onSave({ kodi_produktit: kodi, cmimi_njesi: showPrice ? price : '0', sasia: qty })
     props.onClose()
   }
@@ -102,9 +94,6 @@ function ProductPickerForm(props: {
           <div className="mobile-picker-empty">Nuk u gjet produkt.</div>
         ) : (
           filtered.map((p) => {
-            const disabled = props.existingKodis.some(
-              (k) => k === p.kodi && k !== props.initial?.kodi_produktit,
-            )
             const selected = kodi === p.kodi
             return (
               <button
@@ -115,7 +104,6 @@ function ProductPickerForm(props: {
                 }}
                 type="button"
                 className={`mobile-picker-item${selected ? ' selected' : ''}`}
-                disabled={disabled}
                 onClick={() => selectProduct(p)}
               >
                 <span className="mobile-picker-item-label">{productLabel(p.emri, p.kodi)}</span>
@@ -166,7 +154,6 @@ export function ProductPickerSheet(props: {
   open: boolean
   title: string
   products: Produkti[]
-  existingKodis: string[]
   showPrice?: boolean
   initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
   onClose: () => void
@@ -194,7 +181,6 @@ export function ProductPickerSheet(props: {
         <ProductPickerForm
           key={formKey}
           products={props.products}
-          existingKodis={props.existingKodis}
           showPrice={props.showPrice}
           initial={props.initial}
           onSave={props.onSave}

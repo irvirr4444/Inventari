@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { CheckIcon, CloseIcon, DeleteIcon, EditIcon, PlusIcon } from '../../components/icons'
+import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
 
 type SheetButtonProps = {
   label: string
@@ -76,6 +77,11 @@ export function SheetActionFooter(props: {
   confirmType?: 'button' | 'submit'
   form?: string
 }) {
+  useEnterToConfirm(() => props.onConfirm?.(), {
+    enabled: Boolean(props.onConfirm),
+    disabled: props.confirmDisabled || props.confirmLoading,
+  })
+
   return (
     <SheetFooterRow>
       <SheetCancelButton label={props.cancelLabel ?? 'Anulo'} onClick={props.onCancel} />

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { locationBadge, useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import { LocationAddModal } from './LocationAddModal'
@@ -28,6 +29,8 @@ export function LocationPicker(props: {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
   const options = activeLokacionet.filter((l) => !props.excludeIds?.includes(l.id))
   const selected = options.find((l) => l.id === props.value) ?? options[0]
+
+  useEscapeToClose(() => setMenuOpen(false), { enabled: menuOpen })
 
   const repositionMenu = React.useCallback(() => {
     const trigger = triggerRef.current

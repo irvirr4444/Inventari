@@ -99,9 +99,6 @@ export function validateDynamicHistoryBatchEdits(rows: HistoryEditRow[]): string
     if (Number(row.draft.sasia) <= 0) return 'Sasia duhet te jete > 0.'
     if (Number(row.draft.cmimi_njesi) < 0) return 'Cmimi nuk mund te jete negative.'
   }
-  const kodis = rows.map((row) => row.draft.kodi_produktit).filter(Boolean)
-  const duplicate = kodis.find((kodi, i) => kodis.indexOf(kodi) !== i)
-  if (duplicate) return 'Produkti është zgjedhur dy herë.'
   return null
 }
 

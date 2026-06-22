@@ -66,7 +66,6 @@ function buildEditSnapshot(batch: ActionBatchDetail): HistoryEditSnapshot {
 function HistoriEditProductRow(props: {
   draft: HistoryEditRow['draft']
   products: Produkti[]
-  otherKodis: string[]
   disabled: boolean
   canRemove: boolean
   onDraftChange: (patch: Partial<HistoryEditRow['draft']>) => void
@@ -145,7 +144,6 @@ function HistoriEditProductRow(props: {
         open={pickerOpen}
         title="Zgjedh produktin"
         products={props.products}
-        existingKodis={props.otherKodis}
         initial={{
           kodi_produktit: props.draft.kodi_produktit,
           cmimi_njesi: props.draft.cmimi_njesi,
@@ -289,10 +287,6 @@ function HistoriBatchEditView(props: {
                 key={row.key}
                 draft={row.draft}
                 products={productsByKodi}
-                otherKodis={props.rows
-                  .filter((x) => x.key !== row.key)
-                  .map((x) => x.draft.kodi_produktit)
-                  .filter(Boolean)}
                 disabled={props.busy}
                 canRemove={props.rows.length > 1}
                 onDraftChange={(patch) => updateRow(row.key, patch)}

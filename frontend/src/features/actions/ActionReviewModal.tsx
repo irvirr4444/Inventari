@@ -1,9 +1,13 @@
+import * as React from 'react'
 import type { ProductListItem } from '../../lib/api'
 import { COUNTRY_META, type Country } from '../../lib/country'
 import { countryLabel, fmt, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
+import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
+import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { LlojiBadge } from '../history/historyBadges'
 import { ActionMetaDisplay } from './ActionMetaDisplay'
@@ -55,13 +59,22 @@ export function ActionReviewModal(
   const countryMeta = props.country ? COUNTRY_META[props.country] : null
 
   const productByKodi = new Map(props.products.map((p) => [p.kodi, p]))
+  const contentRef = React.useRef<HTMLDivElement>(null)
+
+  useEnterToConfirm(props.onConfirm, { disabled: props.loading })
+  useEscapeToClose(props.onCancel, { disabled: props.loading })
+  useFocusModalOnOpen(contentRef, true)
 
   return (
     <div
       className="modal-overlay modal-overlay-stacked"
       onClick={(e) => !props.loading && handleOverlayDismiss(e, props.onCancel)}
     >
-      <div className="modal-content action-review-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={contentRef}
+        className="modal-content action-review-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="action-review-header">
           <h3>Finalizo veprimin?</h3>
           <button

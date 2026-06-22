@@ -6,12 +6,9 @@ import { createDynamicActionBatch } from '../lib/api'
 import { todayISODate } from '../lib/dates'
 import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
-import { productLabel } from '../lib/format'
-import type { DynamicProdukti } from '../lib/api'
 
 export function useDynamicActionEntry(options: {
   lokacioniId: string
-  products: DynamicProdukti[]
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { user } = useAuth()
@@ -22,17 +19,7 @@ export function useDynamicActionEntry(options: {
   const [actionPershkrimi, setActionPershkrimi] = React.useState('')
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
-  const duplicateProductMessage = React.useCallback(
-    (kodi: string) => {
-      const product = options.products.find((p) => p.kodi === kodi)
-      return product
-        ? `Ky produkt eshte tashme ne liste: ${productLabel(product.emri, product.kodi)}`
-        : 'Ky produkt eshte tashme ne liste'
-    },
-    [options.products],
-  )
-
-  const itemsState = useActionItems((kodi) => options.notify(duplicateProductMessage(kodi)))
+  const itemsState = useActionItems()
 
   const mutation = useMutation({
     mutationFn: () =>

@@ -5,13 +5,11 @@ import { toActionItemPayload } from '../types/actionItem'
 import { createActionBatch } from '../lib/api'
 import type { Country } from '../lib/country'
 import { todayISODate } from '../lib/dates'
-import { countryLabel, productLabel } from '../lib/format'
+import { countryLabel } from '../lib/format'
 import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
-import type { Produkti } from '../lib/api'
 
 export function useTransferEntry(options: {
-  products: Produkti[]
   notify: (message: string, variant?: 'success' | 'default') => void
   initialFrom?: Country
   onSuccess?: () => void
@@ -28,17 +26,7 @@ export function useTransferEntry(options: {
   const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
-  const duplicateProductMessage = React.useCallback(
-    (kodi: string) => {
-      const product = options.products.find((p) => p.kodi === kodi)
-      return product
-        ? `Ky produkt eshte tashme ne liste: ${productLabel(product.emri, product.kodi)}`
-        : 'Ky produkt eshte tashme ne liste'
-    },
-    [options.products],
-  )
-
-  const itemsState = useActionItems((kodi) => options.notify(duplicateProductMessage(kodi)))
+  const itemsState = useActionItems()
 
   const setFrom = (next: Country) => {
     setTransferFrom(next)

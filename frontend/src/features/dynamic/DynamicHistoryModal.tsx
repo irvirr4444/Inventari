@@ -1,9 +1,8 @@
 import * as React from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   deleteActionBatch,
   getActionBatch,
-  listActionBatches,
   type ActionBatch,
   type DynamicProdukti,
 } from '../../lib/api'
@@ -22,17 +21,29 @@ import { useAuth } from '../../lib/auth/AuthProvider'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
+import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
 import { ExpandedActionDetail } from '../history/ExpandedActionDetail'
 import { EditIcon, DeleteIcon, LlojiBadge } from '../history/historyBadges'
 import { HistoryBatchMetaDisplay } from '../history/HistoryBatchMetaDisplay'
 import { HistorySkeletonTable, HISTORY_TABLE_COL_COUNT } from '../history/HistorySkeletonTable'
+import {
+  HISTORY_MODAL_PAGE_SIZE,
+  HistoryTableEmptyBody,
+  HistoryTablePadRows,
+} from '../history/historyTableLayout'
+import { HistoryModalTitleRow } from '../history/HistoryModalTitleRow'
 import { DynamicActionEditModal } from './DynamicActionEditModal'
 import { DynamicHistoryFilterBar } from './DynamicHistoryFilterBar'
 import { DynamicLocationCell } from './DynamicLocationCell'
+import {
+  historyListRefreshState,
+  useHistoryBatchListQuery,
+} from '../../hooks/useHistoryBatchListQuery'
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = HISTORY_MODAL_PAGE_SIZE
 
 export function DynamicHistoryModal(props: {
   products: DynamicProdukti[]
@@ -98,15 +109,8 @@ export function DynamicHistoryModal(props: {
 
   const clearExpanded = () => setExpandedIds(new Set())
 
-  const listQuery = useQuery({
-    queryKey: [...queryKeys.actionBatches(user?.id, filters), page],
-    queryFn: () =>
-      listActionBatches({
-        ...filters,
-        page,
-        limit: PAGE_SIZE,
-      }),
-  })
+  const listQuery = useHistoryBatchListQuery(user?.id, filters, page, PAGE_SIZE)
+  const { isInitialLoad, isRefreshing, resultsBodyKey } = historyListRefreshState(listQuery)
 
   const prefetchDetail = React.useCallback(
     (actionId: string) => {
@@ -179,41 +183,18 @@ export function DynamicHistoryModal(props: {
     return pages
   }, [totalPages])
 
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  useFocusModalOnOpen(contentRef, variant === 'modal')
+  useEscapeToClose(onClose, { enabled: variant === 'modal' })
+
   const historyBody = (
     <div
+      ref={contentRef}
       className={variant === 'embedded' ? 'history-embedded' : 'modal-content history-modal'}
       onClick={variant === 'modal' ? (e) => e.stopPropagation() : undefined}
     >
       <div className="history-modal-header">
-        {variant === 'modal' ? (
-          <div className="history-title-row">
-            <svg
-              className="history-title-icon"
-              aria-hidden="true"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 6v6l4 2" />
-            </svg>
-            <h3>Historiku i Veprimeve</h3>
-            <div className="spacer" />
-            <button
-              type="button"
-              className="modal-close-btn"
-              onClick={onClose}
-              aria-label="Mbyll"
-            >
-              ×
-            </button>
-          </div>
-        ) : null}
+        {variant === 'modal' ? <HistoryModalTitleRow onClose={onClose} /> : null}
 
         <DynamicHistoryFilterBar
               serverFilters={filters}
@@ -227,7 +208,10 @@ export function DynamicHistoryModal(props: {
             />
           </div>
 
-          <div className="history-table-wrap">
+          <div
+            className={`history-table-wrap history-table-wrap--fixed-body${isRefreshing ? ' history-table-wrap--refreshing' : ''}`}
+          >
+            {isRefreshing ? <div className="history-table-refresh-bar" aria-hidden="true" /> : null}
             <table className="table history-table">
               <colgroup>
                 <col className="history-col-expand" />
@@ -253,38 +237,32 @@ export function DynamicHistoryModal(props: {
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
-              {listQuery.isLoading ? (
+              {isInitialLoad ? (
                 <HistorySkeletonTable />
-              ) : listQuery.isError ? (
-                <tbody>
-                  <tr>
-                    <td colSpan={tableColCount} className="history-empty-cell">
-                      <p className="muted">
-                        {listQuery.error instanceof Error
-                          ? listQuery.error.message
-                          : 'Gabim gjate ngarkimit te historikut.'}
-                      </p>
-                    </td>
-                  </tr>
-                </tbody>
+              ) : listQuery.isError && !listQuery.data ? (
+                <HistoryTableEmptyBody
+                  bodyKey={resultsBodyKey}
+                  colSpan={tableColCount}
+                  message={
+                    listQuery.error instanceof Error
+                      ? listQuery.error.message
+                      : 'Gabim gjate ngarkimit te historikut.'
+                  }
+                />
               ) : actions.length === 0 ? (
-                <tbody>
-                  <tr>
-                    <td colSpan={tableColCount} className="history-empty-cell">
-                      <p className="muted">Nuk u gjet asnje veprim.</p>
-                    </td>
-                  </tr>
-                </tbody>
+                <HistoryTableEmptyBody
+                  bodyKey={resultsBodyKey}
+                  colSpan={tableColCount}
+                  message="Nuk u gjet asnje veprim."
+                />
               ) : filteredActions.length === 0 ? (
-                <tbody>
-                  <tr>
-                    <td colSpan={tableColCount} className="history-empty-cell">
-                      <p className="muted">Asnjë rezultat</p>
-                    </td>
-                  </tr>
-                </tbody>
+                <HistoryTableEmptyBody
+                  bodyKey={resultsBodyKey}
+                  colSpan={tableColCount}
+                  message="Asnjë rezultat"
+                />
               ) : (
-                <tbody>
+                <tbody key={resultsBodyKey} className="history-table-body--enter">
                   {filteredActions.map((action) => {
                     const expanded = expandedIds.has(action.id)
                     return (
@@ -305,7 +283,7 @@ export function DynamicHistoryModal(props: {
                               </span>
                             </button>
                           </td>
-                          <HistoryBatchMetaDisplay batch={action} />
+                          <HistoryBatchMetaDisplay batch={action} matchedItems={action.matched_items} />
                           <td className="history-col-lloji">
                             <LlojiBadge lloji={action.lloji} />
                           </td>
@@ -348,13 +326,20 @@ export function DynamicHistoryModal(props: {
                         {expanded && (
                           <tr className="history-expanded-row">
                             <td colSpan={tableColCount}>
-                              <ExpandedActionDetail actionId={action.id} />
+                              <ExpandedActionDetail
+                                actionId={action.id}
+                                highlightShenim={filters.shenim?.trim() || undefined}
+                              />
                             </td>
                           </tr>
                         )}
                       </React.Fragment>
                     )
                   })}
+                  <HistoryTablePadRows
+                    count={PAGE_SIZE - filteredActions.length}
+                    colSpan={tableColCount}
+                  />
                 </tbody>
               )}
             </table>
@@ -366,16 +351,18 @@ export function DynamicHistoryModal(props: {
             </div>
           )}
 
-          {total > 0 && (
-            <div className="history-pagination">
+          {!isInitialLoad && (
+            <div className={`history-pagination${total > 0 ? '' : ' history-pagination--empty'}`}>
               <span className="history-pagination-summary">
-                Duke shfaqur {rangeStart}–{rangeEnd} nga {total} veprime
+                {total > 0
+                  ? `Duke shfaqur ${rangeStart}–${rangeEnd} nga ${total} veprime`
+                  : 'Duke shfaqur 0 veprime'}
               </span>
               <div className="history-pagination-controls">
                 <button
                   type="button"
                   className="btn sm history-page-btn"
-                  disabled={page <= 1}
+                  disabled={page <= 1 || total === 0}
                   aria-label="Faqja e meparshme"
                   onClick={() => {
                     setPage((p) => p - 1)
@@ -389,6 +376,7 @@ export function DynamicHistoryModal(props: {
                     key={n}
                     type="button"
                     className={`btn sm history-page-btn${n === page ? ' active' : ''}`}
+                    disabled={total === 0}
                     onClick={() => {
                       setPage(n)
                       clearExpanded()
@@ -400,7 +388,7 @@ export function DynamicHistoryModal(props: {
                 <button
                   type="button"
                   className="btn sm history-page-btn"
-                  disabled={page >= totalPages}
+                  disabled={page >= totalPages || total === 0}
                   aria-label="Faqja tjeter"
                   onClick={() => {
                     setPage((p) => p + 1)

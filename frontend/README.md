@@ -243,13 +243,13 @@ Wired in: `ActionItemsTable`, `DynamicActionEntryPanel`, `DynamicTransferForm`, 
 
 Excel exports mirror the same rules server-side (`exportsService` reads `tenant_config`).
 
-**Styles:** `styles/features/locations.css`; `styles/features/dynamic-dashboard.css`; `styles/features/onboarding-wizard.css`; `styles/features/tutorial-overlay.css`; `features/dynamic/mobile/dynamic-mobile.css`.
+**Styles:** `mobile/styles/mobile.css` (imported from `App.tsx` — **required**); `mobile/styles/mobile-layout.css` (bottom nav `--bg`); `styles/features/locations.css`; `styles/features/dynamic-dashboard.css`; `styles/features/onboarding-wizard.css`; `styles/features/tutorial-overlay.css`; `features/dynamic/mobile/dynamic-mobile.css`.
 
 #### Dynamic mobile (`DynamicMobileApp`)
 
 On mobile viewports, **dynamic** accounts get purpose-built tabs in `features/dynamic/mobile/` — same bottom tab bar as legacy (`Veprime | Transfer | Produkte | Histori | Permbledhje`), modeled on `src/mobile/tabs/*` but parameterized by **locations** (not countries). Desktop panels are **not** embedded in mobile.
 
-**Chrome:** header and bottom nav use `var(--surface)` with white labels/icons (`dynamic-mobile-bottom-nav` on the portaled `BottomNav`). Tab content backgrounds vary by tab; Produkte uses the same `--surface` fill edge-to-edge.
+**Chrome:** header uses `var(--surface)` with white labels/icons. **Bottom nav** uses **`var(--bg)`** (same as the page gradient background) via `.mobile-bottom-nav` in `mobile-layout.css` and `.dynamic-mobile-bottom-nav` in `dynamic-mobile.css` — see **Mobile styling contracts** above. Tab content backgrounds vary by tab; Produkte uses `--surface` edge-to-edge.
 
 | Tab | Mobile component | Notes |
 | --- | --- | --- |
@@ -394,7 +394,21 @@ For manual testing on desktop, resize the browser below 768px, use DevTools devi
 
 Open **`http://<your-ip>:5173/?mobile=1`** on your phone (same Wi‑Fi). See [docs/local-dev.md](../docs/local-dev.md) for LAN setup.
 
-**Navigation:** fixed bottom tab bar — **Veprime | Transfer | Produkte | Histori | Permbledhje** (both account types). Dynamic mobile styles the bar with `--surface` background and white/muted-white tab icons (legacy keeps the default light bar).
+**Navigation:** fixed bottom tab bar — **Veprime | Transfer | Produkte | Histori | Permbledhje** (both account types). The bar uses **`var(--bg)`** (`#071528`) so it blends with the app gradient; inactive tabs are muted white, active tab is solid white.
+
+#### Mobile styling contracts (do not break)
+
+These are required for mobile layout and chrome. **Do not remove or “simplify” them during refactors** (e.g. onboarding or auth work).
+
+| Contract | File | Rule |
+| --- | --- | --- |
+| Mobile CSS bundle | `App.tsx` | **Must** keep `import './mobile/styles/mobile.css'` — without it the mobile UI renders unstyled |
+| Mobile bootstrap | `lib/mobileBootstrap.ts` + `main.tsx` | Runs before React; adds `html.mobile-client` and sets the mobile viewport |
+| Bottom nav background | `mobile/styles/mobile-layout.css` → `.mobile-bottom-nav` | **Must** use `background: var(--bg)` — **never** `--card` or `--surface` (those look like a floating light/different panel) |
+| Bottom nav items | same file → `.mobile-bottom-nav-item` | Transparent background; inactive `rgba(255,255,255,0.55)`, active `#fff` |
+| Dynamic nav class | `features/dynamic/mobile/dynamic-mobile.css` → `.dynamic-mobile-bottom-nav` | Same `--bg` rule; `DynamicMobileApp` passes this `className` to portaled `BottomNav` |
+
+Header chrome stays on `var(--surface)`; only the **bottom tab bar** matches the page background (`--bg`).
 
 #### Where to find Historiku on mobile
 
@@ -447,7 +461,7 @@ src/features/dynamic/mobile/
   DynamicMobileApp.tsx               Shell + tab routing; passes dynamic bottom-nav class
   tabs/                              DynamicVeprimeTab, Transfer, Produkte, Histori, Permbledhje
   components/                        DynamicProductCard, DynamicLocationPickerSheet, DynamicMobileStockLevels
-  dynamic-mobile.css                 Surface chrome, product cards, stock stat chips, summary compact cards
+  dynamic-mobile.css                 Bottom nav `--bg` override; product cards, stock stat chips, summary compact cards
 ```
 
 **Shared libs/hooks** (used by desktop and mobile):

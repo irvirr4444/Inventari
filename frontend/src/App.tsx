@@ -17,6 +17,7 @@ import { DynamicDashboardPage } from './features/dynamic/DynamicDashboardPage'
 import { DynamicMobileApp } from './features/dynamic/mobile/DynamicMobileApp'
 import { MobileApp } from './mobile/MobileApp.tsx'
 import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
+import './mobile/styles/mobile.css'
 
 function AuthLoading() {
   return (

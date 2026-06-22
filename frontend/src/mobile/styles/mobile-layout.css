@@ -94,8 +94,9 @@
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   align-items: stretch;
-  background: var(--card);
-  box-shadow: 0 -1px 0 var(--border);
+  background: var(--bg);
+  box-shadow: none;
+  border-top: 1px solid rgba(201, 216, 234, 0.15);
   z-index: 60;
 }
 
@@ -109,13 +110,17 @@
   min-height: var(--mobile-tab-height);
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   padding: 6px 4px;
 }
 
 .mobile-bottom-nav-item.active {
-  color: var(--primary);
+  color: #fff;
+}
+
+.mobile-bottom-nav-item.active .mobile-tab-label {
+  font-weight: 600;
 }
 
 .mobile-bottom-nav-item svg {

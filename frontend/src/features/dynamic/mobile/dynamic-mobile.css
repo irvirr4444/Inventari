@@ -1,13 +1,13 @@
-/* ── Bottom nav: match header surface + white tabs ── */
+/* Dynamic mobile overrides — bottom nav must stay on --bg (see frontend/README.md). */
 
 .mobile-bottom-nav.dynamic-mobile-bottom-nav {
-  background: var(--surface);
+  background: var(--bg);
   box-shadow: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(201, 216, 234, 0.15);
 }
 
 .dynamic-mobile-bottom-nav .mobile-bottom-nav-item {
-  background: var(--surface);
+  background: transparent;
   color: rgba(255, 255, 255, 0.55);
 }
 

@@ -28,7 +28,7 @@ export function Screen1Welcome(props: { onContinue: () => void; onLogout: () => 
           <br />
           fillojë të punojë për ty.
         </h1>
-        <p className="onboarding-welcome-sub">Do të duhen 2 minuta për ta konfiguruar.</p>
+        <p className="onboarding-welcome-sub">Do të duhen 1 minutë për ta konfiguruar.</p>
         <div className="onboarding-stats-row">
           <div className="onboarding-stat-chip">
             <span className="onboarding-stat-num">3</span>

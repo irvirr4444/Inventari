@@ -155,6 +155,19 @@
   border-top: 1px solid var(--border-light);
 }
 
+.date-picker-footer--clearable {
+  justify-content: space-between;
+}
+
+.date-picker-footer-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.date-picker-footer-btn:disabled:hover {
+  background: transparent;
+}
+
 .date-picker-footer-btn {
   border: none;
   background: transparent;

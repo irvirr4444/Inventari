@@ -80,6 +80,19 @@ html.mobile-client .mobile-sheet {
   color: var(--text-muted);
 }
 
+.mobile-date-field .date-input-value,
+.mobile-date-field .date-input-placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-date-field .date-input-trailing-slot {
+  flex-shrink: 0;
+}
+
 .mobile-date-picker-calendar .date-picker-day {
   min-height: 44px;
 }

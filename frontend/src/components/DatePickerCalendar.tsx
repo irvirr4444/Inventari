@@ -12,6 +12,7 @@ export function DatePickerCalendar(props: {
   value: string
   onChange: (iso: string) => void
   className?: string
+  clearable?: boolean
 }) {
   const [viewMonth, setViewMonth] = React.useState(
     () => isoToDate(props.value) ?? new Date(),
@@ -87,7 +88,24 @@ export function DatePickerCalendar(props: {
         })}
       </div>
 
-      <div className="date-picker-footer">
+      <div
+        className={[
+          'date-picker-footer',
+          props.clearable ? 'date-picker-footer--clearable' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {props.clearable ? (
+          <button
+            type="button"
+            className="date-picker-footer-btn"
+            disabled={!props.value}
+            onClick={() => pickDate('')}
+          >
+            Pastro
+          </button>
+        ) : null}
         <button
           type="button"
           className="date-picker-footer-btn primary"

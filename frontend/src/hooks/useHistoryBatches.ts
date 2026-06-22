@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Country } from '../lib/country'
 import {
   deleteActionBatch,
@@ -8,12 +8,14 @@ import {
 import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { queryKeys } from '../lib/queryKeys'
 import { useAuth } from '../lib/auth/AuthProvider'
+import { historyListRefreshState } from './useHistoryBatchListQuery'
 
 export type HistoryFilterState = {
   lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
   shteti?: Country
   dateFrom?: string
   dateTo?: string
+  shenim?: string
 }
 
 export const HISTORY_PAGE_SIZE = 5
@@ -53,7 +55,9 @@ export function useHistoryBatches(options?: {
         shteti: filters.shteti,
         dateFrom: filters.dateFrom,
         dateTo: filters.dateTo,
+        shenim: filters.shenim,
       }),
+    placeholderData: keepPreviousData,
   })
 
   const deleteMut = useMutation({
@@ -80,6 +84,7 @@ export function useHistoryBatches(options?: {
     error,
     setError,
     listQuery,
+    listRefresh: historyListRefreshState(listQuery),
     deleteMut,
     actions,
     total,

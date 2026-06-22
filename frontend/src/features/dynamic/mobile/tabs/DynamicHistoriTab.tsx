@@ -7,7 +7,7 @@ import {
   hasActiveClientFilters,
   type HistoryClientFilters,
 } from '../../../../lib/historyClientFilters'
-import { useHistoryBatches } from '../../../../hooks/useHistoryBatches'
+import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../../../hooks/useHistoryBatches'
 import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
@@ -20,9 +20,13 @@ import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { FilterChips } from '../../../../mobile/components/FilterChips'
+import {
+  ALL_LOKACIONET_LABEL,
+  ALL_VEPRIMET_LABEL,
+} from '../../../../mobile/constants/historiFilters'
 import { HistoriAdvancedFiltersPanel } from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
-import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
-import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
+import { MobileHistoriListPending } from '../../../../mobile/components/MobileHistoriListPending'
+import { MobilePagination } from '../../../../mobile/components/MobilePagination'
 import type { MobileHeaderState } from '../../../../mobile/types'
 import { DynamicLocationMultiPickerSheet } from '../components/DynamicLocationMultiPickerSheet'
 import { DynamicHistoriBatchDetail } from './DynamicHistoriBatchDetail'
@@ -73,20 +77,29 @@ export function DynamicHistoriTab(props: {
     [history.actions, appliedClientFilters, trackPrice],
   )
 
-  const hasAdvancedFilters = hasActiveClientFilters(appliedClientFilters, { trackPrice })
+  const hasAdvancedFilters =
+    hasActiveClientFilters(appliedClientFilters, { trackPrice }) ||
+    !!(history.filters.shenim?.trim()) ||
+    !!(history.filters.dateFrom || history.filters.dateTo)
   const locationFilterCount = appliedClientFilters.locationIds.length
-  const locationLabel =
+  const locationValue =
     locationFilterCount === 0
-      ? 'Lokacioni'
+      ? undefined
       : locationFilterCount === 1
-        ? activeLokacionet.find((l) => l.id === appliedClientFilters.locationIds[0])?.emri ??
-          'Lokacioni'
+        ? activeLokacionet.find((l) => l.id === appliedClientFilters.locationIds[0])?.emri
         : `${locationFilterCount} lokacione`
+  const veprimFilterLabel = history.filters.lloji ?? ALL_VEPRIMET_LABEL
+  const lokacionFilterLabel = locationValue ?? ALL_LOKACIONET_LABEL
+  const { isInitialLoad, isRefreshing } = history.listRefresh
 
   const openAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(appliedClientFilters)
-    setAdvancedFiltersOpen((open) => !open)
+    setAdvancedFiltersOpen(true)
   }, [appliedClientFilters])
+
+  const closeAdvancedFilters = React.useCallback(() => {
+    setAdvancedFiltersOpen(false)
+  }, [])
 
   const applyAdvancedFilters = React.useCallback(() => {
     setAppliedClientFilters(draftClientFilters)
@@ -96,7 +109,12 @@ export function DynamicHistoriTab(props: {
   const clearAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(EMPTY_CLIENT_FILTERS)
     setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
+    history.updateFilters({ shenim: undefined, dateFrom: undefined, dateTo: undefined })
     setAdvancedFiltersOpen(false)
+  }, [history])
+
+  const clearLocationFilter = React.useCallback(() => {
+    setAppliedClientFilters((prev) => ({ ...prev, locationIds: [] }))
   }, [])
 
   const toggleLocationFilter = (id: string) => {
@@ -117,8 +135,6 @@ export function DynamicHistoriTab(props: {
     }
     return () => onHeaderChange({ kind: 'tab' })
   }, [screen.mode, onHeaderChange])
-
-  const llojiLabel = history.filters.lloji ?? 'Lloji'
 
   const formatLocationRoute = (action: ActionBatch) => {
     if (action.lloji === 'Transfer' && action.destination_lokacioni_emri) {
@@ -141,34 +157,27 @@ export function DynamicHistoriTab(props: {
         />
       ) : (
         <>
-          <div className="mobile-tab-panel">
+          <div className="mobile-tab-panel mobile-tab-panel--histori-list">
             <FilterChips
               chips={[
-                { id: 'lloji', label: llojiLabel, active: !!history.filters.lloji },
-                { id: 'lokacioni', label: locationLabel, active: locationFilterCount > 0 },
+                {
+                  id: 'lloji',
+                  label: veprimFilterLabel,
+                  active: !!history.filters.lloji,
+                },
+                {
+                  id: 'lokacioni',
+                  label: lokacionFilterLabel,
+                  active: locationFilterCount > 0,
+                },
                 {
                   id: 'advanced',
-                  label: advancedFiltersOpen ? 'Filtrat e avancuara ▴' : 'Filtrat e avancuara ▾',
+                  label: 'Filtrat e avancuara',
                   active: advancedFiltersOpen,
                   indicator: hasAdvancedFilters,
                 },
-                ...(history.filters.lloji ||
-                history.filters.dateFrom ||
-                history.filters.dateTo ||
-                locationFilterCount > 0
-                  ? [{ id: 'clear', label: 'Pastro', active: false }]
-                  : []),
               ]}
               onSelect={(id) => {
-                if (id === 'clear') {
-                  history.updateFilters({
-                    lloji: undefined,
-                    dateFrom: undefined,
-                    dateTo: undefined,
-                  })
-                  setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
-                  return
-                }
                 if (id === 'advanced') {
                   openAdvancedFilters()
                   return
@@ -178,126 +187,115 @@ export function DynamicHistoriTab(props: {
               }}
             />
 
-            <HistoriAdvancedFiltersPanel
-              open={advancedFiltersOpen}
-              draft={draftClientFilters}
-              showTotali={trackPrice}
-              onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
-              onApply={applyAdvancedFilters}
-              onClear={clearAdvancedFilters}
-            />
-
-            <div className="mobile-field-row">
-              <div>
-                <label className="mobile-label">Nga</label>
-                <MobileDateInput
-                  value={history.filters.dateFrom ?? ''}
-                  onChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
-                  aria-label="Nga data"
-                  placeholder="Nga"
-                />
-              </div>
-              <div>
-                <label className="mobile-label">Deri</label>
-                <MobileDateInput
-                  value={history.filters.dateTo ?? ''}
-                  onChange={(v) => history.updateFilters({ dateTo: v || undefined })}
-                  aria-label="Deri data"
-                  placeholder="Deri"
-                />
-              </div>
-            </div>
-
             {history.error ? <div className="mobile-inline-error">{history.error}</div> : null}
 
-            {history.listQuery.isLoading ? (
-              <SkeletonRow count={5} />
-            ) : history.actions.length === 0 ? (
-              <div className="mobile-empty">
-                <div className="mobile-empty-title">Nuk ka veprime</div>
-              </div>
-            ) : filteredActions.length === 0 ? (
-              <div className="mobile-empty">
-                <div className="mobile-empty-title">Asnjë rezultat</div>
-              </div>
-            ) : (
-              <div className="mobile-list-stack">
-                {filteredActions.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className="mobile-row-card"
-                    style={{
-                      width: '100%',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
+            <div
+              className={`mobile-histori-list-wrap${isRefreshing ? ' is-refreshing' : ''}`}
+              aria-busy={isInitialLoad || isRefreshing}
+            >
+              {isInitialLoad ? (
+                <MobileHistoriListPending variant="initial" />
+              ) : history.actions.length === 0 ? (
+                <div className="mobile-empty">
+                  <div className="mobile-empty-title">Nuk ka veprime</div>
+                </div>
+              ) : filteredActions.length === 0 ? (
+                <div className="mobile-empty">
+                  <div className="mobile-empty-title">Asnjë rezultat</div>
+                </div>
+              ) : (
+                <>
+                  {isRefreshing ? <MobileHistoriListPending variant="overlay" /> : null}
+                  <div
+                    key={history.page}
+                    className={`mobile-histori-list${isRefreshing ? '' : ' mobile-histori-list--settle'}`}
                   >
-                    <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
-                      <MobileLlojiBadge lloji={action.lloji} />
-                      <span className="mobile-card-meta">
-                        {formatActionDateTime(action.data, action.ora)}
-                      </span>
-                    </div>
-                    {action.pershkrimi?.trim() ? (
-                      <div
-                        className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
-                        title={action.pershkrimi.trim()}
-                      >
-                        {action.pershkrimi.trim()}
+                  {Array.from({ length: HISTORY_PAGE_SIZE }, (_, i) => {
+                    const action = filteredActions[i]
+                    if (!action) {
+                      return (
+                        <div
+                          key={`pad-${i}`}
+                          className="mobile-histori-list-slot mobile-histori-list-slot--empty"
+                          aria-hidden
+                        />
+                      )
+                    }
+                    return (
+                      <div key={action.id} className="mobile-histori-list-slot">
+                        <button
+                          type="button"
+                          className="mobile-row-card mobile-histori-row-card"
+                          style={{
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
+                        >
+                          <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
+                            <MobileLlojiBadge lloji={action.lloji} />
+                            <span className="mobile-card-meta">
+                              {formatActionDateTime(action.data, action.ora)}
+                            </span>
+                          </div>
+                          {action.pershkrimi?.trim() ? (
+                            <div
+                              className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
+                              title={action.pershkrimi.trim()}
+                            >
+                              {action.pershkrimi.trim()}
+                            </div>
+                          ) : null}
+                          <div
+                            className="mobile-card-meta row"
+                            style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
+                          >
+                            {formatLocationRoute(action)}
+                          </div>
+                          <div className="mobile-card-meta" style={{ marginTop: 6 }}>
+                            {productCountLabel(action.item_count)}
+                            {trackPrice ? <> · {fmtEuro(action.totali)}</> : null}
+                          </div>
+                        </button>
                       </div>
-                    ) : null}
-                    <div
-                      className="mobile-card-meta row"
-                      style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
-                    >
-                      {formatLocationRoute(action)}
-                    </div>
-                    <div className="mobile-card-meta" style={{ marginTop: 6 }}>
-                      {productCountLabel(action.item_count)}
-                      {trackPrice ? <> · {fmtEuro(action.totali)}</> : null}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                    )
+                  })}
+                  </div>
+                </>
+              )}
+            </div>
 
             {history.total > 0 ? (
-              <div className="mobile-pagination">
-                <button
-                  type="button"
-                  className="mobile-pagination-btn"
-                  disabled={history.page <= 1}
-                  onClick={() => history.setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <span className="mobile-card-meta">
-                  {history.page} / {history.totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="mobile-pagination-btn"
-                  disabled={history.page >= history.totalPages}
-                  onClick={() => history.setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
+              <MobilePagination
+                page={history.page}
+                totalPages={history.totalPages}
+                total={history.total}
+                pageSize={HISTORY_PAGE_SIZE}
+                onPageChange={(nextPage) => history.setPage(nextPage)}
+              />
             ) : null}
           </div>
 
-          <BottomSheet open={llojiOpen} title="Lloji" onClose={() => setLlojiOpen(false)}>
+          <BottomSheet open={llojiOpen} title="Veprimi" onClose={() => setLlojiOpen(false)}>
             <div className="mobile-list-stack">
+              <button
+                type="button"
+                className={`mobile-tap-field${!history.filters.lloji ? ' selected' : ''}`}
+                onClick={() => {
+                  history.updateFilters({ lloji: undefined })
+                  setLlojiOpen(false)
+                }}
+              >
+                {ALL_VEPRIMET_LABEL}
+              </button>
               {LLOJI_FILTER_OPTIONS.map(({ id, label, icon: Icon, tone }) => (
                 <button
                   key={id}
                   type="button"
                   className={`mobile-tap-field${history.filters.lloji === id ? ' selected' : ''}`}
                   onClick={() => {
-                    history.updateFilters({ lloji: history.filters.lloji === id ? undefined : id })
+                    history.updateFilters({ lloji: id })
                     setLlojiOpen(false)
                   }}
                 >
@@ -317,6 +315,7 @@ export function DynamicHistoriTab(props: {
             title="Lokacioni"
             selectedIds={appliedClientFilters.locationIds}
             onToggle={toggleLocationFilter}
+            onClearAll={clearLocationFilter}
             onClose={() => setLocationOpen(false)}
           />
         </>
@@ -351,6 +350,22 @@ export function DynamicHistoriTab(props: {
           </p>
         ) : null}
       </BottomSheet>
+
+      <HistoriAdvancedFiltersPanel
+        open={advancedFiltersOpen}
+        onClose={closeAdvancedFilters}
+        draft={draftClientFilters}
+        dateFrom={history.filters.dateFrom ?? ''}
+        dateTo={history.filters.dateTo ?? ''}
+        shenim={history.filters.shenim ?? ''}
+        showTotali={trackPrice}
+        onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
+        onDateFromChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
+        onDateToChange={(v) => history.updateFilters({ dateTo: v || undefined })}
+        onShenimChange={(v) => history.updateFilters({ shenim: v || undefined })}
+        onApply={applyAdvancedFilters}
+        onClear={clearAdvancedFilters}
+      />
     </>
   )
 }

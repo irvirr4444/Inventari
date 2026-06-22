@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { InputClearButton } from '../../components/InputClearButton'
 import { formatDisplayDate } from '../../lib/format'
 import { DatePickerSheet } from './DatePickerSheet'
 
@@ -29,6 +30,7 @@ export function MobileDateInput(props: {
   onChange: (value: string) => void
   disabled?: boolean
   placeholder?: string
+  clearable?: boolean
   'aria-label'?: string
 }) {
   const [open, setOpen] = React.useState(false)
@@ -47,13 +49,27 @@ export function MobileDateInput(props: {
         <span className={props.value ? 'date-input-value' : 'date-input-placeholder'}>
           {props.value ? formatDisplayDate(props.value) : label}
         </span>
-        <CalendarIcon />
+        {props.clearable ? (
+          <span className="date-input-trailing-slot">
+            {props.value ? (
+              <InputClearButton
+                className="date-input-trailing-btn"
+                onClick={() => props.onChange('')}
+              />
+            ) : (
+              <CalendarIcon />
+            )}
+          </span>
+        ) : (
+          <CalendarIcon />
+        )}
       </button>
 
       <DatePickerSheet
         open={open}
         value={props.value}
         title={label}
+        clearable={props.clearable}
         onClose={() => setOpen(false)}
         onSelect={props.onChange}
       />

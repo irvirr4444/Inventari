@@ -1,4 +1,5 @@
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
+import { ALL_LOKACIONET_LABEL } from '../../../../mobile/constants/historiFilters'
 import { locationBadge, useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 
 export function DynamicLocationMultiPickerSheet(props: {
@@ -6,13 +7,25 @@ export function DynamicLocationMultiPickerSheet(props: {
   title: string
   selectedIds: string[]
   onToggle: (id: string) => void
+  onClearAll: () => void
   onClose: () => void
 }) {
   const { activeLokacionet } = useLokacioni()
+  const allSelected = props.selectedIds.length === 0
 
   return (
     <BottomSheet open={props.open} title={props.title} onClose={props.onClose}>
       <div className="mobile-list-stack">
+        <button
+          type="button"
+          className={`mobile-tap-field${allSelected ? ' selected' : ''}`}
+          onClick={() => {
+            props.onClearAll()
+            props.onClose()
+          }}
+        >
+          {ALL_LOKACIONET_LABEL}
+        </button>
         {activeLokacionet.map((loc) => {
           const checked = props.selectedIds.includes(loc.id)
           return (

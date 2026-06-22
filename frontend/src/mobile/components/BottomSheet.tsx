@@ -12,6 +12,7 @@ type BottomSheetProps = {
   footer?: React.ReactNode
   onEnterConfirm?: () => void
   enterConfirmDisabled?: boolean
+  className?: string
 }
 
 const SHEET_BASE_Z = 100
@@ -103,7 +104,7 @@ export function BottomSheet(props: BottomSheetProps) {
         aria-hidden={false}
       />
       <div
-        className="mobile-sheet open"
+        className={`mobile-sheet open${props.className ? ` ${props.className}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-sheet-title"

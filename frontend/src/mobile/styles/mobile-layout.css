@@ -84,6 +84,18 @@
   min-height: 100%;
 }
 
+html.mobile-client .mobile-content:has(.mobile-tab-panel--histori-list) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-tab-panel--histori-list {
+  flex: 1;
+  min-height: 0;
+  gap: var(--mobile-space-md);
+}
+
 .mobile-bottom-nav {
   position: fixed;
   left: 0;

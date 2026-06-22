@@ -5,6 +5,7 @@ export function DatePickerSheet(props: {
   open: boolean
   value: string
   title?: string
+  clearable?: boolean
   onClose: () => void
   onSelect: (iso: string) => void
 }) {
@@ -12,6 +13,7 @@ export function DatePickerSheet(props: {
     <BottomSheet open={props.open} title={props.title ?? 'Zgjedh daten'} onClose={props.onClose}>
       <DatePickerCalendar
         className="mobile-date-picker-calendar"
+        clearable={props.clearable}
         value={props.value}
         onChange={(iso) => {
           props.onSelect(iso)

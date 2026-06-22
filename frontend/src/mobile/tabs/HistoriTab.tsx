@@ -11,14 +11,18 @@ import {
   hasActiveClientFilters,
   type HistoryClientFilters,
 } from '../../lib/historyClientFilters'
-import { useHistoryBatches } from '../../hooks/useHistoryBatches'
+import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../hooks/useHistoryBatches'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
 import { FilterChips } from '../components/FilterChips'
+import {
+  ALL_SHTETET_LABEL,
+  ALL_VEPRIMET_LABEL,
+} from '../constants/historiFilters'
 import { HistoriAdvancedFiltersPanel } from '../components/HistoriAdvancedFiltersPanel'
-import { MobileDateInput } from '../components/MobileDateInput'
-import { SkeletonRow } from '../components/SkeletonRow'
+import { MobileHistoriListPending } from '../components/MobileHistoriListPending'
+import { MobilePagination } from '../components/MobilePagination'
 import type { MobileHeaderState } from '../types'
 import { HistoriBatchDetail } from './HistoriBatchDetail'
 
@@ -66,12 +70,19 @@ export function HistoriTab(props: {
     [history.actions, appliedClientFilters],
   )
 
-  const hasAdvancedFilters = hasActiveClientFilters(appliedClientFilters)
+  const hasAdvancedFilters =
+    hasActiveClientFilters(appliedClientFilters) ||
+    !!(history.filters.shenim?.trim()) ||
+    !!(history.filters.dateFrom || history.filters.dateTo)
 
   const openAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(appliedClientFilters)
-    setAdvancedFiltersOpen((open) => !open)
+    setAdvancedFiltersOpen(true)
   }, [appliedClientFilters])
+
+  const closeAdvancedFilters = React.useCallback(() => {
+    setAdvancedFiltersOpen(false)
+  }, [])
 
   const applyAdvancedFilters = React.useCallback(() => {
     setAppliedClientFilters(draftClientFilters)
@@ -81,8 +92,9 @@ export function HistoriTab(props: {
   const clearAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(EMPTY_CLIENT_FILTERS)
     setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
+    history.updateFilters({ shenim: undefined, dateFrom: undefined, dateTo: undefined })
     setAdvancedFiltersOpen(false)
-  }, [])
+  }, [history])
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
   const { onHeaderChange } = props
@@ -94,8 +106,11 @@ export function HistoriTab(props: {
     return () => onHeaderChange({ kind: 'tab' })
   }, [screen.mode, onHeaderChange])
 
-  const llojiLabel = history.filters.lloji ?? 'Lloji'
-  const shtetiLabel = history.filters.shteti ? countryLabel(history.filters.shteti) : 'Shteti'
+  const veprimFilterLabel = history.filters.lloji ?? ALL_VEPRIMET_LABEL
+  const shtetiFilterLabel = history.filters.shteti
+    ? countryLabel(history.filters.shteti)
+    : ALL_SHTETET_LABEL
+  const { isInitialLoad, isRefreshing } = history.listRefresh
 
   return (
     <>
@@ -111,34 +126,27 @@ export function HistoriTab(props: {
         />
       ) : (
         <>
-          <div className="mobile-tab-panel">
+          <div className="mobile-tab-panel mobile-tab-panel--histori-list">
             <FilterChips
               chips={[
-                { id: 'lloji', label: llojiLabel, active: !!history.filters.lloji },
-                { id: 'shteti', label: shtetiLabel, active: !!history.filters.shteti },
+                {
+                  id: 'lloji',
+                  label: veprimFilterLabel,
+                  active: !!history.filters.lloji,
+                },
+                {
+                  id: 'shteti',
+                  label: shtetiFilterLabel,
+                  active: !!history.filters.shteti,
+                },
                 {
                   id: 'advanced',
-                  label: advancedFiltersOpen ? 'Filtrat e avancuara ▴' : 'Filtrat e avancuara ▾',
+                  label: 'Filtrat e avancuara',
                   active: advancedFiltersOpen,
                   indicator: hasAdvancedFilters,
                 },
-                ...(history.filters.lloji ||
-                history.filters.shteti ||
-                history.filters.dateFrom ||
-                history.filters.dateTo
-                  ? [{ id: 'clear', label: 'Pastro', active: false }]
-                  : []),
               ]}
               onSelect={(id) => {
-                if (id === 'clear') {
-                  history.updateFilters({
-                    lloji: undefined,
-                    shteti: undefined,
-                    dateFrom: undefined,
-                    dateTo: undefined,
-                  })
-                  return
-                }
                 if (id === 'advanced') {
                   openAdvancedFilters()
                   return
@@ -148,154 +156,144 @@ export function HistoriTab(props: {
               }}
             />
 
-            <HistoriAdvancedFiltersPanel
-              open={advancedFiltersOpen}
-              draft={draftClientFilters}
-              onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
-              onApply={applyAdvancedFilters}
-              onClear={clearAdvancedFilters}
-            />
-
-            <div className="mobile-field-row">
-              <div>
-                <label className="mobile-label">Nga</label>
-                <MobileDateInput
-                  value={history.filters.dateFrom ?? ''}
-                  onChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
-                  aria-label="Nga data"
-                  placeholder="Nga"
-                />
-              </div>
-              <div>
-                <label className="mobile-label">Deri</label>
-                <MobileDateInput
-                  value={history.filters.dateTo ?? ''}
-                  onChange={(v) => history.updateFilters({ dateTo: v || undefined })}
-                  aria-label="Deri data"
-                  placeholder="Deri"
-                />
-              </div>
-            </div>
-
             {history.error ? <div className="mobile-inline-error">{history.error}</div> : null}
 
-            {history.listQuery.isLoading ? (
-              <SkeletonRow count={5} />
-            ) : history.actions.length === 0 ? (
-              <div className="mobile-empty">
-                <div className="mobile-empty-title">Nuk ka veprime</div>
-              </div>
-            ) : filteredActions.length === 0 ? (
-              <div className="mobile-empty">
-                <div className="mobile-empty-title">Asnjë rezultat</div>
-              </div>
-            ) : (
-              <div className="mobile-list-stack">
-                {filteredActions.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className="mobile-row-card"
-                    style={{
-                      width: '100%',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
+            <div
+              className={`mobile-histori-list-wrap${isRefreshing ? ' is-refreshing' : ''}`}
+              aria-busy={isInitialLoad || isRefreshing}
+            >
+              {isInitialLoad ? (
+                <MobileHistoriListPending variant="initial" />
+              ) : history.actions.length === 0 ? (
+                <div className="mobile-empty">
+                  <div className="mobile-empty-title">Nuk ka veprime</div>
+                </div>
+              ) : filteredActions.length === 0 ? (
+                <div className="mobile-empty">
+                  <div className="mobile-empty-title">Asnjë rezultat</div>
+                </div>
+              ) : (
+                <>
+                  {isRefreshing ? <MobileHistoriListPending variant="overlay" /> : null}
+                  <div
+                    key={history.page}
+                    className={`mobile-histori-list${isRefreshing ? '' : ' mobile-histori-list--settle'}`}
                   >
-                    <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
-                      <MobileLlojiBadge lloji={action.lloji} />
-                      <span className="mobile-card-meta">
-                        {formatActionDateTime(action.data, action.ora)}
-                      </span>
-                    </div>
-                    {action.pershkrimi?.trim() ? (
-                      <div
-                        className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
-                        title={action.pershkrimi.trim()}
-                      >
-                        {action.pershkrimi.trim()}
-                      </div>
-                    ) : null}
-                    {action.lloji === 'Transfer' && action.destination_shteti ? (
-                      <div
-                        className="mobile-card-meta row"
-                        style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
-                      >
-                        <img
-                          className="flagIcon"
-                          src={COUNTRY_META[action.shteti].flagSrc}
-                          alt=""
-                          width={16}
-                          height={11}
+                  {Array.from({ length: HISTORY_PAGE_SIZE }, (_, i) => {
+                    const action = filteredActions[i]
+                    if (!action) {
+                      return (
+                        <div
+                          key={`pad-${i}`}
+                          className="mobile-histori-list-slot mobile-histori-list-slot--empty"
+                          aria-hidden
                         />
-                        {countryLabel(action.shteti)} → {countryLabel(action.destination_shteti)}
-                        <img
-                          className="flagIcon"
-                          src={COUNTRY_META[action.destination_shteti].flagSrc}
-                          alt=""
-                          width={16}
-                          height={11}
-                        />
+                      )
+                    }
+                    return (
+                      <div key={action.id} className="mobile-histori-list-slot">
+                        <button
+                          type="button"
+                          className="mobile-row-card mobile-histori-row-card"
+                          style={{
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
+                        >
+                          <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
+                            <MobileLlojiBadge lloji={action.lloji} />
+                            <span className="mobile-card-meta">
+                              {formatActionDateTime(action.data, action.ora)}
+                            </span>
+                          </div>
+                          {action.pershkrimi?.trim() ? (
+                            <div
+                              className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
+                              title={action.pershkrimi.trim()}
+                            >
+                              {action.pershkrimi.trim()}
+                            </div>
+                          ) : null}
+                          {action.lloji === 'Transfer' && action.destination_shteti ? (
+                            <div
+                              className="mobile-card-meta row"
+                              style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
+                            >
+                              <img
+                                className="flagIcon"
+                                src={COUNTRY_META[action.shteti].flagSrc}
+                                alt=""
+                                width={16}
+                                height={11}
+                              />
+                              {countryLabel(action.shteti)} → {countryLabel(action.destination_shteti)}
+                              <img
+                                className="flagIcon"
+                                src={COUNTRY_META[action.destination_shteti].flagSrc}
+                                alt=""
+                                width={16}
+                                height={11}
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className="mobile-card-meta row"
+                              style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
+                            >
+                              <img
+                                className="flagIcon"
+                                src={COUNTRY_META[action.shteti].flagSrc}
+                                alt=""
+                                width={16}
+                                height={11}
+                              />
+                              {countryLabel(action.shteti)}
+                            </div>
+                          )}
+                          <div className="mobile-card-meta" style={{ marginTop: 6 }}>
+                            {productCountLabel(action.item_count)} · {fmtEuro(action.totali)}
+                          </div>
+                        </button>
                       </div>
-                    ) : (
-                      <div
-                        className="mobile-card-meta row"
-                        style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
-                      >
-                        <img
-                          className="flagIcon"
-                          src={COUNTRY_META[action.shteti].flagSrc}
-                          alt=""
-                          width={16}
-                          height={11}
-                        />
-                        {countryLabel(action.shteti)}
-                      </div>
-                    )}
-                    <div className="mobile-card-meta" style={{ marginTop: 6 }}>
-                      {productCountLabel(action.item_count)} · {fmtEuro(action.totali)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                    )
+                  })}
+                  </div>
+                </>
+              )}
+            </div>
 
             {history.total > 0 ? (
-              <div className="mobile-pagination">
-                <button
-                  type="button"
-                  className="mobile-pagination-btn"
-                  disabled={history.page <= 1}
-                  onClick={() => history.setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <span className="mobile-card-meta">
-                  {history.page} / {history.totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="mobile-pagination-btn"
-                  disabled={history.page >= history.totalPages}
-                  onClick={() => history.setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
+              <MobilePagination
+                page={history.page}
+                totalPages={history.totalPages}
+                total={history.total}
+                pageSize={HISTORY_PAGE_SIZE}
+                onPageChange={(nextPage) => history.setPage(nextPage)}
+              />
             ) : null}
           </div>
 
-          <BottomSheet open={llojiOpen} title="Lloji" onClose={() => setLlojiOpen(false)}>
+          <BottomSheet open={llojiOpen} title="Veprimi" onClose={() => setLlojiOpen(false)}>
             <div className="mobile-list-stack">
+              <button
+                type="button"
+                className={`mobile-tap-field${!history.filters.lloji ? ' selected' : ''}`}
+                onClick={() => {
+                  history.updateFilters({ lloji: undefined })
+                  setLlojiOpen(false)
+                }}
+              >
+                {ALL_VEPRIMET_LABEL}
+              </button>
               {LLOJI_FILTER_OPTIONS.map(({ id, label, icon: Icon, tone }) => (
                 <button
                   key={id}
                   type="button"
                   className={`mobile-tap-field${history.filters.lloji === id ? ' selected' : ''}`}
                   onClick={() => {
-                    history.updateFilters({ lloji: history.filters.lloji === id ? undefined : id })
+                    history.updateFilters({ lloji: id })
                     setLlojiOpen(false)
                   }}
                 >
@@ -312,13 +310,23 @@ export function HistoriTab(props: {
 
           <BottomSheet open={shtetiOpen} title="Shteti" onClose={() => setShtetiOpen(false)}>
             <div className="mobile-list-stack">
+              <button
+                type="button"
+                className={`mobile-tap-field${!history.filters.shteti ? ' selected' : ''}`}
+                onClick={() => {
+                  history.updateFilters({ shteti: undefined })
+                  setShtetiOpen(false)
+                }}
+              >
+                {ALL_SHTETET_LABEL}
+              </button>
               {(['XK', 'AL'] as Country[]).map((c) => (
                 <button
                   key={c}
                   type="button"
-                  className="mobile-tap-field"
+                  className={`mobile-tap-field${history.filters.shteti === c ? ' selected' : ''}`}
                   onClick={() => {
-                    history.updateFilters({ shteti: history.filters.shteti === c ? undefined : c })
+                    history.updateFilters({ shteti: c })
                     setShtetiOpen(false)
                   }}
                 >
@@ -362,6 +370,21 @@ export function HistoriTab(props: {
           </p>
         ) : null}
       </BottomSheet>
+
+      <HistoriAdvancedFiltersPanel
+        open={advancedFiltersOpen}
+        onClose={closeAdvancedFilters}
+        draft={draftClientFilters}
+        dateFrom={history.filters.dateFrom ?? ''}
+        dateTo={history.filters.dateTo ?? ''}
+        shenim={history.filters.shenim ?? ''}
+        onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
+        onDateFromChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
+        onDateToChange={(v) => history.updateFilters({ dateTo: v || undefined })}
+        onShenimChange={(v) => history.updateFilters({ shenim: v || undefined })}
+        onApply={applyAdvancedFilters}
+        onClear={clearAdvancedFilters}
+      />
     </>
   )
 }

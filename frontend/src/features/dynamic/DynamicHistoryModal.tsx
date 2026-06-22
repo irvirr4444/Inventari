@@ -110,7 +110,8 @@ export function DynamicHistoryModal(props: {
   const clearExpanded = () => setExpandedIds(new Set())
 
   const listQuery = useHistoryBatchListQuery(user?.id, filters, page, PAGE_SIZE)
-  const { isInitialLoad, isRefreshing, resultsBodyKey } = historyListRefreshState(listQuery)
+  const { isInitialLoad, isRefreshing } = historyListRefreshState(listQuery)
+  const isTableLoading = isInitialLoad || isRefreshing
 
   const prefetchDetail = React.useCallback(
     (actionId: string) => {
@@ -208,10 +209,7 @@ export function DynamicHistoryModal(props: {
             />
           </div>
 
-          <div
-            className={`history-table-wrap history-table-wrap--fixed-body${isRefreshing ? ' history-table-wrap--refreshing' : ''}`}
-          >
-            {isRefreshing ? <div className="history-table-refresh-bar" aria-hidden="true" /> : null}
+          <div className="history-table-wrap history-table-wrap--fixed-body">
             <table className="table history-table">
               <colgroup>
                 <col className="history-col-expand" />
@@ -237,11 +235,10 @@ export function DynamicHistoryModal(props: {
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
-              {isInitialLoad ? (
+              {isTableLoading ? (
                 <HistorySkeletonTable />
               ) : listQuery.isError && !listQuery.data ? (
                 <HistoryTableEmptyBody
-                  bodyKey={resultsBodyKey}
                   colSpan={tableColCount}
                   message={
                     listQuery.error instanceof Error
@@ -251,18 +248,16 @@ export function DynamicHistoryModal(props: {
                 />
               ) : actions.length === 0 ? (
                 <HistoryTableEmptyBody
-                  bodyKey={resultsBodyKey}
                   colSpan={tableColCount}
                   message="Nuk u gjet asnje veprim."
                 />
               ) : filteredActions.length === 0 ? (
                 <HistoryTableEmptyBody
-                  bodyKey={resultsBodyKey}
                   colSpan={tableColCount}
                   message="Asnjë rezultat"
                 />
               ) : (
-                <tbody key={resultsBodyKey} className="history-table-body--enter">
+                <tbody key={page}>
                   {filteredActions.map((action) => {
                     const expanded = expandedIds.has(action.id)
                     return (
@@ -351,7 +346,7 @@ export function DynamicHistoryModal(props: {
             </div>
           )}
 
-          {!isInitialLoad && (
+          {!isTableLoading && (
             <div className={`history-pagination${total > 0 ? '' : ' history-pagination--empty'}`}>
               <span className="history-pagination-summary">
                 {total > 0

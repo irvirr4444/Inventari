@@ -17,10 +17,9 @@ export function HistoryTablePadRows(props: { count: number; colSpan: number }) {
 export function HistoryTableEmptyBody(props: {
   message: string
   colSpan: number
-  bodyKey?: string | number
 }) {
   return (
-    <tbody key={props.bodyKey} className="history-table-body--enter">
+    <tbody>
       <tr className="history-table-empty-message-row">
         <td colSpan={props.colSpan} className="history-empty-cell">
           <p className="muted">{props.message}</p>

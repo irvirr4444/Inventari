@@ -25,11 +25,9 @@ export function historyListRefreshState(query: {
   isLoading: boolean
   isFetching: boolean
   isPlaceholderData: boolean
-  dataUpdatedAt: number
 }) {
   return {
     isInitialLoad: query.isLoading,
     isRefreshing: query.isFetching && query.isPlaceholderData,
-    resultsBodyKey: query.dataUpdatedAt,
   }
 }

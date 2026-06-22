@@ -18,7 +18,7 @@ const TAB_TITLES: Record<TabId, string> = {
   transfer: 'Transfer',
   produkte: 'Produkte',
   histori: 'Histori',
-  permblehdje: 'Permbledhje',
+  permblehdje: 'Totalet',
 }
 
 const CTA_TABS: TabId[] = ['veprime', 'transfer']

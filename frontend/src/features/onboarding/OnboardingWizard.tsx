@@ -119,61 +119,65 @@ export function OnboardingWizard() {
 
   return (
     <div className="onboarding-wizard">
-      <div className="onboarding-wizard__progress" aria-hidden="true">
-        <div
-          className="onboarding-wizard__progress-bar"
-          style={{ width: `${PROGRESS[screen]}%` }}
-        />
-      </div>
-
-      <div className="onboarding-wizard__topbar">
-        {screen === 0 ? (
-          <button type="button" className="onboarding-wizard__back-link" onClick={handleBackToLogin}>
-            Kthehu te hyrja
-          </button>
-        ) : (
-          <button type="button" className="onboarding-wizard__back-link" onClick={goBack}>
-            ← Kthehu
-          </button>
-        )}
-      </div>
-
-      <div className={`onboarding-wizard__body ${animClass}`}>
-        {screen === 0 ? <Screen1Welcome onContinue={() => goTo(1)} /> : null}
-        {screen === 1 ? (
-          <Screen2LocationCount
-            value={locationCount}
-            onChange={handleCountChange}
-            onContinue={continueToLocationNames}
-          />
-        ) : null}
-        {screen === 2 ? (
-          <Screen3LocationNames
-            locations={locations}
-            onChange={setLocations}
-            onContinue={() => goTo(3)}
-          />
-        ) : null}
-        {screen === 3 ? (
+      <div className="onboarding-wizard__inner">
+        {screen > 0 ? (
           <>
-            <Screen4Pricing
-              value={trackPrice}
-              onChange={setTrackPrice}
-              onContinue={() => void handlePricingContinue()}
-              loading={savingPricing}
-            />
-            {error ? <p className="ob-error">{error}</p> : null}
+            <div className="onboarding-top-bar">
+              <button type="button" className="onboarding-back-btn" onClick={goBack}>
+                ← Kthehu
+              </button>
+              <span className="onboarding-step-label">
+                {screen} / 4
+              </span>
+            </div>
+            <div className="onboarding-progress-track" aria-hidden="true">
+              <div
+                className="onboarding-progress-fill"
+                style={{ width: `${PROGRESS[screen]}%` }}
+              />
+            </div>
           </>
         ) : null}
-        {screen === 4 ? (
-          <Screen5Confirm
-            locations={locations}
-            trackPrice={trackPrice ?? true}
-            onSubmit={() => void handleSubmit()}
-            submitting={submitting}
-            error={error}
-          />
-        ) : null}
+
+        <div className={`onboarding-wizard__body ${animClass}`}>
+          {screen === 0 ? (
+            <Screen1Welcome onContinue={() => goTo(1)} onLogout={handleBackToLogin} />
+          ) : null}
+          {screen === 1 ? (
+            <Screen2LocationCount
+              value={locationCount}
+              onChange={handleCountChange}
+              onContinue={continueToLocationNames}
+            />
+          ) : null}
+          {screen === 2 ? (
+            <Screen3LocationNames
+              locations={locations}
+              onChange={setLocations}
+              onContinue={() => goTo(3)}
+            />
+          ) : null}
+          {screen === 3 ? (
+            <>
+              <Screen4Pricing
+                value={trackPrice}
+                onChange={setTrackPrice}
+                onContinue={() => void handlePricingContinue()}
+                loading={savingPricing}
+              />
+              {error ? <p className="ob-error">{error}</p> : null}
+            </>
+          ) : null}
+          {screen === 4 ? (
+            <Screen5Confirm
+              locations={locations}
+              trackPrice={trackPrice ?? true}
+              onSubmit={() => void handleSubmit()}
+              submitting={submitting}
+              error={error}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )

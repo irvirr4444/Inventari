@@ -6,7 +6,9 @@
   --mobile-space-md: 16px;
   --mobile-space-lg: 24px;
   --mobile-space-xl: 32px;
-  --mobile-tab-height: 60px;
+  --mobile-tab-height: 64px;
+  --mobile-nav-inactive: #6b7f99;
+  --mobile-nav-active: #ffffff;
   --mobile-cta-height: 52px;
   --mobile-edit-footer-height: 108px;
   --mobile-sheet-radius: 16px;

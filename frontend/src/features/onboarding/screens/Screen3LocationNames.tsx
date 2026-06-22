@@ -37,43 +37,48 @@ export function Screen3LocationNames(props: {
     props.onChange(next)
   }
 
+  const getPlaceholder = (index: number) =>
+    PLACEHOLDERS[Math.min(index, PLACEHOLDERS.length - 1)]
+
   return (
-    <div className="onboarding-wizard__screen">
-      <h1 className="ob-headline">{headline}</h1>
-      <div className="ob-location-name-list">
-        {props.locations.map((loc, index) => (
-          <div key={index} className="ob-location-name-row" style={{ flexWrap: 'wrap' }}>
-            <span className="ob-location-name-row__index">{index + 1}.</span>
-            <input
-              className="ob-location-name-row__input"
-              value={loc.emri}
-              placeholder={PLACEHOLDERS[Math.min(index, PLACEHOLDERS.length - 1)]}
-              onChange={(e) => updateLocation(index, { emri: e.target.value })}
-              aria-label={`Emri i vendodhjes ${index + 1}`}
-            />
-            <button
-              type="button"
-              className={`ob-location-name-row__emoji${openPickerIndex === index ? ' ob-location-name-row__emoji--open' : ''}`}
-              onClick={() => setOpenPickerIndex(openPickerIndex === index ? null : index)}
-              aria-label="Zgjidh emoji"
-            >
-              {loc.flagEmoji}
-            </button>
-            {openPickerIndex === index ? (
-              <LocationEmojiPicker
-                className="ob-location-name-row__picker"
-                value={loc.flagEmoji}
-                onChange={(emoji) => {
-                  updateLocation(index, { flagEmoji: emoji })
-                  setOpenPickerIndex(null)
-                }}
+    <div className="onboarding-wizard__screen onboarding-wizard__screen--2">
+      <div className="onboarding-orb onboarding-orb--a" aria-hidden="true" />
+      <div className="onboarding-orb onboarding-orb--b" aria-hidden="true" />
+      <div className="onboarding-content">
+        <h1 className="onboarding-screen-title">{headline}</h1>
+        <div className="onboarding-locs-scroll">
+          {props.locations.map((loc, index) => (
+            <div key={index} className="onboarding-location-row">
+              <button
+                type="button"
+                className={`onboarding-emoji-btn${openPickerIndex === index ? ' onboarding-emoji-btn--open' : ''}`}
+                onClick={() => setOpenPickerIndex(openPickerIndex === index ? null : index)}
+                aria-label="Zgjidh emoji"
+              >
+                {loc.flagEmoji || '📦'}
+              </button>
+              <input
+                className="onboarding-loc-input"
+                value={loc.emri}
+                placeholder={getPlaceholder(index)}
+                onChange={(e) => updateLocation(index, { emri: e.target.value })}
+                aria-label={`Emri i vendodhjes ${index + 1}`}
               />
-            ) : null}
-          </div>
-        ))}
-      </div>
-      <div className="ob-cta-wrap">
-        <button type="button" className="ob-cta" disabled={!allNamed} onClick={props.onContinue}>
+              {openPickerIndex === index ? (
+                <LocationEmojiPicker
+                  className="onboarding-location-row__picker"
+                  value={loc.flagEmoji}
+                  onChange={(emoji) => {
+                    updateLocation(index, { flagEmoji: emoji })
+                    setOpenPickerIndex(null)
+                  }}
+                />
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <div className="onboarding-spacer" />
+        <button type="button" className="onboarding-cta" disabled={!allNamed} onClick={props.onContinue}>
           Vazhdo →
         </button>
       </div>

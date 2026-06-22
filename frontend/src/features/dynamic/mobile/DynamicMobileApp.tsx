@@ -20,7 +20,7 @@ const TAB_TITLES: Record<TabId, string> = {
   transfer: 'Transfer',
   produkte: 'Produkte',
   histori: 'Histori',
-  permblehdje: 'Permbledhje',
+  permblehdje: 'Totalet',
 }
 
 const CTA_TABS: TabId[] = ['veprime', 'transfer']
@@ -34,9 +34,12 @@ export function DynamicMobileApp(props: {
   const { snackbar, notify } = useSnackbar()
   const { refreshSession } = useAuth()
   const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
+  const [tutorialTarget, setTutorialTarget] = React.useState<string | null>(null)
 
   const dismissTutorial = React.useCallback(async () => {
     setTutorialOpen(false)
+    setTutorialTarget(null)
+    setTab('veprime')
     try {
       await markTutorialSeen()
       await refreshSession()
@@ -93,6 +96,7 @@ export function DynamicMobileApp(props: {
       <BottomNavPortal
         active={tab}
         tutorialOpen={tutorialOpen}
+        tutorialTarget={tutorialOpen ? tutorialTarget : null}
         onTutorialInterrupt={() => void dismissTutorial()}
         onChange={setTab}
       />
@@ -101,6 +105,7 @@ export function DynamicMobileApp(props: {
         <TutorialOverlay
           isMobile
           onMobileTabChange={setTab}
+          onTutorialTargetChange={setTutorialTarget}
           onDismiss={() => void dismissTutorial()}
         />
       ) : null}
@@ -112,16 +117,25 @@ function BottomNavPortal(props: {
   active: TabId
   onChange: (tab: TabId) => void
   tutorialOpen?: boolean
+  tutorialTarget?: string | null
   onTutorialInterrupt?: () => void
   className?: string
 }) {
   if (typeof document === 'undefined') return null
   const handleChange = (tab: TabId) => {
-    if (props.tutorialOpen) props.onTutorialInterrupt?.()
+    if (props.tutorialOpen) {
+      props.onTutorialInterrupt?.()
+      return
+    }
     props.onChange(tab)
   }
   return createPortal(
-    <BottomNav active={props.active} onChange={handleChange} className="dynamic-mobile-bottom-nav" />,
+    <BottomNav
+      active={props.active}
+      onChange={handleChange}
+      tutorialTarget={props.tutorialTarget}
+      className="dynamic-mobile-bottom-nav"
+    />,
     document.body,
   )
 }

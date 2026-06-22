@@ -35,14 +35,15 @@ const DESKTOP_STEPS: Array<{ target: string; text: string }> = [
   },
 ]
 
-const MOBILE_STEPS: Array<{ target: string; mobileTab: TabId; text: string }> = [
-  { target: 'tab-produkte', mobileTab: 'produkte', text: 'Shihni dhe menaxhoni të gjitha produktet.' },
-  { target: 'tab-veprime', mobileTab: 'veprime', text: 'Regjistroni hyrjet dhe daljet këtu.' },
-  { target: 'tab-transfer', mobileTab: 'transfer', text: 'Transferoni stok midis vendodhjeve.' },
-  { target: 'tab-histori', mobileTab: 'histori', text: 'Çdo veprim ruhet dhe mund të ndryshohet.' },
+const MOBILE_STEPS: Array<{ target: string; mobileTab: TabId; label: string; text: string }> = [
+  { target: 'tab-produkte', mobileTab: 'produkte', label: 'Produkte', text: 'Shihni dhe menaxhoni të gjitha produktet.' },
+  { target: 'tab-veprime', mobileTab: 'veprime', label: 'Veprime', text: 'Regjistroni hyrjet dhe daljet këtu.' },
+  { target: 'tab-transfer', mobileTab: 'transfer', label: 'Transfer', text: 'Transferoni stok midis vendodhjeve.' },
+  { target: 'tab-histori', mobileTab: 'histori', label: 'Histori', text: 'Çdo veprim ruhet dhe mund të ndryshohet.' },
   {
     target: 'tab-permbledhje',
     mobileTab: 'permblehdje',
+    label: 'Përmbledhje',
     text: 'Totalet dhe shkarkimi i raporteve Excel.',
   },
 ]
@@ -100,6 +101,7 @@ function computeTooltipPlacement(
 export function TutorialOverlay(props: {
   isMobile?: boolean
   onMobileTabChange?: (tab: TabId) => void
+  onTutorialTargetChange?: (target: string | null) => void
   onDismiss: () => void
 }) {
   const { refreshSession } = useAuth()
@@ -120,6 +122,7 @@ export function TutorialOverlay(props: {
   const finish = React.useCallback(async () => {
     if (dismissedRef.current) return
     dismissedRef.current = true
+    props.onTutorialTargetChange?.(null)
     try {
       await markTutorialSeen()
       await refreshSession()
@@ -128,6 +131,15 @@ export function TutorialOverlay(props: {
     }
     props.onDismiss()
   }, [props, refreshSession])
+
+  React.useEffect(() => {
+    if (!props.isMobile) {
+      props.onTutorialTargetChange?.(null)
+      return
+    }
+    props.onTutorialTargetChange?.(step.target)
+    return () => props.onTutorialTargetChange?.(null)
+  }, [props.isMobile, props.onTutorialTargetChange, step.target])
 
   React.useEffect(() => {
     if (location.pathname !== initialPathRef.current) {
@@ -215,15 +227,72 @@ export function TutorialOverlay(props: {
         className={`tutorial-tooltip arrow-${arrow}${props.isMobile ? ' tutorial-tooltip--mobile' : ''}`}
         style={tooltipStyle}
       >
-        <p className="tutorial-tooltip__text">{step.text}</p>
-        <div className="tutorial-tooltip__actions">
-          <button type="button" className="tutorial-tooltip__btn tutorial-tooltip__btn--ghost" onClick={() => void finish()}>
-            × Kalo
-          </button>
-          <button type="button" className="tutorial-tooltip__btn tutorial-tooltip__btn--primary" onClick={next}>
-            {isLast ? 'Gati! →' : 'Vazhdo →'}
-          </button>
-        </div>
+        {props.isMobile ? (
+          <>
+            <div className="tutorial-tooltip__header">
+              <div className="tutorial-tooltip__header-main">
+                <span className="tutorial-tooltip__eyebrow">Udhëzues</span>
+                <span className="tutorial-tooltip__label">
+                  {(step as (typeof MOBILE_STEPS)[number]).label}
+                </span>
+              </div>
+              <span className="tutorial-tooltip__step-count">
+                {stepIndex + 1} / {steps.length}
+              </span>
+            </div>
+            <div className="tutorial-tooltip__progress-track" aria-hidden="true">
+              <div
+                className="tutorial-tooltip__progress-fill"
+                style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+            <div className="tutorial-tooltip__dots" aria-hidden="true">
+              {steps.map((_, i) => (
+                <span
+                  key={i}
+                  className={`tutorial-tooltip__dot${i === stepIndex ? ' tutorial-tooltip__dot--active' : i < stepIndex ? ' tutorial-tooltip__dot--done' : ''}`}
+                />
+              ))}
+            </div>
+            <p className="tutorial-tooltip__text">{step.text}</p>
+            <div className="tutorial-tooltip__actions tutorial-tooltip__actions--mobile">
+              <button
+                type="button"
+                className="tutorial-tooltip__btn tutorial-tooltip__btn--ghost"
+                onClick={() => void finish()}
+              >
+                × Kalo
+              </button>
+              <button
+                type="button"
+                className="tutorial-tooltip__btn tutorial-tooltip__btn--primary"
+                onClick={next}
+              >
+                {isLast ? 'Gati! →' : 'Vazhdo →'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="tutorial-tooltip__text">{step.text}</p>
+            <div className="tutorial-tooltip__actions">
+              <button
+                type="button"
+                className="tutorial-tooltip__btn tutorial-tooltip__btn--ghost"
+                onClick={() => void finish()}
+              >
+                × Kalo
+              </button>
+              <button
+                type="button"
+                className="tutorial-tooltip__btn tutorial-tooltip__btn--primary"
+                onClick={next}
+              >
+                {isLast ? 'Gati! →' : 'Vazhdo →'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

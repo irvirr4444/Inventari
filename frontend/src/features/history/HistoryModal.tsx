@@ -179,7 +179,16 @@ export function HistoryModal(props: {
 
   const contentRef = React.useRef<HTMLDivElement>(null)
   useFocusModalOnOpen(contentRef, true)
-  useEscapeToClose(onClose)
+
+  const handleEscape = React.useCallback(() => {
+    if (expandedIds.size > 0) {
+      clearExpanded()
+      return
+    }
+    onClose()
+  }, [expandedIds.size, onClose])
+
+  useEscapeToClose(handleEscape)
 
   return (
     <>

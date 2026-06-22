@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { CountrySelect } from '../../components/CountrySelect'
-import { DateInput } from '../../components/DateInput'
 import { ErrorAlert } from '../../components/ErrorAlert'
 import { Modal } from '../../components/Modal'
 import type { Country } from '../../lib/country'
@@ -67,12 +66,10 @@ export function TransferModal(props: {
           </div>
         </div>
 
-        <div className="row transfer-date-row" style={{ gap: 8, margin: '16px 0 12px' }}>
-          <span className="muted" style={{ fontSize: 13 }}>Data e Veprimit</span>
-          <DateInput value={props.date} onChange={props.onDateChange} style={{ width: 150 }} />
-        </div>
-
         <ActionMetaFields
+          layout="modal-row"
+          date={props.date}
+          onDateChange={props.onDateChange}
           ora={props.ora}
           pershkrimi={props.pershkrimi}
           onOraChange={props.onOraChange}

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useEscapeToClose } from '../hooks/useEscapeToClose'
 
 export type Country = 'XK' | 'AL'
 
@@ -57,6 +58,8 @@ export function CountrySelector() {
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
+
+  useEscapeToClose(() => setOpen(false), { enabled: open })
 
   const active = COUNTRY_META_INTERNAL[country]
 

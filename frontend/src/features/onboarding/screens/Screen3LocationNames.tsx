@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useEscapeToClose } from '../../../hooks/useEscapeToClose'
 import { DEFAULT_LOCATION_EMOJI, LocationEmojiPicker } from '../../locations/LocationEmojiPicker'
 
 export type LocationDraft = {
@@ -25,6 +26,8 @@ export function Screen3LocationNames(props: {
   onContinue: () => void
 }) {
   const [openPickerIndex, setOpenPickerIndex] = React.useState<number | null>(null)
+
+  useEscapeToClose(() => setOpenPickerIndex(null), { enabled: openPickerIndex !== null })
 
   const allNamed = props.locations.every((l) => l.emri.trim().length > 0)
   const headline =

@@ -75,6 +75,7 @@ export function ActionItemsTable(props: {
                             className="input"
                             step="0.01"
                             min={0}
+                            clearable
                             value={it.cmimi_njesi}
                             onChange={(v) => props.onUpdate(it.key, 'cmimi_njesi', v)}
                             placeholder="0.00"
@@ -86,6 +87,7 @@ export function ActionItemsTable(props: {
                         <NumericInput
                           className="input"
                           min={1}
+                          clearable
                           value={it.sasia}
                           onChange={(v) => props.onUpdate(it.key, 'sasia', v)}
                           placeholder="1"

@@ -186,7 +186,16 @@ export function DynamicHistoryModal(props: {
 
   const contentRef = React.useRef<HTMLDivElement>(null)
   useFocusModalOnOpen(contentRef, variant === 'modal')
-  useEscapeToClose(onClose, { enabled: variant === 'modal' })
+
+  const handleEscape = React.useCallback(() => {
+    if (expandedIds.size > 0) {
+      clearExpanded()
+      return
+    }
+    onClose()
+  }, [expandedIds.size, onClose])
+
+  useEscapeToClose(handleEscape, { enabled: variant === 'modal' })
 
   const historyBody = (
     <div

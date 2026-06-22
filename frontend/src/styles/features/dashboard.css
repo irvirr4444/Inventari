@@ -110,18 +110,28 @@
 }
 
 .action-header-control-ora .action-meta-ora-input {
-  width: auto;
+  width: 158px;
   flex-shrink: 0;
 }
 
-.action-header-control-pershkrimi .action-meta-pershkrimi-input {
+.action-header-control-pershkrimi .clearable-field {
   width: 294px;
   max-width: 294px;
   flex: 0 0 294px;
+}
+
+.action-header-control-pershkrimi .action-meta-pershkrimi-input {
+  width: 100%;
+  max-width: none;
+  flex: none;
   height: var(--action-header-control-height);
   padding-top: 6px;
   padding-bottom: 6px;
   box-sizing: border-box;
+}
+
+.action-header-control-pershkrimi .clearable-field__clear {
+  background: var(--card);
 }
 
 .action-header-control-label {
@@ -144,10 +154,13 @@
   box-sizing: border-box;
 }
 
-.action-header-control .ora-digit-box {
-  height: var(--action-header-control-height);
-  width: 22px;
-  font-size: 14px;
+.action-header-control .time-input-trigger.input .time-input-value,
+.action-header-control .time-input-trigger.input .time-input-placeholder {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .action-meta-pershkrimi-input {

@@ -17,7 +17,7 @@ export function ConfirmModal(props: {
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   useEnterToConfirm(props.onConfirm, { disabled: props.loading })
-  useEscapeToClose(props.onCancel, { disabled: props.loading })
+  useEscapeToClose(props.onCancel)
   useFocusModalOnOpen(contentRef, true)
 
   const modal = (

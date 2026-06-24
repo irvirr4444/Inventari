@@ -11,7 +11,7 @@ import { createEmptyActionItem } from '../../../../types/actionItem'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
-import { ProductPickerSheet } from '../../../../mobile/components/ProductPickerSheet'
+import { ProductPickerSheet, type ProductPickerSaveData } from '../../../../mobile/components/ProductPickerSheet'
 import { ProductRowCard } from '../../../../mobile/components/ProductRowCard'
 import { StickyCta } from '../../../../mobile/components/StickyCta'
 import {
@@ -60,17 +60,19 @@ export function DynamicTransferTab(props: {
     setPickerOpen(true)
   }
 
-  const handleSave = (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => {
+  const handleSave = (data: ProductPickerSaveData) => {
     if (editingKey) {
       entry.itemsState.updateItem(editingKey, 'kodi_produktit', data.kodi_produktit)
       entry.itemsState.updateItem(editingKey, 'cmimi_njesi', data.cmimi_njesi)
       entry.itemsState.updateItem(editingKey, 'sasia', data.sasia)
+      entry.itemsState.updateItem(editingKey, 'shenim', data.shenim)
     } else {
       const empty = entry.itemsState.items.find((i) => !i.kodi_produktit.trim())
       if (empty) {
         entry.itemsState.updateItem(empty.key, 'kodi_produktit', data.kodi_produktit)
         entry.itemsState.updateItem(empty.key, 'cmimi_njesi', data.cmimi_njesi)
         entry.itemsState.updateItem(empty.key, 'sasia', data.sasia)
+        entry.itemsState.updateItem(empty.key, 'shenim', data.shenim)
       } else {
         const item = createEmptyActionItem()
         entry.itemsState.setItems([...entry.itemsState.items, { ...item, ...data }])
@@ -177,6 +179,8 @@ export function DynamicTransferTab(props: {
         title="Nga"
         value={entry.transferFrom}
         excludeIds={[entry.transferTo]}
+        allowAdd
+        onNotify={props.notify}
         onClose={() => setFromOpen(false)}
         onSelect={entry.setTransferFrom}
       />
@@ -185,6 +189,8 @@ export function DynamicTransferTab(props: {
         title="Te"
         value={entry.transferTo}
         excludeIds={[entry.transferFrom]}
+        allowAdd
+        onNotify={props.notify}
         onClose={() => setToOpen(false)}
         onSelect={entry.setTransferTo}
       />
@@ -200,6 +206,7 @@ export function DynamicTransferTab(props: {
                 kodi_produktit: editingItem.kodi_produktit,
                 cmimi_njesi: editingItem.cmimi_njesi,
                 sasia: editingItem.sasia,
+                shenim: editingItem.shenim,
               }
             : undefined
         }

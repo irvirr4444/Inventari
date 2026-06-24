@@ -3,8 +3,9 @@ import type { ActionBatch } from '../../../../lib/api'
 import { DaljeIcon, HyrjeIcon, LlojiTransferIcon } from '../../../../components/icons'
 import {
   applyHistoryClientFilters,
+  advancedHistoriFilterValueLabel,
+  countAdvancedHistoriFilters,
   EMPTY_CLIENT_FILTERS,
-  hasActiveClientFilters,
   type HistoryClientFilters,
 } from '../../../../lib/historyClientFilters'
 import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../../../hooks/useHistoryBatches'
@@ -21,7 +22,7 @@ import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { FilterChips } from '../../../../mobile/components/FilterChips'
 import {
-  ALL_LOKACIONET_LABEL,
+  ALL_FILTER_VALUE_LABEL,
   ALL_VEPRIMET_LABEL,
 } from '../../../../mobile/constants/historiFilters'
 import { HistoriAdvancedFiltersPanel } from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
@@ -77,19 +78,22 @@ export function DynamicHistoriTab(props: {
     [history.actions, appliedClientFilters, trackPrice],
   )
 
-  const hasAdvancedFilters =
-    hasActiveClientFilters(appliedClientFilters, { trackPrice }) ||
-    !!(history.filters.shenim?.trim()) ||
-    !!(history.filters.dateFrom || history.filters.dateTo)
+  const advancedFilterCount = countAdvancedHistoriFilters(
+    appliedClientFilters,
+    history.filters,
+    { trackPrice },
+  )
+  const hasAdvancedFilters = advancedFilterCount > 0
   const locationFilterCount = appliedClientFilters.locationIds.length
   const locationValue =
     locationFilterCount === 0
-      ? undefined
+      ? ALL_FILTER_VALUE_LABEL
       : locationFilterCount === 1
-        ? activeLokacionet.find((l) => l.id === appliedClientFilters.locationIds[0])?.emri
+        ? activeLokacionet.find((l) => l.id === appliedClientFilters.locationIds[0])?.emri ??
+          ALL_FILTER_VALUE_LABEL
         : `${locationFilterCount} lokacione`
-  const veprimFilterLabel = history.filters.lloji ?? ALL_VEPRIMET_LABEL
-  const lokacionFilterLabel = locationValue ?? ALL_LOKACIONET_LABEL
+  const veprimValue = history.filters.lloji ?? ALL_FILTER_VALUE_LABEL
+  const advancedValue = advancedHistoriFilterValueLabel(advancedFilterCount)
   const { isInitialLoad, isRefreshing } = history.listRefresh
 
   const openAdvancedFilters = React.useCallback(() => {
@@ -162,17 +166,20 @@ export function DynamicHistoriTab(props: {
               chips={[
                 {
                   id: 'lloji',
-                  label: veprimFilterLabel,
+                  label: 'Veprime',
+                  value: veprimValue,
                   active: !!history.filters.lloji,
                 },
                 {
                   id: 'lokacioni',
-                  label: lokacionFilterLabel,
+                  label: 'Lokacione',
+                  value: locationValue,
                   active: locationFilterCount > 0,
                 },
                 {
                   id: 'advanced',
-                  label: 'Filtrat e avancuara',
+                  label: 'Filtra',
+                  value: advancedValue,
                   active: advancedFiltersOpen,
                   indicator: hasAdvancedFilters,
                 },
@@ -316,6 +323,8 @@ export function DynamicHistoriTab(props: {
             selectedIds={appliedClientFilters.locationIds}
             onToggle={toggleLocationFilter}
             onClearAll={clearLocationFilter}
+            allowAdd
+            onNotify={props.notify}
             onClose={() => setLocationOpen(false)}
           />
         </>

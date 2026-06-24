@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useDynamicActionEntry } from '../../../../hooks/useDynamicActionEntry'
 import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
+import { InputClearButton } from '../../../../components/InputClearButton'
 import { OraInput } from '../../../../components/OraInput'
 import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
@@ -11,7 +12,7 @@ import { createEmptyActionItem } from '../../../../types/actionItem'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
-import { ProductPickerSheet } from '../../../../mobile/components/ProductPickerSheet'
+import { ProductPickerSheet, type ProductPickerSaveData } from '../../../../mobile/components/ProductPickerSheet'
 import { ProductRowCard } from '../../../../mobile/components/ProductRowCard'
 import { SegmentedControl } from '../../../../mobile/components/SegmentedControl'
 import { StickyCta } from '../../../../mobile/components/StickyCta'
@@ -63,17 +64,19 @@ export function DynamicVeprimeTab(props: {
     setPickerOpen(true)
   }
 
-  const handleSave = (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => {
+  const handleSave = (data: ProductPickerSaveData) => {
     if (editingKey) {
       entry.itemsState.updateItem(editingKey, 'kodi_produktit', data.kodi_produktit)
       entry.itemsState.updateItem(editingKey, 'cmimi_njesi', data.cmimi_njesi)
       entry.itemsState.updateItem(editingKey, 'sasia', data.sasia)
+      entry.itemsState.updateItem(editingKey, 'shenim', data.shenim)
     } else {
       const empty = entry.itemsState.items.find((i) => !i.kodi_produktit.trim())
       if (empty) {
         entry.itemsState.updateItem(empty.key, 'kodi_produktit', data.kodi_produktit)
         entry.itemsState.updateItem(empty.key, 'cmimi_njesi', data.cmimi_njesi)
         entry.itemsState.updateItem(empty.key, 'sasia', data.sasia)
+        entry.itemsState.updateItem(empty.key, 'shenim', data.shenim)
       } else {
         const item = createEmptyActionItem()
         entry.itemsState.setItems([...entry.itemsState.items, { ...item, ...data }])
@@ -118,22 +121,31 @@ export function DynamicVeprimeTab(props: {
             <OraInput
               id="dynamic-veprime-ora"
               className="mobile-input"
+              clearable
               value={entry.actionOra}
               onChange={entry.setActionOra}
             />
           </div>
-        </div>
-        <div>
-          <label className="mobile-label" htmlFor="dynamic-veprime-pershkrimi">Pershkrimi</label>
-          <input
-            id="dynamic-veprime-pershkrimi"
-            type="text"
-            className="mobile-input"
-            value={entry.actionPershkrimi}
-            onChange={(e) => entry.setActionPershkrimi(e.target.value)}
-            maxLength={500}
-            placeholder="Opsionale"
-          />
+          <div>
+            <label className="mobile-label" htmlFor="dynamic-veprime-pershkrimi">Pershkrimi</label>
+            <span
+              className={`clearable-field${entry.actionPershkrimi.trim() ? ' clearable-field--has-value' : ''}`}
+            >
+              <input
+                id="dynamic-veprime-pershkrimi"
+                type="text"
+                className="mobile-input clearable-field__control"
+                value={entry.actionPershkrimi}
+                onChange={(e) => entry.setActionPershkrimi(e.target.value)}
+                maxLength={500}
+                placeholder="Opsionale"
+              />
+              <InputClearButton
+                className="clearable-field__clear"
+                onClick={() => entry.setActionPershkrimi('')}
+              />
+            </span>
+          </div>
         </div>
 
         <div>
@@ -195,6 +207,7 @@ export function DynamicVeprimeTab(props: {
                 kodi_produktit: editingItem.kodi_produktit,
                 cmimi_njesi: editingItem.cmimi_njesi,
                 sasia: editingItem.sasia,
+                shenim: editingItem.shenim,
               }
             : undefined
         }

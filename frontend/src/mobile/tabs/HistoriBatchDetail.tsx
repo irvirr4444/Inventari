@@ -148,6 +148,7 @@ function HistoriEditProductRow(props: {
           kodi_produktit: props.draft.kodi_produktit,
           cmimi_njesi: props.draft.cmimi_njesi,
           sasia: props.draft.sasia,
+          shenim: props.draft.shenim,
         }}
         onClose={() => setPickerOpen(false)}
         onSave={(data) => {

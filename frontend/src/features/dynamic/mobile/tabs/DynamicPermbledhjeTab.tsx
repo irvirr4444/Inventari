@@ -7,45 +7,45 @@ import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
 import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
 
-function LocationSummarySection(props: {
+function LocationSummaryCard(props: {
   emoji: string
   name: string
-  loading: boolean
   summary: CountrySummaryData
   trackPrice: boolean
 }) {
-  if (props.loading) return <SkeletonRow count={2} />
-
   return (
-    <section className="mobile-summary-section">
-      <div
-        className="mobile-card-label row"
-        style={{ gap: 8, alignItems: 'center', marginBottom: 12 }}
-      >
-        <span>{props.emoji}</span>
-        {props.name}
-      </div>
-      <div className="mobile-summary-row">
-        <span>Hyrje (sasi)</span>
-        <span className="mobile-num">{fmtInt(props.summary.in_qty)}</span>
-      </div>
-      {props.trackPrice ? (
-        <div className="mobile-summary-row">
-          <span>Hyrje (vlerë)</span>
-          <span className="mobile-num">{fmt(props.summary.in_value)} €</span>
+    <article className="dynamic-mobile-summary-card">
+      <header className="dynamic-mobile-summary-card-head">
+        <span className="dynamic-mobile-summary-card-emoji" aria-hidden="true">
+          {props.emoji}
+        </span>
+        <span className="dynamic-mobile-summary-card-name">{props.name}</span>
+      </header>
+      <div className="dynamic-mobile-summary-card-grid">
+        <div className="dynamic-mobile-summary-stat dynamic-mobile-summary-stat--in">
+          <span className="dynamic-mobile-summary-stat-label">Hyrje</span>
+          <span className="dynamic-mobile-summary-stat-qty mobile-num">
+            {fmtInt(props.summary.in_qty)}
+          </span>
+          {props.trackPrice ? (
+            <span className="dynamic-mobile-summary-stat-value mobile-num">
+              {fmt(props.summary.in_value)} €
+            </span>
+          ) : null}
         </div>
-      ) : null}
-      <div className="mobile-summary-row">
-        <span>Dalje (sasi)</span>
-        <span className="mobile-num">{fmtInt(props.summary.out_qty)}</span>
-      </div>
-      {props.trackPrice ? (
-        <div className="mobile-summary-row">
-          <span>Dalje (vlerë)</span>
-          <span className="mobile-num">{fmt(props.summary.out_value)} €</span>
+        <div className="dynamic-mobile-summary-stat dynamic-mobile-summary-stat--out">
+          <span className="dynamic-mobile-summary-stat-label">Dalje</span>
+          <span className="dynamic-mobile-summary-stat-qty mobile-num">
+            {fmtInt(props.summary.out_qty)}
+          </span>
+          {props.trackPrice ? (
+            <span className="dynamic-mobile-summary-stat-value mobile-num">
+              {fmt(props.summary.out_value)} €
+            </span>
+          ) : null}
         </div>
-      ) : null}
-    </section>
+      </div>
+    </article>
   )
 }
 
@@ -59,11 +59,11 @@ export function DynamicPermbledhjeTab() {
 
   const loading = query.isLoading || query.isFetching
   const summaryData = (query.data ?? {}) as Record<string, CountrySummaryData>
-  const useCompactList = summaryLocations.length > 3
+  const scrollableList = summaryLocations.length > 6
 
   return (
-    <div className="mobile-tab-panel">
-      <div className="mobile-field-row">
+    <div className="mobile-tab-panel dynamic-permbledhje-panel">
+      <div className="mobile-field-row dynamic-permbledhje-dates">
         <div>
           <label className="mobile-label">Nga</label>
           <MobileDateInput value={from} onChange={setFrom} aria-label="Nga" placeholder="Nga" />
@@ -85,63 +85,28 @@ export function DynamicPermbledhjeTab() {
           <div className="mobile-empty-title">Nuk ka lokacione te shfaqura ne permbledhje.</div>
         </div>
       ) : loading ? (
-        <SkeletonRow count={Math.min(summaryLocations.length, 4)} />
-      ) : useCompactList ? (
-        <div className="dynamic-mobile-summary-compact">
-          {summaryLocations.map((loc) => {
-            const s = summaryData[loc.id] ?? emptySummary
-            return (
-              <div key={loc.id} className="dynamic-mobile-summary-compact-row">
-                <div className="mobile-card-label">
-                  {loc.flag_emoji ?? '📍'} {loc.emri}
-                </div>
-                <div className="mobile-summary-row">
-                  <span>Hyrje (sasi)</span>
-                  <span className="mobile-num">{fmtInt(s.in_qty)}</span>
-                </div>
-                {trackPrice ? (
-                  <div className="mobile-summary-row">
-                    <span>Hyrje (vlerë)</span>
-                    <span className="mobile-num">{fmt(s.in_value)} €</span>
-                  </div>
-                ) : null}
-                <div className="mobile-summary-row">
-                  <span>Dalje (sasi)</span>
-                  <span className="mobile-num">{fmtInt(s.out_qty)}</span>
-                </div>
-                {trackPrice ? (
-                  <div className="mobile-summary-row">
-                    <span>Dalje (vlerë)</span>
-                    <span className="mobile-num">{fmt(s.out_value)} €</span>
-                  </div>
-                ) : null}
-              </div>
-            )
-          })}
+        <div className="dynamic-mobile-summary-list">
+          <SkeletonRow count={Math.min(summaryLocations.length, 6)} />
         </div>
       ) : (
-        summaryLocations.map((loc) => (
-          <LocationSummarySection
-            key={loc.id}
-            emoji={loc.flag_emoji ?? '📍'}
-            name={loc.emri}
-            loading={false}
-            summary={summaryData[loc.id] ?? emptySummary}
-            trackPrice={trackPrice}
-          />
-        ))
+        <div
+          className={`dynamic-mobile-summary-list${scrollableList ? ' dynamic-mobile-summary-list--scrollable' : ''}`}
+        >
+          {summaryLocations.map((loc) => (
+            <LocationSummaryCard
+              key={loc.id}
+              emoji={loc.flag_emoji ?? '📍'}
+              name={loc.emri}
+              summary={summaryData[loc.id] ?? emptySummary}
+              trackPrice={trackPrice}
+            />
+          ))}
+        </div>
       )}
 
       <a
-        className="mobile-btn-outline"
+        className="mobile-btn-outline dynamic-permbledhje-export"
         href={exportUrl('xlsx', { from, to })}
-        style={{
-          textAlign: 'center',
-          textDecoration: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
       >
         Shkarko Excel
       </a>

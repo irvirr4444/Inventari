@@ -7,8 +7,9 @@ import { fmtEuro, formatDisplayDate, productCountLabel, countryLabel } from '../
 import { formatActionDateTime } from '../../lib/actionMeta'
 import {
   applyHistoryClientFilters,
+  advancedHistoriFilterValueLabel,
+  countAdvancedHistoriFilters,
   EMPTY_CLIENT_FILTERS,
-  hasActiveClientFilters,
   type HistoryClientFilters,
 } from '../../lib/historyClientFilters'
 import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../hooks/useHistoryBatches'
@@ -17,6 +18,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
 import { FilterChips } from '../components/FilterChips'
 import {
+  ALL_FILTER_VALUE_LABEL,
   ALL_SHTETET_LABEL,
   ALL_VEPRIMET_LABEL,
 } from '../constants/historiFilters'
@@ -70,10 +72,8 @@ export function HistoriTab(props: {
     [history.actions, appliedClientFilters],
   )
 
-  const hasAdvancedFilters =
-    hasActiveClientFilters(appliedClientFilters) ||
-    !!(history.filters.shenim?.trim()) ||
-    !!(history.filters.dateFrom || history.filters.dateTo)
+  const advancedFilterCount = countAdvancedHistoriFilters(appliedClientFilters, history.filters)
+  const hasAdvancedFilters = advancedFilterCount > 0
 
   const openAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(appliedClientFilters)
@@ -106,10 +106,11 @@ export function HistoriTab(props: {
     return () => onHeaderChange({ kind: 'tab' })
   }, [screen.mode, onHeaderChange])
 
-  const veprimFilterLabel = history.filters.lloji ?? ALL_VEPRIMET_LABEL
-  const shtetiFilterLabel = history.filters.shteti
+  const veprimValue = history.filters.lloji ?? ALL_FILTER_VALUE_LABEL
+  const shtetiValue = history.filters.shteti
     ? countryLabel(history.filters.shteti)
-    : ALL_SHTETET_LABEL
+    : ALL_FILTER_VALUE_LABEL
+  const advancedValue = advancedHistoriFilterValueLabel(advancedFilterCount)
   const { isInitialLoad, isRefreshing } = history.listRefresh
 
   return (
@@ -131,17 +132,20 @@ export function HistoriTab(props: {
               chips={[
                 {
                   id: 'lloji',
-                  label: veprimFilterLabel,
+                  label: 'Veprime',
+                  value: veprimValue,
                   active: !!history.filters.lloji,
                 },
                 {
                   id: 'shteti',
-                  label: shtetiFilterLabel,
+                  label: 'Shteti',
+                  value: shtetiValue,
                   active: !!history.filters.shteti,
                 },
                 {
                   id: 'advanced',
-                  label: 'Filtrat e avancuara',
+                  label: 'Filtra',
+                  value: advancedValue,
                   active: advancedFiltersOpen,
                   indicator: hasAdvancedFilters,
                 },

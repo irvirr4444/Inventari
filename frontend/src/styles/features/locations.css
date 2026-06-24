@@ -174,8 +174,8 @@
 }
 
 .location-emoji-option {
-  border: 1px solid var(--border, #e2e8f0);
-  background: var(--surface, #fff);
+  border: 1px solid var(--border-light);
+  background: var(--card-soft);
   border-radius: 8px;
   padding: 6px;
   font-size: 1.1rem;
@@ -184,33 +184,45 @@
   touch-action: manipulation;
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .location-emoji-picker-wide .location-emoji-option {
-  border-color: transparent;
-  background: transparent;
+  border: 1px solid var(--border-light);
+  background: var(--card-soft);
   padding: 8px 4px;
   font-size: 1.2rem;
   border-radius: 10px;
+  min-height: 44px;
 }
 
 .location-emoji-option:hover:not(:disabled) {
-  border-color: var(--accent, #2563eb);
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.1);
 }
 
 .location-emoji-picker-wide .location-emoji-option:hover:not(:disabled) {
-  border-color: transparent;
-  background: rgba(232, 241, 251, 0.65);
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.12);
+  box-shadow: 0 1px 3px rgba(47, 125, 246, 0.12);
 }
 
 .location-emoji-option.active {
-  border-color: var(--accent, #2563eb);
-  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.14);
+  box-shadow: 0 0 0 1px rgba(47, 125, 246, 0.18);
 }
 
 .location-emoji-picker-wide .location-emoji-option.active {
-  border-color: rgba(37, 99, 235, 0.2);
-  background: #dbeaff;
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.16);
+  box-shadow: 0 0 0 2px rgba(47, 125, 246, 0.14);
 }
 
 .location-emoji-option:disabled {

@@ -155,6 +155,7 @@ function DynamicHistoriEditProductRow(props: {
           kodi_produktit: props.draft.kodi_produktit,
           cmimi_njesi: props.draft.cmimi_njesi,
           sasia: props.draft.sasia,
+          shenim: props.draft.shenim,
         }}
         onClose={() => setPickerOpen(false)}
         onSave={(data) => {
@@ -339,6 +340,8 @@ function DynamicHistoriBatchEditView(props: {
         title="Nga"
         value={props.meta.lokacioni_id}
         excludeIds={[props.meta.destination_lokacioni_id]}
+        allowAdd
+        onNotify={props.onNotify}
         onClose={() => setFromOpen(false)}
         onSelect={setFrom}
       />
@@ -347,6 +350,8 @@ function DynamicHistoriBatchEditView(props: {
         title="Te"
         value={props.meta.destination_lokacioni_id}
         excludeIds={[props.meta.lokacioni_id]}
+        allowAdd
+        onNotify={props.onNotify}
         onClose={() => setToOpen(false)}
         onSelect={(id) => props.onMetaChange({ ...props.meta, destination_lokacioni_id: id })}
       />
@@ -354,6 +359,8 @@ function DynamicHistoriBatchEditView(props: {
         open={locOpen}
         title="Lokacioni"
         value={props.meta.lokacioni_id}
+        allowAdd
+        onNotify={props.onNotify}
         onClose={() => setLocOpen(false)}
         onSelect={(id) => props.onMetaChange({ ...props.meta, lokacioni_id: id })}
       />

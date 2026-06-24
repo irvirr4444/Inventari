@@ -14,6 +14,14 @@ html.mobile-client {
   text-size-adjust: 100%;
 }
 
+html.mobile-client .modal-overlay {
+  z-index: 150;
+}
+
+html.mobile-client .modal-overlay-stacked {
+  z-index: 160;
+}
+
 html.mobile-client,
 html.mobile-client body,
 html.mobile-client #root {

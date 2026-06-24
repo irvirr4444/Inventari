@@ -9,7 +9,7 @@ import { createEmptyActionItem } from '../../types/actionItem'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter } from '../components/SheetActions'
 import { MobileDateInput } from '../components/MobileDateInput'
-import { ProductPickerSheet } from '../components/ProductPickerSheet'
+import { ProductPickerSheet, type ProductPickerSaveData } from '../components/ProductPickerSheet'
 import { ProductRowCard } from '../components/ProductRowCard'
 import { StickyCta } from '../components/StickyCta'
 import { OraInput } from '../../components/OraInput'
@@ -93,17 +93,19 @@ export function TransferTab(props: {
     setPickerOpen(true)
   }
 
-  const handleSave = (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => {
+  const handleSave = (data: ProductPickerSaveData) => {
     if (editingKey) {
       entry.itemsState.updateItem(editingKey, 'kodi_produktit', data.kodi_produktit)
       entry.itemsState.updateItem(editingKey, 'cmimi_njesi', data.cmimi_njesi)
       entry.itemsState.updateItem(editingKey, 'sasia', data.sasia)
+      entry.itemsState.updateItem(editingKey, 'shenim', data.shenim)
     } else {
       const empty = entry.itemsState.items.find((i) => !i.kodi_produktit.trim())
       if (empty) {
         entry.itemsState.updateItem(empty.key, 'kodi_produktit', data.kodi_produktit)
         entry.itemsState.updateItem(empty.key, 'cmimi_njesi', data.cmimi_njesi)
         entry.itemsState.updateItem(empty.key, 'sasia', data.sasia)
+        entry.itemsState.updateItem(empty.key, 'shenim', data.shenim)
       } else {
         const item = createEmptyActionItem()
         entry.itemsState.setItems([...entry.itemsState.items, { ...item, ...data }])
@@ -219,6 +221,7 @@ export function TransferTab(props: {
                 kodi_produktit: editingItem.kodi_produktit,
                 cmimi_njesi: editingItem.cmimi_njesi,
                 sasia: editingItem.sasia,
+                shenim: editingItem.shenim,
               }
             : undefined
         }

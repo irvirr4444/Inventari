@@ -1,3 +1,5 @@
+import { ALL_FILTER_VALUE_LABEL } from '../constants/historiFilters'
+
 export type FilterChip = {
   id: string
   label: string
@@ -30,17 +32,19 @@ function FilterFieldButton(props: {
   onSelect: (id: string) => void
 }) {
   const { chip } = props
+  const value = chip.value ?? ALL_FILTER_VALUE_LABEL
+
   return (
     <button
       type="button"
       className={`mobile-filter-field${chip.active ? ' is-active' : ''}${chip.indicator ? ' has-indicator' : ''}`}
       onClick={() => props.onSelect(chip.id)}
     >
+      <span className="mobile-filter-field-label">{chip.label}</span>
       <span className="mobile-filter-field-main">
-        <span className="mobile-filter-field-text">{chip.label}</span>
+        <span className="mobile-filter-field-value">{value}</span>
         <FilterChevron />
       </span>
-      {chip.value ? <span className="mobile-filter-field-value">{chip.value}</span> : null}
     </button>
   )
 }

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { CheckIcon } from '../../components/icons'
+import { InputClearButton } from '../../components/InputClearButton'
 import { productLabel, sortProductsByKodi } from '../../lib/format'
 import type { Produkti } from '../../lib/api'
 import type { ActionItemDraft } from '../../types/actionItem'
@@ -10,11 +11,16 @@ import { SheetActionFooter } from './SheetActions'
 
 const FORM_ID = 'mobile-product-picker-form'
 
+export type ProductPickerSaveData = Pick<
+  ActionItemDraft,
+  'kodi_produktit' | 'cmimi_njesi' | 'sasia' | 'shenim'
+>
+
 function ProductPickerForm(props: {
   products: Produkti[]
   showPrice?: boolean
-  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
-  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
+  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia' | 'shenim'>
+  onSave: (data: ProductPickerSaveData) => void
   onClose: () => void
 }) {
   const showPrice = props.showPrice ?? true
@@ -22,6 +28,7 @@ function ProductPickerForm(props: {
   const [kodi, setKodi] = React.useState(props.initial?.kodi_produktit ?? '')
   const [price, setPrice] = React.useState(props.initial?.cmimi_njesi ?? '')
   const [qty, setQty] = React.useState(props.initial?.sasia ?? '')
+  const [shenim, setShenim] = React.useState(props.initial?.shenim ?? '')
   const [error, setError] = React.useState<string | null>(null)
   const itemRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
   const listRef = React.useRef<HTMLDivElement>(null)
@@ -64,7 +71,12 @@ function ProductPickerForm(props: {
       setError('Cmimi/Njesi duhet te jete >= 0.')
       return
     }
-    props.onSave({ kodi_produktit: kodi, cmimi_njesi: showPrice ? price : '0', sasia: qty })
+    props.onSave({
+      kodi_produktit: kodi,
+      cmimi_njesi: showPrice ? price : '0',
+      sasia: qty,
+      shenim: shenim.trim(),
+    })
     props.onClose()
   }
 
@@ -77,23 +89,26 @@ function ProductPickerForm(props: {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {selectedProduct ? (
-        <div className="mobile-picker-selected">
-          <div className="mobile-picker-selected-icon" aria-hidden="true">
+      <div
+        className={`mobile-picker-empty${selectedProduct ? ' mobile-picker-empty--selected' : ''}`}
+        aria-live="polite"
+      >
+        <span className="mobile-picker-empty-text">
+          {selectedProduct
+            ? productLabel(selectedProduct.emri, selectedProduct.kodi)
+            : 'Zgjidh nje produkt nga lista'}
+        </span>
+        {selectedProduct ? (
+          <span className="mobile-picker-empty-check" aria-hidden="true">
             <CheckIcon />
-          </div>
-          <div className="mobile-picker-selected-body">
-            <div className="mobile-picker-selected-label">Produkti i zgjedhur</div>
-            <div className="mobile-picker-selected-name">
-              {productLabel(selectedProduct.emri, selectedProduct.kodi)}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="mobile-picker-empty">Zgjidh nje produkt nga lista</div>
-      )}
+          </span>
+        ) : null}
+      </div>
 
-      <div ref={listRef} className="mobile-picker-list">
+      <div
+        ref={listRef}
+        className={`mobile-picker-list${filtered.length > 4 ? ' mobile-picker-list--scrollable' : ''}`}
+      >
         {filtered.length === 0 ? (
           <div className="mobile-picker-empty">Nuk u gjet produkt.</div>
         ) : (
@@ -131,6 +146,7 @@ function ProductPickerForm(props: {
                 className="mobile-input"
                 step="0.01"
                 min={0}
+                clearable
                 value={price}
                 onChange={setPrice}
                 placeholder="0.00"
@@ -148,6 +164,28 @@ function ProductPickerForm(props: {
             />
           </div>
         </div>
+        <div>
+          <label className="mobile-label" htmlFor="mobile-picker-shenim">
+            Shënim
+          </label>
+          <span
+            className={`clearable-field${shenim.trim() ? ' clearable-field--has-value' : ''}`}
+          >
+            <input
+              id="mobile-picker-shenim"
+              type="text"
+              className="mobile-input clearable-field__control"
+              value={shenim}
+              onChange={(e) => setShenim(e.target.value)}
+              maxLength={200}
+              placeholder="Opsionale"
+            />
+            <InputClearButton
+              className="clearable-field__clear"
+              onClick={() => setShenim('')}
+            />
+          </span>
+        </div>
         {error ? <div className="mobile-inline-error">{error}</div> : null}
       </div>
     </form>
@@ -159,9 +197,9 @@ export function ProductPickerSheet(props: {
   title: string
   products: Produkti[]
   showPrice?: boolean
-  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia'>
+  initial?: Pick<ActionItemDraft, 'kodi_produktit' | 'cmimi_njesi' | 'sasia' | 'shenim'>
   onClose: () => void
-  onSave: (data: { kodi_produktit: string; cmimi_njesi: string; sasia: string }) => void
+  onSave: (data: ProductPickerSaveData) => void
 }) {
   const formKey = `${props.initial?.kodi_produktit ?? 'new'}-${props.open}`
   const isEdit = !!props.initial?.kodi_produktit

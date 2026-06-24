@@ -32,6 +32,31 @@ export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
   produkteMax: '',
 }
 
+export function countAdvancedHistoriFilters(
+  client: HistoryClientFilters,
+  server: Pick<HistoryServerFilters, 'shenim' | 'dateFrom' | 'dateTo'>,
+  options?: { trackPrice?: boolean },
+): number {
+  const trackPrice = options?.trackPrice ?? true
+  let count = 0
+  if ((server.shenim?.trim() ?? '') !== '') count++
+  if (server.dateFrom || server.dateTo) count++
+  if (client.oraFrom.trim() !== '') count++
+  if (client.oraDeri.trim() !== '') count++
+  if (client.pershkriminQuery.trim() !== '') count++
+  if (trackPrice && client.totaliMin !== '') count++
+  if (trackPrice && client.totaliMax !== '') count++
+  if (client.produkteMin !== '') count++
+  if (client.produkteMax !== '') count++
+  return count
+}
+
+export function advancedHistoriFilterValueLabel(count: number): string {
+  if (count === 0) return 'Më shumë'
+  if (count === 1) return '1 aktiv'
+  return `${count} aktive`
+}
+
 export function hasActiveClientFilters(
   filters: HistoryClientFilters,
   options?: { trackPrice?: boolean },

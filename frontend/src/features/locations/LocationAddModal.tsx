@@ -1,8 +1,11 @@
 import * as React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { createLokacioni } from '../../lib/api/lokacionet'
 import type { Lokacioni } from '../../lib/lokacioni/types'
+import { useAuth } from '../../lib/auth/AuthProvider'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
+import { queryKeys } from '../../lib/queryKeys'
 import { DEFAULT_LOCATION_EMOJI, LocationEmojiPicker } from './LocationEmojiPicker'
 
 export function LocationAddModal(props: {
@@ -10,7 +13,9 @@ export function LocationAddModal(props: {
   onClose: () => void
   onCreated: (loc: Lokacioni) => void
 }) {
-  const { lokacionet } = useLokacioni()
+  const { lokacionet, refresh } = useLokacioni()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [emri, setEmri] = React.useState('')
   const [flagEmoji, setFlagEmoji] = React.useState(DEFAULT_LOCATION_EMOJI)
   const [error, setError] = React.useState<string | null>(null)
@@ -39,6 +44,12 @@ export function LocationAddModal(props: {
         flag_emoji: flagEmoji,
         rradhitja: lokacionet.length,
       })
+      queryClient.setQueryData<Lokacioni[]>(queryKeys.lokacionet(user?.id), (prev) => {
+        const list = prev ?? lokacionet
+        if (list.some((l) => l.id === loc.id)) return list
+        return [...list, loc]
+      })
+      await refresh()
       props.onCreated(loc)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim')

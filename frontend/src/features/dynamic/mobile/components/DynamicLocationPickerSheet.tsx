@@ -32,14 +32,23 @@ export function DynamicLocationPickerSheet(props: {
                 props.onClose()
               }}
             >
-              <span className="row" style={{ gap: 8, alignItems: 'center' }}>
-                {locationBadge(loc)}
-                {loc.emri}
+              <span className="mobile-location-option">
+                <span className="mobile-location-option-emoji" aria-hidden="true">
+                  {locationBadge(loc)}
+                </span>
+                <span className="mobile-location-option-name">{loc.emri}</span>
               </span>
             </button>
           ))}
           {props.allowAdd ? (
-            <button type="button" className="mobile-btn-outline" onClick={() => setAddOpen(true)}>
+            <button
+              type="button"
+              className="mobile-btn-outline"
+              onClick={() => {
+                props.onClose()
+                setAddOpen(true)
+              }}
+            >
               + Shto lokacion
             </button>
           ) : null}
@@ -74,14 +83,16 @@ export function DynamicLocationField(props: {
     <div>
       <label className="mobile-label">{props.label}</label>
       <button type="button" className="mobile-tap-field" onClick={props.onOpen}>
-        <span className="row mobile-tap-field-value" style={{ gap: 8, alignItems: 'center' }}>
+        <span className="mobile-location-option mobile-tap-field-value">
           {loc ? (
             <>
-              <span>{loc.flag_emoji ?? '📍'}</span>
-              <span className="mobile-meta-truncate">{loc.emri}</span>
+              <span className="mobile-location-option-emoji" aria-hidden="true">
+                {loc.flag_emoji ?? '📍'}
+              </span>
+              <span className="mobile-location-option-name mobile-meta-truncate">{loc.emri}</span>
             </>
           ) : (
-            <span className="mobile-meta-truncate">Zgjedh lokacionin…</span>
+            <span className="mobile-location-option-name mobile-meta-truncate">Zgjedh lokacionin…</span>
           )}
         </span>
         <span aria-hidden="true">▾</span>

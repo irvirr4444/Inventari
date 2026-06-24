@@ -1,6 +1,7 @@
 import type { CountrySummary as CountrySummaryData } from '@inventari/shared'
 import { DateInput } from '../../components/DateInput'
 import { ErrorAlert } from '../../components/ErrorAlert'
+import { DownloadIcon } from '../../components/icons'
 import { exportUrl } from '../../lib/api'
 import { fmt, fmtInt } from '../../lib/format'
 import type { Lokacioni } from '../../lib/lokacioni/types'
@@ -87,6 +88,7 @@ export function DynamicSummaryPanel(props: {
           href={exportUrl('xlsx', { from: props.from, to: props.to })}
           title="Shkarko Excel"
         >
+          <DownloadIcon />
           Excel
         </a>
       </div>

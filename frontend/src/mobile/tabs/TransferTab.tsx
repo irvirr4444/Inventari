@@ -182,8 +182,6 @@ export function TransferTab(props: {
           </div>
         ) : null}
 
-        {entry.transferError ? <div className="mobile-inline-error">{entry.transferError}</div> : null}
-
         <div className="mobile-total-row">
           <span>Totali:</span>
           <span className="mobile-num">{fmtEuro(entry.itemsState.total)}</span>

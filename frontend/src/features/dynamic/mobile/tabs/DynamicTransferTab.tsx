@@ -155,10 +155,6 @@ export function DynamicTransferTab(props: {
           </div>
         ) : null}
 
-        {entry.transferError ? (
-          <div className="mobile-inline-error">{entry.transferError}</div>
-        ) : null}
-
         {trackPrice ? (
           <div className="mobile-total-row">
             <span>Totali:</span>
@@ -178,7 +174,6 @@ export function DynamicTransferTab(props: {
         open={fromOpen}
         title="Nga"
         value={entry.transferFrom}
-        excludeIds={[entry.transferTo]}
         allowAdd
         onNotify={props.notify}
         onClose={() => setFromOpen(false)}
@@ -188,7 +183,6 @@ export function DynamicTransferTab(props: {
         open={toOpen}
         title="Te"
         value={entry.transferTo}
-        excludeIds={[entry.transferFrom]}
         allowAdd
         onNotify={props.notify}
         onClose={() => setToOpen(false)}

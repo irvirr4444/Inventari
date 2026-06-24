@@ -38,6 +38,31 @@ describe('validateTransfer', () => {
 })
 
 describe('buildVeprimRows', () => {
+  it('creates Dalje and Hyrje rows for dynamic location transfer', () => {
+    const locA = '11111111-1111-4111-8111-111111111101'
+    const locB = '22222222-2222-4222-8222-222222222222'
+    const { rows } = buildVeprimRows(
+      {
+        lloji: 'Transfer',
+        lokacioni_id: locA,
+        destination_lokacioni_id: locB,
+        data: '2026-06-17',
+        items: [{ kodi_produktit: 'P1', cmimi_njesi: 2, sasia: 5 }],
+      },
+      {
+        mirrorToAlbania: false,
+        lokacionet: [
+          { id: locA, kodi: 'MAG' },
+          { id: locB, kodi: 'SHOP' },
+        ],
+      },
+    )
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ lloji: 'Dalje', lokacioni_id: locA, shteti: 'XK', sasia: 5 })
+    expect(rows[1]).toMatchObject({ lloji: 'Hyrje', lokacioni_id: locB, shteti: 'XK', sasia: 5 })
+  })
+
   it('creates Dalje and Hyrje rows for transfer', () => {
     const { rows, mirrorRows } = buildVeprimRows(
       {

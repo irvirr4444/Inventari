@@ -1,7 +1,7 @@
 import * as React from 'react'
 import type { ProductListItem } from '../../lib/api'
 import { COUNTRY_META, type Country } from '../../lib/country'
-import { countryLabel, fmt, productLabel } from '../../lib/format'
+import { countryHistoryLabel, countryLabel, fmt, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
@@ -28,26 +28,120 @@ function ReviewTableColgroup(props: { widths: readonly string[] }) {
   )
 }
 
-export function ActionReviewModal(
-  props: {
-    lloji: 'Hyrje' | 'Dalje'
-    actionDate: string
-    actionOra: string
-    actionPershkrimi: string
-    items: ActionItemDraft[]
-    products: ProductListItem[]
-    total: number
-    loading: boolean
-    onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
-    onCancel: () => void
-    onConfirm: () => void
-    onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
-    showPrice?: boolean
-  } & (
-    | { country: Country; location?: never }
-    | { location: { emri: string; flagEmoji?: string | null }; country?: never }
-  ),
+type ReviewLocation = { emri: string; flagEmoji?: string | null }
+
+function ReviewLocationEndpoint(props: { location: ReviewLocation }) {
+  return (
+    <span className="action-review-transfer-endpoint">
+      {props.location.flagEmoji ? (
+        <span className="action-review-transfer-badge" aria-hidden="true">
+          {props.location.flagEmoji}
+        </span>
+      ) : null}
+      <span className="action-review-transfer-name">{props.location.emri}</span>
+    </span>
+  )
+}
+
+function ReviewCountryEndpoint(props: { country: Country }) {
+  const meta = COUNTRY_META[props.country]
+  return (
+    <span className="action-review-transfer-endpoint">
+      <img className="flagIcon" src={meta.flagSrc} alt="" />
+      <span className="action-review-transfer-name">{countryHistoryLabel(props.country)}</span>
+    </span>
+  )
+}
+
+function ReviewRouteMeta(
+  props:
+    | { country: Country; location?: never; transferFrom?: never; transferTo?: never; transferFromLocation?: never; transferToLocation?: never }
+    | { location: ReviewLocation; country?: never; transferFrom?: never; transferTo?: never; transferFromLocation?: never; transferToLocation?: never }
+    | { transferFrom: Country; transferTo: Country; country?: never; location?: never; transferFromLocation?: never; transferToLocation?: never }
+    | {
+        transferFromLocation: ReviewLocation
+        transferToLocation: ReviewLocation
+        country?: never
+        location?: never
+        transferFrom?: never
+        transferTo?: never
+      },
 ) {
+  if ('transferFrom' in props && props.transferFrom) {
+    return (
+      <span className="action-review-transfer-route">
+        <ReviewCountryEndpoint country={props.transferFrom} />
+        <span className="action-review-transfer-arrow" aria-hidden="true">
+          →
+        </span>
+        <ReviewCountryEndpoint country={props.transferTo} />
+      </span>
+    )
+  }
+
+  if ('transferFromLocation' in props && props.transferFromLocation) {
+    return (
+      <span className="action-review-transfer-route">
+        <ReviewLocationEndpoint location={props.transferFromLocation} />
+        <span className="action-review-transfer-arrow" aria-hidden="true">
+          →
+        </span>
+        <ReviewLocationEndpoint location={props.transferToLocation} />
+      </span>
+    )
+  }
+
+  if ('location' in props && props.location) {
+    return (
+      <span className="action-review-meta-country">
+        <ReviewLocationEndpoint location={props.location} />
+      </span>
+    )
+  }
+
+  const countryMeta = COUNTRY_META[props.country!]
+  return (
+    <span className="action-review-meta-country">
+      <img className="flagIcon" src={countryMeta.flagSrc} alt="" />
+      {countryLabel(props.country!)}
+    </span>
+  )
+}
+
+type ActionReviewModalProps = {
+  actionDate: string
+  actionOra: string
+  actionPershkrimi: string
+  items: ActionItemDraft[]
+  products: ProductListItem[]
+  total: number
+  loading: boolean
+  onUpdateItem: (key: string, field: keyof ActionItemDraft, value: string | number) => void
+  onCancel: () => void
+  onConfirm: () => void
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
+  showPrice?: boolean
+} & (
+  | ({
+      lloji: 'Hyrje' | 'Dalje'
+    } & (
+      | { country: Country; location?: never }
+      | { location: ReviewLocation; country?: never }
+    ))
+  | ({
+      lloji: 'Transfer'
+    } & (
+      | { transferFrom: Country; transferTo: Country; transferFromLocation?: never; transferToLocation?: never }
+      | {
+          transferFromLocation: ReviewLocation
+          transferToLocation: ReviewLocation
+          transferFrom?: never
+          transferTo?: never
+        }
+    ))
+)
+
+export function ActionReviewModal(props: ActionReviewModalProps) {
   const showPrice = props.showPrice ?? true
   const columnWidths = showPrice ? REVIEW_TABLE_COL_WIDTHS_FULL : REVIEW_TABLE_COL_WIDTHS_NO_PRICE
   const displayItems = props.items.filter((i) => i.kodi_produktit.trim())
@@ -56,7 +150,9 @@ export function ActionReviewModal(
     displayItems.length < REVIEW_VISIBLE_ROWS
       ? REVIEW_VISIBLE_ROWS - displayItems.length
       : 0
-  const countryMeta = props.country ? COUNTRY_META[props.country] : null
+  const isTransfer = props.lloji === 'Transfer'
+  const title = isTransfer ? 'Finalizo transfertën?' : 'Finalizo veprimin?'
+  const totalLabel = isTransfer ? 'Totali i transfertës' : 'Totali i veprimit'
 
   const productByKodi = new Map(props.products.map((p) => [p.kodi, p]))
   const contentRef = React.useRef<HTMLDivElement>(null)
@@ -76,7 +172,7 @@ export function ActionReviewModal(
         onClick={(e) => e.stopPropagation()}
       >
         <div className="action-review-header">
-          <h3>Finalizo veprimin?</h3>
+          <h3>{title}</h3>
           <button
             type="button"
             className="modal-close-btn"
@@ -90,21 +186,7 @@ export function ActionReviewModal(
 
         <div className="action-review-meta">
           <LlojiBadge lloji={props.lloji} />
-          <span className="action-review-meta-country">
-            {props.location ? (
-              <>
-                {props.location.flagEmoji ? (
-                  <span className="flagIcon">{props.location.flagEmoji}</span>
-                ) : null}
-                {props.location.emri}
-              </>
-            ) : countryMeta ? (
-              <>
-                <img className="flagIcon" src={countryMeta.flagSrc} alt="" />
-                {countryLabel(props.country!)}
-              </>
-            ) : null}
-          </span>
+          <ReviewRouteMeta {...props} />
           <span className="action-review-meta-sep" aria-hidden="true">
             ·
           </span>
@@ -229,7 +311,7 @@ export function ActionReviewModal(
         <div className="action-review-footer">
           {showPrice ? (
             <div className="history-expanded-total">
-              Totali i veprimit: <strong className="num">{fmt(props.total)}</strong>
+              {totalLabel}: <strong className="num">{fmt(props.total)}</strong>
             </div>
           ) : null}
           <div className="action-review-actions">

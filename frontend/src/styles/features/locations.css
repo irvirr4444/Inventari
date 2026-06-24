@@ -1,22 +1,27 @@
-.location-pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .location-picker-dropdown {
   position: relative;
+  width: 100%;
 }
 
 .location-picker-trigger {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  width: 100%;
+  border: 1px solid var(--border-light, rgba(201, 216, 234, 0.95));
+  background: #fff;
+  text-align: left;
+}
+
+.location-picker-trigger:hover {
+  border-color: rgba(37, 99, 235, 0.35);
 }
 
 .location-picker-chevron {
   flex-shrink: 0;
   opacity: 0.65;
+  margin-left: auto;
 }
 
 .location-picker-menu {
@@ -39,7 +44,7 @@
 
 .location-picker-menu-portal {
   position: fixed;
-  z-index: 45;
+  z-index: 100;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -82,8 +87,9 @@
   color: var(--text);
 }
 
-.location-pill.active {
-  border-color: var(--accent, #2563eb);
+.location-picker-menu-empty {
+  padding: 8px 10px;
+  font-size: 13px;
 }
 
 .locations-editor h1 {

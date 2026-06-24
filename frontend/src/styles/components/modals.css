@@ -261,6 +261,47 @@
   color: var(--text);
 }
 
+.action-review-transfer-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.action-review-transfer-endpoint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.action-review-transfer-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.action-review-transfer-name {
+  line-height: 1.2;
+}
+
+.action-review-transfer-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.action-review-transfer-endpoint .flagIcon {
+  flex-shrink: 0;
+}
+
 .action-review-meta-sep {
   color: var(--text-muted);
 }

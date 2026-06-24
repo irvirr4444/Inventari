@@ -64,7 +64,6 @@ export function useDashboardPage() {
     transferEntry.setTransferOra('')
     transferEntry.setTransferPershkrimi('')
     transferEntry.itemsState.reset()
-    transferEntry.setTransferError(null)
     transferEntry.setConfirmOpen(false)
     setTransferDialogOpen(true)
   }
@@ -146,8 +145,6 @@ export function useDashboardPage() {
     setTransferOra: transferEntry.setTransferOra,
     transferPershkrimi: transferEntry.transferPershkrimi,
     setTransferPershkrimi: transferEntry.setTransferPershkrimi,
-    transferError: transferEntry.transferError,
-    setTransferError: transferEntry.setTransferError,
     confirmTransferOpen: transferEntry.confirmOpen,
     setConfirmTransferOpen: transferEntry.setConfirmOpen,
     historyOpen,

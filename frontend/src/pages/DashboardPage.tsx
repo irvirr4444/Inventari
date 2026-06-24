@@ -8,7 +8,7 @@ import { ProductFormModal } from '../features/products/ProductFormModal'
 import { ProductsPanel } from '../features/products/ProductsPanel'
 import { SummaryPanel } from '../features/summary/SummaryPanel'
 import { validateActionItems } from '../hooks/useActionItems'
-import { countryLabel, fmt, productLabel } from '../lib/format'
+import { productLabel } from '../lib/format'
 import { useDashboardPage } from './useDashboardPage'
 
 export function DashboardPage() {
@@ -77,7 +77,6 @@ export function DashboardPage() {
           pershkrimi={d.transferPershkrimi}
           items={d.transferItemsState.items}
           products={d.products}
-          error={d.transferError}
           total={d.transferItemsState.total}
           saving={d.transferMutation.isPending}
           onFromChange={d.setTransferFrom}
@@ -91,7 +90,6 @@ export function DashboardPage() {
           onNotify={d.notify}
           onClose={() => {
             d.setTransferDialogOpen(false)
-            d.setTransferError(null)
             d.setConfirmTransferOpen(false)
           }}
           onSubmit={d.submitTransfer}
@@ -171,22 +169,28 @@ export function DashboardPage() {
       )}
 
       {d.confirmTransferOpen && (
-        <ConfirmModal
-          title="Finalizo transfertën?"
-          message={
-            <span>
-              Transfer nga {countryLabel(d.transferFrom)} ne {countryLabel(d.transferTo)} me total{' '}
-              <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                {fmt(d.transferItemsState.total)}
-              </strong>
-              .
-            </span>
-          }
-          confirmLabel={d.transferMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
-          tone="primary"
+        <ActionReviewModal
+          lloji="Transfer"
+          transferFrom={d.transferFrom}
+          transferTo={d.transferTo}
+          actionDate={d.transferDate}
+          actionOra={d.transferOra}
+          actionPershkrimi={d.transferPershkrimi}
+          items={d.transferItemsState.items}
+          products={d.products}
+          total={d.transferItemsState.total}
           loading={d.transferMutation.isPending}
+          onUpdateItem={d.transferItemsState.updateItem}
+          onNotify={d.notify}
           onCancel={() => d.setConfirmTransferOpen(false)}
-          onConfirm={() => d.transferMutation.mutate()}
+          onConfirm={() => {
+            const result = validateActionItems(d.transferItemsState.items)
+            if (result.ok === false) {
+              d.notify(result.error, 'error')
+              return
+            }
+            d.transferMutation.mutate()
+          }}
         />
       )}
 

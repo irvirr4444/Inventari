@@ -16,7 +16,10 @@ export function DynamicLocationPickerSheet(props: {
   const { activeLokacionet } = useLokacioni()
   const [addOpen, setAddOpen] = React.useState(false)
 
-  const locations = activeLokacionet.filter((l) => !props.excludeIds?.includes(l.id))
+  const excludedIds = new Set(props.excludeIds ?? [])
+  const locations = activeLokacionet.filter(
+    (l) => l.id === props.value || !excludedIds.has(l.id),
+  )
 
   return (
     <>

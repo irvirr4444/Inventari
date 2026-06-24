@@ -7,14 +7,11 @@ import { DynamicTransferForm } from './DynamicTransferForm'
 export function DynamicTransferModal(props: {
   from: string
   to: string
-  fromLabel: string
-  toLabel: string
   date: string
   ora: string
   pershkrimi: string
   items: ActionItemDraft[]
   products: DynamicProdukti[]
-  error: string | null
   total: number
   saving: boolean
   onFromChange: (id: string) => void
@@ -39,14 +36,11 @@ export function DynamicTransferModal(props: {
       <DynamicTransferForm
         from={props.from}
         to={props.to}
-        fromLabel={props.fromLabel}
-        toLabel={props.toLabel}
         date={props.date}
         ora={props.ora}
         pershkrimi={props.pershkrimi}
         items={props.items}
         products={props.products}
-        error={props.error}
         total={props.total}
         saving={props.saving}
         onFromChange={props.onFromChange}

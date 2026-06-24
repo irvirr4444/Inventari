@@ -19,6 +19,7 @@ import { insertVeprimet } from '../repositories/veprimiRepository.js'
 import { insertVeprimBatch } from '../repositories/veprimBatchRepository.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 import { resolveLokacioniIdForCountry } from './legacyDtoService.js'
+import { lokacioniToCountry } from '../domain/lokacioni.js'
 import { getTrackPriceForTenant } from './tenantConfigService.js'
 
 export function validateTransfer(body: NormalizedActionBody) {
@@ -272,13 +273,19 @@ export async function createAction(
       ? resolveLokacioniIdForCountry(lokacionet, body.destination_shteti)
       : null)
 
+  const batchShteti = body.shteti ?? lokacioniToCountry(lokacionet, sourceLoc)
+  const batchDestShteti =
+    body.lloji === 'Transfer'
+      ? body.destination_shteti ?? (destLoc ? lokacioniToCountry(lokacionet, destLoc) : null)
+      : body.destination_shteti ?? null
+
   let batchId: string | null = null
   try {
     batchId = await insertVeprimBatch(supabase, user.id, {
       lloji: body.lloji,
       data: body.data,
-      shteti: body.shteti ?? 'XK',
-      destination_shteti: body.destination_shteti,
+      shteti: batchShteti,
+      destination_shteti: batchDestShteti,
       lokacioni_id: sourceLoc,
       destination_lokacioni_id: destLoc,
       ora: body.ora ?? null,
@@ -304,8 +311,8 @@ export async function createAction(
       batch_id: batchId,
       transfer: body.lloji === 'Transfer',
       transfer_count: body.lloji === 'Transfer' ? body.items.length : 0,
-      transfer_from: body.lloji === 'Transfer' ? body.shteti : undefined,
-      transfer_to: body.lloji === 'Transfer' ? body.destination_shteti : undefined,
+      transfer_from: body.lloji === 'Transfer' ? batchShteti : undefined,
+      transfer_to: body.lloji === 'Transfer' ? batchDestShteti ?? undefined : undefined,
       mirrored_to_albania: mirrorRows.length > 0,
       mirrored_count: mirrorRows.length,
     },

@@ -1,5 +1,4 @@
 import type * as React from 'react'
-import { ErrorAlert } from '../../components/ErrorAlert'
 import type { DynamicProdukti } from '../../lib/api'
 import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
@@ -11,14 +10,11 @@ import { useTenantConfig } from '../../hooks/useTenantConfig'
 export function DynamicTransferForm(props: {
   from: string
   to: string
-  fromLabel: string
-  toLabel: string
   date: string
   ora: string
   pershkrimi: string
   items: ActionItemDraft[]
   products: DynamicProdukti[]
-  error: string | null
   total: number
   saving: boolean
   onFromChange: (id: string) => void
@@ -47,7 +43,6 @@ export function DynamicTransferForm(props: {
           <DynamicLocationSelect
             value={props.from}
             onChange={updateFrom}
-            excludeIds={[props.to]}
           />
         </div>
         <div className="transfer-arrow" aria-hidden="true">→</div>
@@ -56,11 +51,7 @@ export function DynamicTransferForm(props: {
           <DynamicLocationSelect
             value={props.to}
             onChange={props.onToChange}
-            excludeIds={[props.from]}
           />
-        </div>
-        <div className="transfer-hint">
-          Transfer: {props.fromLabel} → {props.toLabel}
         </div>
       </div>
 
@@ -119,7 +110,6 @@ export function DynamicTransferForm(props: {
         </div>
       )}
 
-      {props.error && <ErrorAlert message={props.error} style={{ marginTop: 16 }} />}
     </form>
   )
 }

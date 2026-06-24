@@ -2,7 +2,7 @@ import { ConfirmModal } from '../../components/ConfirmModal'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { ActionReviewModal } from '../actions/ActionReviewModal'
 import { validateActionItems } from '../../hooks/useActionItems'
-import { fmt, productLabel } from '../../lib/format'
+import { productLabel } from '../../lib/format'
 import type { useDynamicDashboardPage } from '../../pages/useDynamicDashboardPage'
 import { DynamicHistoryModal } from './DynamicHistoryModal'
 import { DynamicProductFormModal } from './DynamicProductFormModal'
@@ -26,14 +26,11 @@ export function DynamicDashboardModals(props: {
         <DynamicTransferModal
           from={d.transferFrom}
           to={d.transferTo}
-          fromLabel={d.transferFromLabel}
-          toLabel={d.transferToLabel}
           date={d.transferDate}
           ora={d.transferOra}
           pershkrimi={d.transferPershkrimi}
           items={d.transferItemsState.items}
           products={d.products}
-          error={d.transferError}
           total={d.transferItemsState.total}
           saving={d.transferMutation.isPending}
           onFromChange={d.setTransferFrom}
@@ -47,7 +44,6 @@ export function DynamicDashboardModals(props: {
           onNotify={d.notify}
           onClose={() => {
             d.setTransferDialogOpen(false)
-            d.setTransferError(null)
             d.setConfirmTransferOpen(false)
           }}
           onSubmit={d.submitTransfer}
@@ -137,28 +133,35 @@ export function DynamicDashboardModals(props: {
       )}
 
       {d.confirmTransferOpen && (
-        <ConfirmModal
-          title="Finalizo transfertën?"
-          message={
-            <span>
-              Transfer nga {d.transferFromLabel} ne {d.transferToLabel}
-              {trackPrice ? (
-                <>
-                  {' '}
-                  me total{' '}
-                  <strong className="num" style={{ color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                    {fmt(d.transferItemsState.total)}
-                  </strong>
-                </>
-              ) : null}
-              .
-            </span>
-          }
-          confirmLabel={d.transferMutation.isPending ? 'Duke finalizuar...' : 'Finalizo'}
-          tone="primary"
+        <ActionReviewModal
+          lloji="Transfer"
+          transferFromLocation={{
+            emri: d.transferFromLabel,
+            flagEmoji: d.sortedLocations.find((l) => l.id === d.transferFrom)?.flag_emoji,
+          }}
+          transferToLocation={{
+            emri: d.transferToLabel,
+            flagEmoji: d.sortedLocations.find((l) => l.id === d.transferTo)?.flag_emoji,
+          }}
+          actionDate={d.transferDate}
+          actionOra={d.transferOra}
+          actionPershkrimi={d.transferPershkrimi}
+          items={d.transferItemsState.items}
+          products={d.products}
+          total={d.transferItemsState.total}
           loading={d.transferMutation.isPending}
+          onUpdateItem={d.transferItemsState.updateItem}
+          onNotify={d.notify}
           onCancel={() => d.setConfirmTransferOpen(false)}
-          onConfirm={() => d.transferMutation.mutate()}
+          onConfirm={() => {
+            const result = validateActionItems(d.transferItemsState.items)
+            if (result.ok === false) {
+              d.notify(result.error, 'error')
+              return
+            }
+            d.transferMutation.mutate()
+          }}
+          showPrice={trackPrice}
         />
       )}
     </>

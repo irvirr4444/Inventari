@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { CountrySelect } from '../../components/CountrySelect'
-import { ErrorAlert } from '../../components/ErrorAlert'
 import { Modal } from '../../components/Modal'
 import type { Country } from '../../lib/country'
 import type { Produkti } from '../../lib/api'
@@ -17,7 +16,6 @@ export function TransferModal(props: {
   pershkrimi: string
   items: ActionItemDraft[]
   products: Produkti[]
-  error: string | null
   total: number
   saving: boolean
   onFromChange: (country: Country) => void
@@ -104,8 +102,6 @@ export function TransferModal(props: {
             {props.saving ? 'Duke finalizuar…' : 'Finalizo Transfertën'}
           </button>
         </div>
-
-        {props.error && <ErrorAlert message={props.error} style={{ marginTop: 16 }} />}
       </form>
     </Modal>
   )

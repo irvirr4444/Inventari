@@ -10,7 +10,7 @@ import { scheduleInvalidate } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
 
 export function useTransferEntry(options: {
-  notify: (message: string, variant?: 'success' | 'default') => void
+  notify: (message: string, variant?: 'success' | 'default' | 'error') => void
   initialFrom?: Country
   onSuccess?: () => void
 }) {
@@ -23,7 +23,6 @@ export function useTransferEntry(options: {
   const [transferDate, setTransferDate] = React.useState(todayISODate())
   const [transferOra, setTransferOra] = React.useState('')
   const [transferPershkrimi, setTransferPershkrimi] = React.useState('')
-  const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const itemsState = useActionItems()
@@ -47,7 +46,6 @@ export function useTransferEntry(options: {
           .map(toActionItemPayload),
       }),
     onSuccess: (result) => {
-      setTransferError(null)
       setConfirmOpen(false)
       options.notify(
         result.meta?.transfer
@@ -62,20 +60,19 @@ export function useTransferEntry(options: {
       scheduleInvalidate(qc, 'all', { userId: user?.id })
     },
     onError: (e) => {
-      setTransferError(e instanceof Error ? e.message : 'Error')
+      options.notify(e instanceof Error ? e.message : 'Error', 'error')
       setConfirmOpen(false)
     },
   })
 
   const requestFinalize = () => {
-    setTransferError(null)
     const result = validateActionItems(itemsState.items)
     if (!result.ok) {
-      setTransferError(result.error)
+      options.notify(result.error, 'error')
       return
     }
     if (transferFrom === transferTo) {
-      setTransferError('Transferi kerkon dy vende te ndryshme.')
+      options.notify('Transferi kerkon dy vende te ndryshme.', 'error')
       return
     }
     setConfirmOpen(true)
@@ -94,8 +91,6 @@ export function useTransferEntry(options: {
     setTransferOra,
     transferPershkrimi,
     setTransferPershkrimi,
-    transferError,
-    setTransferError,
     confirmOpen,
     setConfirmOpen,
     itemsState,

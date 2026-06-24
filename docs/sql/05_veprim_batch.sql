@@ -44,7 +44,15 @@ create table if not exists public.veprim_batch (
   constraint veprim_batch_transfer_dest_check
     check (
       lloji <> 'Transfer'
-      or (destination_shteti is not null and destination_shteti <> shteti)
+      or (
+        destination_lokacioni_id is not null
+        and lokacioni_id is not null
+        and destination_lokacioni_id <> lokacioni_id
+      )
+      or (
+        destination_shteti is not null
+        and destination_shteti <> shteti
+      )
     )
 );
 

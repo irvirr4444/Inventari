@@ -78,11 +78,12 @@ export function useDynamicDashboardPage() {
 
   const openTransferDialog = () => {
     transferEntry.setTransferFrom(lokacioniId)
+    const destination = sortedLocations.find((l) => l.id !== lokacioniId)
+    transferEntry.setTransferTo(destination?.id ?? '')
     transferEntry.setTransferDate(todayISODate())
     transferEntry.setTransferOra('')
     transferEntry.setTransferPershkrimi('')
     transferEntry.itemsState.reset()
-    transferEntry.setTransferError(null)
     transferEntry.setConfirmOpen(false)
     setTransferDialogOpen(true)
   }
@@ -192,8 +193,6 @@ export function useDynamicDashboardPage() {
     setTransferOra: transferEntry.setTransferOra,
     transferPershkrimi: transferEntry.transferPershkrimi,
     setTransferPershkrimi: transferEntry.setTransferPershkrimi,
-    transferError: transferEntry.transferError,
-    setTransferError: transferEntry.setTransferError,
     confirmTransferOpen: transferEntry.confirmOpen,
     setConfirmTransferOpen: transferEntry.setConfirmOpen,
     transferFromLabel: transferEntry.fromLabel,

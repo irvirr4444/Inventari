@@ -36,6 +36,7 @@ import {
 import { validateStock } from './services/actionsService.js'
 import { listLokacionetByOwner } from './repositories/lokacioniRepository.js'
 import type { LokacioniRow } from './domain/lokacioni.js'
+import { lokacioniToCountry } from './domain/lokacioni.js'
 import {
   deleteLegacyBatch,
   ensureRealBatchId,
@@ -123,11 +124,6 @@ function aggregateBatch(
     flag_emoji: loc?.flag_emoji ?? undefined,
     destination_flag_emoji: dest?.flag_emoji ?? undefined,
   }
-}
-
-function lokacioniToCountry(lokacionet: LokacioniRow[], lokacioniId: string): Country {
-  const match = lokacionet.find((l) => l.id === lokacioniId)
-  return match?.kodi === 'AL' ? 'AL' : 'XK'
 }
 
 type BatchItemInput = {

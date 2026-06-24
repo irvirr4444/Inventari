@@ -17,14 +17,13 @@ export function useDynamicTransferEntry(options: {
   const { user } = useAuth()
   const defaultFrom = options.initialFrom ?? options.activeLokacionet[0]?.id ?? ''
   const defaultTo =
-    options.activeLokacionet.find((l) => l.id !== defaultFrom)?.id ?? defaultFrom
+    options.activeLokacionet.find((l) => l.id !== defaultFrom)?.id ?? ''
 
   const [transferFrom, setTransferFrom] = React.useState(defaultFrom)
   const [transferTo, setTransferTo] = React.useState(defaultTo)
   const [transferDate, setTransferDate] = React.useState(todayISODate())
   const [transferOra, setTransferOra] = React.useState('')
   const [transferPershkrimi, setTransferPershkrimi] = React.useState('')
-  const [transferError, setTransferError] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const itemsState = useActionItems()
@@ -33,7 +32,15 @@ export function useDynamicTransferEntry(options: {
     setTransferFrom(next)
     if (next === transferTo) {
       const alt = options.activeLokacionet.find((l) => l.id !== next)
-      if (alt) setTransferTo(alt.id)
+      setTransferTo(alt?.id ?? '')
+    }
+  }
+
+  const setTo = (next: string) => {
+    setTransferTo(next)
+    if (next === transferFrom) {
+      const alt = options.activeLokacionet.find((l) => l.id !== next)
+      setTransferFrom(alt?.id ?? '')
     }
   }
 
@@ -54,7 +61,6 @@ export function useDynamicTransferEntry(options: {
           .map(toActionItemPayload),
       }),
     onSuccess: (result) => {
-      setTransferError(null)
       setConfirmOpen(false)
       options.notify(
         result.meta?.transfer
@@ -69,20 +75,21 @@ export function useDynamicTransferEntry(options: {
       scheduleInvalidate(qc, 'all', { userId: user?.id })
     },
     onError: (e) => {
-      setTransferError(e instanceof Error ? e.message : 'Error')
+      options.notify(e instanceof Error ? e.message : 'Error', 'error')
       setConfirmOpen(false)
     },
   })
 
   const requestFinalize = () => {
-    setTransferError(null)
-    const result = validateActionItems(itemsState.items)
-    if (!result.ok) {
-      setTransferError(result.error)
+    const destinationOptions = options.activeLokacionet.filter((l) => l.id !== transferFrom)
+    const hasDestination = destinationOptions.some((l) => l.id === transferTo)
+    if (!hasDestination) {
+      options.notify('Zgjidh Destinacionin', 'error')
       return
     }
-    if (transferFrom === transferTo) {
-      setTransferError('Transferi kerkon dy lokacione te ndryshme.')
+    const result = validateActionItems(itemsState.items)
+    if (!result.ok) {
+      options.notify(result.error, 'error')
       return
     }
     setConfirmOpen(true)
@@ -92,15 +99,13 @@ export function useDynamicTransferEntry(options: {
     transferFrom,
     setTransferFrom: setFrom,
     transferTo,
-    setTransferTo,
+    setTransferTo: setTo,
     transferDate,
     setTransferDate,
     transferOra,
     setTransferOra,
     transferPershkrimi,
     setTransferPershkrimi,
-    transferError,
-    setTransferError,
     confirmOpen,
     setConfirmOpen,
     itemsState,

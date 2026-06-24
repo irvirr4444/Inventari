@@ -27,8 +27,11 @@ export function LocationPicker(props: {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
   const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const menuRef = React.useRef<HTMLDivElement | null>(null)
-  const options = activeLokacionet.filter((l) => !props.excludeIds?.includes(l.id))
-  const selected = options.find((l) => l.id === props.value) ?? options[0]
+  const excludedIds = new Set(props.excludeIds ?? [])
+  const options = activeLokacionet.filter(
+    (l) => l.id === props.value || !excludedIds.has(l.id),
+  )
+  const selected = activeLokacionet.find((l) => l.id === props.value) ?? null
 
   useEscapeToClose(() => setMenuOpen(false), { enabled: menuOpen })
 
@@ -86,44 +89,39 @@ export function LocationPicker(props: {
     props.onNotify?.('Lokacioni u shtua me sukses.', 'success')
   }
 
-  const addModal = props.allowAdd ? (
-    <LocationAddModal
-      open={addOpen}
-      onClose={() => setAddOpen(false)}
-      onCreated={handleCreated}
-    />
-  ) : null
-
-  if (props.allowAdd) {
-    const menu =
-      menuOpen && menuPos
-        ? createPortal(
-            <div
-              ref={menuRef}
-              className="location-picker-menu location-picker-menu-portal"
-              role="menu"
-              style={{
-                top: menuPos.top,
-                left: menuPos.left,
-                minWidth: menuPos.minWidth,
-                maxHeight: menuPos.maxHeight,
-              }}
-            >
-              {options.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  role="menuitem"
-                  className={`location-picker-menu-item${props.value === l.id ? ' active' : ''}`}
-                  onClick={() => {
-                    props.onChange(l.id)
-                    setMenuOpen(false)
-                  }}
-                >
-                  <span>{locationBadge(l)}</span>
-                  <span>{l.emri}</span>
-                </button>
-              ))}
+  const menu =
+    menuOpen && menuPos
+      ? createPortal(
+          <div
+            ref={menuRef}
+            className="location-picker-menu location-picker-menu-portal"
+            role="menu"
+            style={{
+              top: menuPos.top,
+              left: menuPos.left,
+              minWidth: menuPos.minWidth,
+              maxHeight: menuPos.maxHeight,
+            }}
+          >
+            {options.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                role="menuitem"
+                className={`location-picker-menu-item${props.value === l.id ? ' active' : ''}`}
+                onClick={() => {
+                  props.onChange(l.id)
+                  setMenuOpen(false)
+                }}
+              >
+                <span>{locationBadge(l)}</span>
+                <span>{l.emri}</span>
+              </button>
+            ))}
+            {options.length === 0 ? (
+              <div className="location-picker-menu-empty muted">Nuk ka lokacione te disponueshme.</div>
+            ) : null}
+            {props.allowAdd ? (
               <button
                 type="button"
                 role="menuitem"
@@ -135,81 +133,56 @@ export function LocationPicker(props: {
               >
                 + Shto
               </button>
-            </div>,
-            document.body,
-          )
-        : null
-
-    return (
-      <>
-        <div ref={rootRef} className="location-picker-dropdown">
-          <button
-            ref={triggerRef}
-            type="button"
-            className="btn location-pill active location-picker-trigger"
-            data-tutorial={props.dataTutorial}
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-          >
-            {selected ? (
-              <>
-                {locationBadge(selected)} {selected.emri}
-              </>
-            ) : (
-              <span>Zgjidh lokacionin</span>
-            )}
-            <svg
-              className="location-picker-chevron"
-              aria-hidden="true"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-        </div>
-        {menu}
-        {addModal}
-      </>
-    )
-  }
-
-  if (options.length <= 4) {
-    return (
-      <div className="location-pill-row">
-        {options.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            className={`btn location-pill${props.value === l.id ? ' active' : ''}`}
-            onClick={() => props.onChange(l.id)}
-          >
-            {locationBadge(l)} {l.emri}
-          </button>
-        ))}
-      </div>
-    )
-  }
+            ) : null}
+          </div>,
+          document.body,
+        )
+      : null
 
   return (
-    <select
-      className="input"
-      value={props.value}
-      onChange={(e) => props.onChange(e.target.value)}
-    >
-      {options.map((l) => (
-        <option key={l.id} value={l.id}>
-          {l.emri}
-        </option>
-      ))}
-    </select>
+    <>
+      <div ref={rootRef} className="location-picker-dropdown">
+        <button
+          ref={triggerRef}
+          type="button"
+          className="btn location-picker-trigger"
+          data-tutorial={props.dataTutorial}
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+        >
+          {selected ? (
+            <>
+              {locationBadge(selected)} {selected.emri}
+            </>
+          ) : (
+            <span className="muted">Zgjidh lokacionin</span>
+          )}
+          <svg
+            className="location-picker-chevron"
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      </div>
+      {menu}
+      {props.allowAdd ? (
+        <LocationAddModal
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          onCreated={handleCreated}
+        />
+      ) : null}
+    </>
   )
 }
 

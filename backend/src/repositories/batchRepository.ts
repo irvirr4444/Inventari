@@ -295,7 +295,7 @@ export async function fetchExportLegacyActions(supabase: SupabaseClient, tenantI
   const { data, error } = await supabase
     .from('veprimi')
     .select(
-      'id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,veprim_batch(ora,pershkrimi)',
+      'id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,batch_id,veprim_batch(ora,pershkrimi,lloji,shteti,destination_shteti)',
     )
     .eq('pronari_id', tenantId)
     .order('data', { ascending: true })
@@ -306,22 +306,17 @@ export async function fetchExportLegacyActions(supabase: SupabaseClient, tenantI
   return data ?? []
 }
 
-export async function fetchDynamicExportActions(
-  supabase: SupabaseClient,
-  tenantId: string,
-  query: { from?: string; to?: string },
-) {
-  let q = supabase
+export async function fetchExportDynamicActions(supabase: SupabaseClient, tenantId: string) {
+  const { data, error } = await supabase
     .from('veprimi')
-    .select('id,lloji,data,lokacioni_id,kodi_produktit,cmimi_njesi,sasia,totali,created_at')
+    .select(
+      'id,lloji,data,lokacioni_id,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,batch_id,veprim_batch(ora,pershkrimi,lloji,lokacioni_id,destination_lokacioni_id)',
+    )
     .eq('pronari_id', tenantId)
     .order('data', { ascending: true })
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 
-  if (query.from) q = q.gte('data', query.from)
-  if (query.to) q = q.lte('data', query.to)
-
-  const { data, error } = await q
   if (error) throw mapSupabaseError(error)
   return data ?? []
 }

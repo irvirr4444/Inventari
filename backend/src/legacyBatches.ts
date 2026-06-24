@@ -181,7 +181,6 @@ function legacyBatchMeta(batch: LegacyBatch) {
     (max, r) => (r.created_at > max ? r.created_at : max),
     batch.rows[0]?.created_at ?? new Date().toISOString(),
   )
-  const timeMatch = /T(\d{2}):(\d{2})/.exec(created_at)
 
   return {
     id: batch.id,
@@ -189,7 +188,7 @@ function legacyBatchMeta(batch: LegacyBatch) {
     shteti: batch.key.shteti,
     destination_shteti: batch.key.destination_shteti,
     data: batch.key.data,
-    ora: timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : null,
+    ora: null,
     pershkrimi: null,
     totali,
     created_at,

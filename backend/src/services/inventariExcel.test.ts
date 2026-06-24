@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  exportOraForAction,
+  exportPershkrimiForAction,
+  exportShenimForAction,
   isWithinExportRange,
   signedQty,
   transferKey,
@@ -28,5 +31,31 @@ describe('inventariExcel helpers', () => {
   it('isWithinExportRange respects from/to', () => {
     expect(isWithinExportRange(row, { from: '2026-06-01', to: '2026-06-17' })).toBe(true)
     expect(isWithinExportRange(row, { from: '2026-06-15' })).toBe(false)
+  })
+
+  it('exportOraForAction prefers batch ora', () => {
+    expect(
+      exportOraForAction({
+        ...row,
+        veprim_batch: { ora: '14:30:00', pershkrimi: null },
+      }),
+    ).toBe('14:30')
+  })
+
+  it('exportOraForAction falls back to created_at', () => {
+    expect(exportOraForAction(row)).toBe('10:00')
+  })
+
+  it('exportPershkrimiForAction reads batch pershkrimi', () => {
+    expect(
+      exportPershkrimiForAction({
+        ...row,
+        veprim_batch: { ora: null, pershkrimi: '  Faturë  ' },
+      }),
+    ).toBe('Faturë')
+  })
+
+  it('exportShenimForAction trims line note', () => {
+    expect(exportShenimForAction({ ...row, shenim: '  fragile  ' })).toBe('fragile')
   })
 })

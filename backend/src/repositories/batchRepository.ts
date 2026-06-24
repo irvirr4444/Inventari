@@ -294,7 +294,9 @@ export async function fetchExportLegacyProducts(supabase: SupabaseClient, tenant
 export async function fetchExportLegacyActions(supabase: SupabaseClient, tenantId: string) {
   const { data, error } = await supabase
     .from('veprimi')
-    .select('id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,created_at')
+    .select(
+      'id,lloji,data,shteti,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,veprim_batch(ora,pershkrimi)',
+    )
     .eq('pronari_id', tenantId)
     .order('data', { ascending: true })
     .order('created_at', { ascending: true })

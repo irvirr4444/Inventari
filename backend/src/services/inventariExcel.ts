@@ -1,16 +1,21 @@
 import ExcelJS from 'exceljs'
 import fs from 'node:fs'
 import path from 'node:path'
-import { ERR_NO_ACTIONS_IN_PERIOD } from '@inventari/shared'
+import { ERR_NO_ACTIONS_IN_PERIOD, formatOraDisplay } from '@inventari/shared'
 import { autoSizeColumns } from '../excel.js'
 
-export const INVENTARI_EXPORT_COLS = 13
+export const INVENTARI_EXPORT_COLS = 19
 
 export type ProductExportRow = {
   kodi: string
   emri: string
   gjendje_kosove: number | null
   gjendje_shqiperi: number | null
+}
+
+export type ActionExportBatchMeta = {
+  ora: string | null
+  pershkrimi: string | null
 }
 
 export type ActionExportRow = {
@@ -21,7 +26,38 @@ export type ActionExportRow = {
   kodi_produktit: string
   cmimi_njesi: number | string
   sasia: number
+  shenim?: string | null
   created_at: string
+  veprim_batch?: ActionExportBatchMeta | ActionExportBatchMeta[] | null
+}
+
+const INVENTARI_PRICE_COLS = [6, 8, 15, 17] as const
+const INVENTARI_QTY_COLS = [7, 10, 16, 19] as const
+
+function resolveBatchMeta(action: ActionExportRow): ActionExportBatchMeta | null {
+  const batch = action.veprim_batch
+  if (!batch) return null
+  return Array.isArray(batch) ? (batch[0] ?? null) : batch
+}
+
+export function exportPershkrimiForAction(action: ActionExportRow) {
+  return resolveBatchMeta(action)?.pershkrimi?.trim() ?? ''
+}
+
+export function exportOraForAction(action: ActionExportRow) {
+  const batchOra = resolveBatchMeta(action)?.ora
+  if (batchOra) return formatOraDisplay(batchOra)
+
+  const match = /T(\d{2}):(\d{2})/.exec(action.created_at)
+  return match ? `${match[1]}:${match[2]}` : ''
+}
+
+export function exportShenimForAction(action: ActionExportRow) {
+  return action.shenim?.trim() ?? ''
+}
+
+function emptyInventariRow() {
+  return Array<string | number | null>(INVENTARI_EXPORT_COLS).fill('')
 }
 
 export function signedQty(row: ActionExportRow) {
@@ -93,10 +129,10 @@ export function writeInventariDataRow(
     cell.alignment = { ...cell.alignment, wrapText: false, vertical: 'middle' }
   }
 
-  for (const col of [4, 6, 10, 12]) {
+  for (const col of INVENTARI_PRICE_COLS) {
     row.getCell(col).numFmt = '#,##0.00'
   }
-  for (const col of [5, 7, 11, 13]) {
+  for (const col of INVENTARI_QTY_COLS) {
     row.getCell(col).numFmt = '#,##0'
   }
 
@@ -204,15 +240,25 @@ async function buildInventariExcelBufferAsync(
     if (isMirroredAlbaniaIn) {
       mirrorCounts.set(key, (mirrorCounts.get(key) ?? 1) - 1)
     } else if (isWithinExportRange(action, query)) {
+      const pershkrimi = exportPershkrimiForAction(action)
+      const ora = exportOraForAction(action)
+      const shenim = exportShenimForAction(action)
+
       if (action.shteti === 'XK') {
         rowValues = [
           product.kodi,
           product.emri,
+          pershkrimi,
           action.data,
+          ora,
           unitPrice,
           qty,
           unitPrice * qty,
+          shenim,
           stock.XK,
+          '',
+          '',
+          '',
           '',
           '',
           '',
@@ -223,11 +269,14 @@ async function buildInventariExcelBufferAsync(
 
         if (action.lloji === 'Dalje') {
           const alQty = Number(action.sasia ?? 0)
-          rowValues[8] = action.data
-          rowValues[9] = unitPrice
-          rowValues[10] = alQty
-          rowValues[11] = unitPrice * alQty
-          rowValues[12] = stock.AL + alQty
+          rowValues[11] = pershkrimi
+          rowValues[12] = action.data
+          rowValues[13] = ora
+          rowValues[14] = unitPrice
+          rowValues[15] = alQty
+          rowValues[16] = unitPrice * alQty
+          rowValues[17] = shenim
+          rowValues[18] = stock.AL + alQty
         }
       } else if (action.shteti === 'AL') {
         rowValues = [
@@ -239,10 +288,16 @@ async function buildInventariExcelBufferAsync(
           '',
           '',
           '',
+          '',
+          '',
+          '',
+          pershkrimi,
           action.data,
+          ora,
           unitPrice,
           qty,
           unitPrice * qty,
+          shenim,
           stock.AL,
         ]
       }
@@ -255,21 +310,9 @@ async function buildInventariExcelBufferAsync(
   }
 
   if (nextDataRow === 3) {
-    writeInventariDataRow(sheet, nextDataRow, [
-      '',
-      ERR_NO_ACTIONS_IN_PERIOD,
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-    ])
+    const emptyRow = emptyInventariRow()
+    emptyRow[1] = ERR_NO_ACTIONS_IN_PERIOD
+    writeInventariDataRow(sheet, nextDataRow, emptyRow)
     nextDataRow += 1
   }
 

@@ -340,7 +340,7 @@ export function buildPermbledhjeTotalRow(
 
 export function buildVeprimListTotalRow(
   rows: NavSheetRow[],
-  columnCount = VEPRIM_DETAIL_HEADERS.length,
+  columnCount: number = VEPRIM_DETAIL_HEADERS.length,
 ): NavSheetRow | null {
   if (rows.length === 0) return null
 
@@ -1007,7 +1007,7 @@ function collectLegacyNavigationRow(
     navigation.hyrjeRows.get(destinationShteti)?.push(
       buildVeprimDetailRow(
         product,
-        { ...action, lloji: 'Hyrje', shteti: destinationShteti },
+        { ...action, lloji: 'Hyrje' },
         transferQty,
         transferDestGjendje ?? transferQty,
       ),
@@ -1276,7 +1276,7 @@ export async function buildDynamicInventariExcelBuffer(
     const stock = runningStock.get(action.kodi_produktit)
     const locationId = action.lokacioni_id
     const blockIndex = locationId ? locationIndex.get(locationId) : undefined
-    if (!product || !stock || blockIndex === undefined) continue
+    if (!product || !stock || !locationId || blockIndex === undefined) continue
 
     const qty = signedQty(action)
     const unitPrice = Number(action.cmimi_njesi ?? 0)

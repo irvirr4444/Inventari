@@ -11,6 +11,7 @@ import { ProdukteTab } from './tabs/ProdukteTab'
 import { TransferTab } from './tabs/TransferTab'
 import { VeprimeTab } from './tabs/VeprimeTab'
 import type { MobileHeaderState, TabId } from './types'
+import './styles/mobile.css'
 
 export type { TabId } from './types'
 

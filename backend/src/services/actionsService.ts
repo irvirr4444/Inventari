@@ -273,7 +273,11 @@ export async function createAction(
       ? resolveLokacioniIdForCountry(lokacionet, body.destination_shteti)
       : null)
 
-  const batchShteti = body.shteti ?? lokacioniToCountry(lokacionet, sourceLoc)
+  const batchShteti: Country = (() => {
+    if (body.shteti) return body.shteti
+    if (sourceLoc) return lokacioniToCountry(lokacionet, sourceLoc)
+    throw new AppError(400, ERR_BATCH_CREATE_FAILED)
+  })()
   const batchDestShteti =
     body.lloji === 'Transfer'
       ? body.destination_shteti ?? (destLoc ? lokacioniToCountry(lokacionet, destLoc) : null)

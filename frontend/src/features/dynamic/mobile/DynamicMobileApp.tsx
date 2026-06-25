@@ -14,6 +14,7 @@ import { DynamicVeprimeTab } from './tabs/DynamicVeprimeTab'
 import { markTutorialSeen } from '../../../lib/api/tenantConfig'
 import { useAuth } from '../../../lib/auth/AuthProvider'
 import { TutorialOverlay } from '../../onboarding/TutorialOverlay'
+import '../../../mobile/styles/mobile.css'
 import './dynamic-mobile.css'
 
 const TAB_TITLES: Record<TabId, string> = {

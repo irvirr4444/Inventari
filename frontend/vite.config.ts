@@ -18,4 +18,23 @@ export default defineConfig({
       '/api': 'http://localhost:3001',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (id.includes('react-router') || id.includes('react-router-dom')) {
+            return 'router'
+          }
+          if (id.includes('@tanstack/react-query')) {
+            return 'query'
+          }
+          if (id.includes('react-dom') || /\/react\//.test(id)) {
+            return 'react-vendor'
+          }
+        },
+      },
+    },
+  },
 })

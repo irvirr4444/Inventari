@@ -9,15 +9,39 @@ import {
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useAuth } from './lib/auth/AuthProvider'
 import { useMobileClient } from './hooks/useMobileClient'
-import { DashboardPage } from './pages/DashboardPage'
-import { LoginPage } from './pages/LoginPage'
-import { OnboardingWizard } from './features/onboarding/OnboardingWizard'
-import { LocationsSettingsPage } from './features/settings/LocationsSettingsPage'
-import { DynamicDashboardPage } from './features/dynamic/DynamicDashboardPage'
-import { DynamicMobileApp } from './features/dynamic/mobile/DynamicMobileApp'
-import { MobileApp } from './mobile/MobileApp.tsx'
 import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
-import './mobile/styles/mobile.css'
+
+const LoginPage = React.lazy(() =>
+  import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+)
+const OnboardingWizard = React.lazy(() =>
+  import('./features/onboarding/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard })),
+)
+const LocationsSettingsPage = React.lazy(() =>
+  import('./features/settings/LocationsSettingsPage').then((m) => ({
+    default: m.LocationsSettingsPage,
+  })),
+)
+const DashboardPage = React.lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+)
+const DynamicDashboardPage = React.lazy(() =>
+  import('./features/dynamic/DynamicDashboardPage').then((m) => ({
+    default: m.DynamicDashboardPage,
+  })),
+)
+const MobileApp = React.lazy(() =>
+  import('./mobile/MobileApp').then((m) => ({ default: m.MobileApp })),
+)
+const DynamicMobileApp = React.lazy(() =>
+  import('./features/dynamic/mobile/DynamicMobileApp').then((m) => ({
+    default: m.DynamicMobileApp,
+  })),
+)
+
+function RouteSuspense(props: { children: React.ReactNode }) {
+  return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
+}
 
 function AuthLoading() {
   return (
@@ -33,23 +57,27 @@ function AuthLoading() {
 function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }) {
   if (props.isMobile) {
     return (
-      <ErrorBoundary fallbackClassName="mobile-auth-loading">
-        <MobileApp onLogout={props.onLogout} />
-      </ErrorBoundary>
+      <RouteSuspense>
+        <ErrorBoundary fallbackClassName="mobile-auth-loading">
+          <MobileApp onLogout={props.onLogout} />
+        </ErrorBoundary>
+      </RouteSuspense>
     )
   }
 
   return (
-    <div>
-      <div className="app-actions">
-        <button type="button" className="btn" onClick={props.onLogout}>
-          Dil
-        </button>
+    <RouteSuspense>
+      <div>
+        <div className="app-actions">
+          <button type="button" className="btn" onClick={props.onLogout}>
+            Dil
+          </button>
+        </div>
+        <main className="container">
+          <DashboardPage />
+        </main>
       </div>
-      <main className="container">
-        <DashboardPage />
-      </main>
-    </div>
+    </RouteSuspense>
   )
 }
 
@@ -60,21 +88,25 @@ function DynamicDashboardShell(props: {
 }) {
   if (props.isMobile) {
     return (
-      <DynamicMobileApp onLogout={props.onLogout} showTutorial={props.showTutorial} />
+      <RouteSuspense>
+        <DynamicMobileApp onLogout={props.onLogout} showTutorial={props.showTutorial} />
+      </RouteSuspense>
     )
   }
 
   return (
-    <div>
-      <div className="app-actions">
-        <button type="button" className="btn" onClick={props.onLogout}>
-          Dil
-        </button>
+    <RouteSuspense>
+      <div>
+        <div className="app-actions">
+          <button type="button" className="btn" onClick={props.onLogout}>
+            Dil
+          </button>
+        </div>
+        <main className="container">
+          <DynamicDashboardPage showTutorial={props.showTutorial} />
+        </main>
       </div>
-      <main className="container">
-        <DynamicDashboardPage showTutorial={props.showTutorial} />
-      </main>
-    </div>
+    </RouteSuspense>
   )
 }
 
@@ -122,9 +154,11 @@ function RequireAuth(props: { children: React.ReactNode }) {
 
 function LoginRoute() {
   return (
-    <main className="container auth-container">
-      <LoginPage />
-    </main>
+    <RouteSuspense>
+      <main className="container auth-container">
+        <LoginPage />
+      </main>
+    </RouteSuspense>
   )
 }
 
@@ -164,7 +198,9 @@ export default function App() {
           path="/onboarding"
           element={
             <RequireAuth>
-              <OnboardingWizard />
+              <RouteSuspense>
+                <OnboardingWizard />
+              </RouteSuspense>
             </RequireAuth>
           }
         />
@@ -173,7 +209,9 @@ export default function App() {
           path="/settings/locations"
           element={
             <RequireAuth>
-              <LocationsSettingsPage />
+              <RouteSuspense>
+                <LocationsSettingsPage />
+              </RouteSuspense>
             </RequireAuth>
           }
         />

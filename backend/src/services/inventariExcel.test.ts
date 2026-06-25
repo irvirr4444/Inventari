@@ -22,6 +22,11 @@ import {
   writeInventariDataRow,
 } from '../services/inventariExcel.js'
 
+function fillArgb(fill: ExcelJS.Fill | undefined): string | undefined {
+  if (!fill || fill.type !== 'pattern') return undefined
+  return fill.fgColor?.argb
+}
+
 describe('inventariExcel helpers', () => {
   const row = {
     id: '1',
@@ -233,8 +238,8 @@ describe('inventariExcel helpers', () => {
     for (let rowNumber = 3; rowNumber <= 30; rowNumber += 1) {
       writeInventariDataRow(sheet, rowNumber, row, 2)
     }
-    expect(sheet.getCell(3, 3).fill?.fgColor?.argb).toBe('FFC9DAF8')
-    expect(sheet.getCell(3, 12).fill?.fgColor?.argb).toBe('FFFCE5CD')
+    expect(fillArgb(sheet.getCell(3, 3).fill)).toBe('FFC9DAF8')
+    expect(fillArgb(sheet.getCell(3, 12).fill)).toBe('FFFCE5CD')
   })
 
   it('buildInventariExcelBuffer keeps location block colors after total row', async () => {
@@ -266,8 +271,8 @@ describe('inventariExcel helpers', () => {
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Permbledhje')
     expect(sheet).toBeTruthy()
-    expect(sheet!.getCell(3, 3).fill?.fgColor?.argb).toBe('FFC9DAF8')
-    expect(sheet!.getCell(3, 12).fill?.fgColor?.argb).toBe('FFFCE5CD')
+    expect(fillArgb(sheet!.getCell(3, 3).fill)).toBe('FFC9DAF8')
+    expect(fillArgb(sheet!.getCell(3, 12).fill)).toBe('FFFCE5CD')
     expect(sheet!.getCell(4, 2).value).toBe('TOTAL:')
     expect(sheet!.getCell(3, 5).value).toBe('')
 

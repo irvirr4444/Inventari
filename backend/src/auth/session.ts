@@ -69,15 +69,21 @@ export function setSessionCookie(
   sessionSecret: string,
   user: { id: string; email: string | null },
 ) {
+  const secure = process.env.NODE_ENV === 'production'
   reply.setCookie(SESSION_COOKIE, createSessionToken(sessionSecret, user), {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: secure ? 'none' : 'lax',
+    secure,
     path: '/',
     maxAge: SESSION_MAX_AGE_SECONDS,
   })
 }
 
 export function clearSessionCookie(reply: FastifyReply) {
-  reply.clearCookie(SESSION_COOKIE, { path: '/' })
+  const secure = process.env.NODE_ENV === 'production'
+  reply.clearCookie(SESSION_COOKIE, {
+    path: '/',
+    secure,
+    sameSite: secure ? 'none' : 'lax',
+  })
 }

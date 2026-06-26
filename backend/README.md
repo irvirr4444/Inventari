@@ -74,7 +74,7 @@ Copy `backend/.env.example` to `backend/.env` (repo root `.env` is also loaded b
 | `SESSION_SECRET` | prod recommended | HMAC secret (min 32 chars); defaults to service key if unset |
 | `GOOGLE_CLIENT_ID` | no | Enables Google sign-in; must match frontend `VITE_GOOGLE_CLIENT_ID` |
 | `DATABASE_URL` | no | Postgres URI for CLI migration script only |
-| `CORS_ORIGIN` | no | Allowed origin in production |
+| `CORS_ORIGIN` | no | Allowed origin(s) in production; comma-separated for web + Capacitor (`https://localhost`) |
 | `PORT` / `HOST` | no | Listen address (default `3001` / `0.0.0.0`) |
 
 ## Project structure

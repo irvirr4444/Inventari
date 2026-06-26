@@ -4,13 +4,17 @@
   "workspaces": [
     "backend",
     "frontend",
+    "android-shell",
     "packages/shared"
   ],
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"npm -w backend run dev\" \"npm -w frontend run dev\"",
     "build": "npm -w backend run build && npm -w frontend run build",
     "lint": "npm -w backend run lint && npm -w frontend run lint",
-    "test": "npm -w @inventari/shared run test && npm -w backend run test"
+    "test": "npm -w @inventari/shared run test && npm -w backend run test",
+    "android:build": "CAPACITOR=1 npm run build -w frontend",
+    "android:sync": "npm run android:build && npm -w @inventari/android-shell run cap:sync",
+    "android:open": "npm -w @inventari/android-shell run cap:open"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

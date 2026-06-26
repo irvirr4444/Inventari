@@ -69,13 +69,6 @@ export function DatePickerCalendar(props: DatePickerCalendarProps) {
 
     const endpoint = props.selectingEndpoint ?? 'from'
 
-    if (endpoint === 'to' && rangeFrom) {
-      const [from, to] = normalizeIsoDateRange(rangeFrom, iso)
-      props.onRangeChange(from, to)
-      props.onRangeComplete?.()
-      return
-    }
-
     if (endpoint === 'from' && rangeTo) {
       const [from, to] = normalizeIsoDateRange(iso, rangeTo)
       props.onRangeChange(from, to)

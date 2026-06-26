@@ -123,7 +123,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 - **Frontend UI:** [frontend/README.md](frontend/README.md) — setup, auth, API; links to [desktop](frontend/README-DESKTOP.md) and [mobile](frontend/README-MOBILE.md) UI docs
 - **Backend API and architecture:** [backend/README.md](backend/README.md)
-- **Android APK (planned):** [docs/android-apk.md](docs/android-apk.md) — Capacitor guide to package the mobile web UI as an installable app
+- **Android APK:** [docs/android-apk.md](docs/android-apk.md) — Capacitor shell in `android-shell/`; run `npm run android:sync` then `npm run android:open`
 - **Local development:** [docs/local-dev.md](docs/local-dev.md)
 - **Deploy (Render):** [docs/render.md](docs/render.md)
 - **SQL migrations:** [docs/sql/](docs/sql/)

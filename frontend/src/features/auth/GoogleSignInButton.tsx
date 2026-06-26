@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { loginWithGoogle } from '../../lib/api/auth'
 import { ApiError } from '../../lib/api/http'
+import { isCapacitorNativeApp } from '../../lib/capacitorClient'
 import { useAuth } from '../../lib/auth/AuthProvider'
 
 declare global {
@@ -41,6 +42,7 @@ function loadGsiScript(): Promise<void> {
 }
 
 export function isGoogleSignInConfigured(): boolean {
+  if (isCapacitorNativeApp()) return false
   return Boolean(GOOGLE_CLIENT_ID)
 }
 
@@ -182,7 +184,8 @@ export function GoogleSignInButton(props: {
         mountButton()
       })
       .catch(() => {
-        if (!cancelled) onErrorRef.current('Hyrja me Google deshtoi.')
+        // GSI often fails in Capacitor WebView — hide button via scriptReady, no snackbar
+        if (!cancelled) setScriptReady(false)
       })
 
     return () => {

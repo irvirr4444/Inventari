@@ -34,6 +34,17 @@ const EnvSchema = z.object({
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const FRONTEND_DIST_DIR = path.join(REPO_ROOT, 'frontend', 'dist')
 
+function parseCorsOrigin(value: string | undefined): boolean | string | string[] {
+  if (!value) return true
+  const origins = value
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+  if (origins.length === 0) return true
+  if (origins.length === 1) return origins[0]
+  return origins
+}
+
 export async function buildApp() {
   const env = EnvSchema.parse(process.env)
   const loginEmail = (env.login_email ?? env.LOGIN_EMAIL)?.trim().toLowerCase()
@@ -74,7 +85,7 @@ export async function buildApp() {
   })
 
   await app.register(cors, {
-    origin: env.CORS_ORIGIN ?? true,
+    origin: parseCorsOrigin(env.CORS_ORIGIN),
     credentials: true,
   })
 

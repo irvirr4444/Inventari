@@ -83,6 +83,87 @@ export function hasActiveServerFilters(filters: HistoryServerFilters): boolean {
   )
 }
 
+export type HistoryFilterRangeField = 'date' | 'ora' | 'totali' | 'produkte'
+
+export type HistoryFilterRangeIssue = {
+  field: HistoryFilterRangeField
+  message: string
+}
+
+export const HISTORY_FILTER_RANGE_MESSAGES = {
+  date: '«Nga» duhet të jetë para «Deri».',
+  ora: 'Orari i parë duhet të jetë para orarit të dytë.',
+  totali: 'Totali minimal nuk mund të jetë më i madh se maksimali.',
+  produkte: 'Numri minimal i produkteve nuk mund të jetë më i madh se maksimali.',
+} as const
+
+export function mergeHistoryServerFilters(
+  prev: HistoryServerFilters,
+  patch: Partial<HistoryServerFilters>,
+): HistoryServerFilters {
+  const next = { ...prev }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined || value === '') {
+      delete next[key as keyof HistoryServerFilters]
+    } else {
+      ;(next as Record<string, unknown>)[key] = value
+    }
+  }
+  return next
+}
+
+export function getHistoryFilterRangeIssues(
+  server: Pick<HistoryServerFilters, 'dateFrom' | 'dateTo'>,
+  client: HistoryClientFilters,
+  options?: { trackPrice?: boolean },
+): HistoryFilterRangeIssue[] {
+  const trackPrice = options?.trackPrice ?? true
+  const issues: HistoryFilterRangeIssue[] = []
+
+  if (server.dateFrom && server.dateTo && server.dateFrom > server.dateTo) {
+    issues.push({ field: 'date', message: HISTORY_FILTER_RANGE_MESSAGES.date })
+  }
+
+  const oraFrom = normalizeOraInput(client.oraFrom)
+  const oraDeri = normalizeOraInput(client.oraDeri)
+  if (oraFrom !== undefined && oraDeri !== undefined && oraFrom > oraDeri) {
+    issues.push({ field: 'ora', message: HISTORY_FILTER_RANGE_MESSAGES.ora })
+  }
+
+  const totaliMin = parseBound(client.totaliMin)
+  const totaliMax = parseBound(client.totaliMax)
+  if (trackPrice && totaliMin !== null && totaliMax !== null && totaliMin > totaliMax) {
+    issues.push({ field: 'totali', message: HISTORY_FILTER_RANGE_MESSAGES.totali })
+  }
+
+  const produkteMin = parseBound(client.produkteMin)
+  const produkteMax = parseBound(client.produkteMax)
+  if (produkteMin !== null && produkteMax !== null && produkteMin > produkteMax) {
+    issues.push({ field: 'produkte', message: HISTORY_FILTER_RANGE_MESSAGES.produkte })
+  }
+
+  return issues
+}
+
+export function getHistoryFilterRangeIssueMessage(
+  issues: HistoryFilterRangeIssue[],
+  field: HistoryFilterRangeField,
+): string | undefined {
+  return issues.find((issue) => issue.field === field)?.message
+}
+
+export function formatHistoryFilterRangeIssuesMessage(issues: HistoryFilterRangeIssue[]): string {
+  return issues.map((issue) => issue.message).join(' ')
+}
+
+export function notifyHistoryFilterRangeIssues(
+  issues: HistoryFilterRangeIssue[],
+  notify?: (message: string, variant?: 'success' | 'default' | 'error') => void,
+): void {
+  if (issues.length === 0 || !notify) return
+  notify(formatHistoryFilterRangeIssuesMessage(issues), 'error')
+}
+
 function parseBound(value: number | ''): number | null {
   if (value === '') return null
   const n = Number(value)
@@ -121,8 +202,15 @@ export function applyHistoryClientFilters(
 
   return batches.filter((batch) => {
     if (locationFilter.length > 0) {
-      const batchLoc = batch.lokacioni_id
-      if (!batchLoc || !locationFilter.includes(batchLoc)) return false
+      const matchesLocation = locationFilter.some((locationId) => {
+        if (batch.lloji === 'Transfer') {
+          return (
+            batch.lokacioni_id === locationId || batch.destination_lokacioni_id === locationId
+          )
+        }
+        return batch.lokacioni_id === locationId
+      })
+      if (!matchesLocation) return false
     }
 
     if (hasOraFilter) {

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { analyticsSummary } from '../lib/api'
 import { isoDateDaysAgo } from '../lib/dates'
 import { queryKeys } from '../lib/queryKeys'
@@ -14,6 +14,7 @@ export function useSummaryQuery(from: string, to: string) {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   })
 }
 

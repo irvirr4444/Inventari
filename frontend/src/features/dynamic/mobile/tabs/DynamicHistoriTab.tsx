@@ -1,12 +1,16 @@
 import * as React from 'react'
 import type { ActionBatch } from '../../../../lib/api'
 import { DaljeIcon, HyrjeIcon, LlojiTransferIcon } from '../../../../components/icons'
+import { MobileHistoriActionCard } from '../../../../mobile/components/MobileHistoriActionCard'
 import {
   applyHistoryClientFilters,
   advancedHistoriFilterValueLabel,
   countAdvancedHistoriFilters,
   EMPTY_CLIENT_FILTERS,
+  getHistoryFilterRangeIssues,
+  notifyHistoryFilterRangeIssues,
   type HistoryClientFilters,
+  type HistoryFilterRangeIssue,
 } from '../../../../lib/historyClientFilters'
 import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../../../hooks/useHistoryBatches'
 import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
@@ -26,21 +30,12 @@ import {
   ALL_VEPRIMET_LABEL,
 } from '../../../../mobile/constants/historiFilters'
 import { HistoriAdvancedFiltersPanel } from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
+import { HistoryExportActions } from '../../../history/HistoryExportActions'
 import { MobileHistoriListPending } from '../../../../mobile/components/MobileHistoriListPending'
 import { MobilePagination } from '../../../../mobile/components/MobilePagination'
 import type { MobileHeaderState } from '../../../../mobile/types'
 import { DynamicLocationMultiPickerSheet } from '../components/DynamicLocationMultiPickerSheet'
 import { DynamicHistoriBatchDetail } from './DynamicHistoriBatchDetail'
-
-function MobileLlojiBadge(props: { lloji: ActionBatch['lloji'] }) {
-  const cls =
-    props.lloji === 'Hyrje'
-      ? 'mobile-badge-hyrje'
-      : props.lloji === 'Dalje'
-        ? 'mobile-badge-dalje'
-        : 'mobile-badge-transfer'
-  return <span className={`mobile-badge ${cls}`}>{props.lloji}</span>
-}
 
 const LLOJI_FILTER_OPTIONS = [
   { id: 'Hyrje' as const, label: 'Hyrje', icon: HyrjeIcon, tone: 'hyrje' },
@@ -70,6 +65,10 @@ export function DynamicHistoriTab(props: {
     React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
   const [appliedClientFilters, setAppliedClientFilters] =
     React.useState<HistoryClientFilters>(EMPTY_CLIENT_FILTERS)
+  const [draftDateFrom, setDraftDateFrom] = React.useState('')
+  const [draftDateTo, setDraftDateTo] = React.useState('')
+  const [draftShenim, setDraftShenim] = React.useState('')
+  const [rangeIssues, setRangeIssues] = React.useState<HistoryFilterRangeIssue[]>([])
 
   const products = productsQuery.data ?? []
 
@@ -98,21 +97,64 @@ export function DynamicHistoriTab(props: {
 
   const openAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(appliedClientFilters)
+    setDraftDateFrom(history.filters.dateFrom ?? '')
+    setDraftDateTo(history.filters.dateTo ?? '')
+    setDraftShenim(history.filters.shenim ?? '')
+    setRangeIssues([])
     setAdvancedFiltersOpen(true)
-  }, [appliedClientFilters])
+  }, [appliedClientFilters, history.filters.dateFrom, history.filters.dateTo, history.filters.shenim])
 
   const closeAdvancedFilters = React.useCallback(() => {
     setAdvancedFiltersOpen(false)
   }, [])
 
+  const tryDraftOraChange = React.useCallback(
+    (patch: Partial<Pick<HistoryClientFilters, 'oraFrom' | 'oraDeri'>>): boolean => {
+      const next = { ...draftClientFilters, ...patch }
+      const server = {
+        dateFrom: draftDateFrom || undefined,
+        dateTo: draftDateTo || undefined,
+        shenim: draftShenim || undefined,
+      }
+      const issues = getHistoryFilterRangeIssues(server, next, { trackPrice })
+      const oraIssues = issues.filter((issue) => issue.field === 'ora')
+      if (oraIssues.length > 0) {
+        setRangeIssues(issues)
+        notifyHistoryFilterRangeIssues(oraIssues, props.notify)
+        return false
+      }
+      setRangeIssues((prev) => prev.filter((issue) => issue.field !== 'ora'))
+      setDraftClientFilters(next)
+      return true
+    },
+    [draftClientFilters, draftDateFrom, draftDateTo, draftShenim, props, trackPrice],
+  )
+
   const applyAdvancedFilters = React.useCallback(() => {
+    const server = {
+      dateFrom: draftDateFrom || undefined,
+      dateTo: draftDateTo || undefined,
+      shenim: draftShenim || undefined,
+    }
+    const issues = getHistoryFilterRangeIssues(server, draftClientFilters, { trackPrice })
+    if (issues.length > 0) {
+      setRangeIssues(issues)
+      notifyHistoryFilterRangeIssues(issues, props.notify)
+      return
+    }
+    setRangeIssues([])
+    history.updateFilters(server)
     setAppliedClientFilters(draftClientFilters)
     setAdvancedFiltersOpen(false)
-  }, [draftClientFilters])
+  }, [draftClientFilters, draftDateFrom, draftDateTo, draftShenim, history, props, trackPrice])
 
   const clearAdvancedFilters = React.useCallback(() => {
     setDraftClientFilters(EMPTY_CLIENT_FILTERS)
     setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
+    setDraftDateFrom('')
+    setDraftDateTo('')
+    setDraftShenim('')
+    setRangeIssues([])
     history.updateFilters({ shenim: undefined, dateFrom: undefined, dateTo: undefined })
     setAdvancedFiltersOpen(false)
   }, [history])
@@ -139,13 +181,6 @@ export function DynamicHistoriTab(props: {
     }
     return () => onHeaderChange({ kind: 'tab' })
   }, [screen.mode, onHeaderChange])
-
-  const formatLocationRoute = (action: ActionBatch) => {
-    if (action.lloji === 'Transfer' && action.destination_lokacioni_emri) {
-      return `${action.flag_emoji ?? '📍'} ${action.lokacioni_emri ?? '—'} → ${action.destination_flag_emoji ?? '📍'} ${action.destination_lokacioni_emri}`
-    }
-    return `${action.flag_emoji ?? '📍'} ${action.lokacioni_emri ?? '—'}`
-  }
 
   return (
     <>
@@ -212,7 +247,6 @@ export function DynamicHistoriTab(props: {
                 </div>
               ) : (
                 <>
-                  {isRefreshing ? <MobileHistoriListPending variant="overlay" /> : null}
                   <div
                     key={history.page}
                     className={`mobile-histori-list${isRefreshing ? '' : ' mobile-histori-list--settle'}`}
@@ -230,41 +264,18 @@ export function DynamicHistoriTab(props: {
                     }
                     return (
                       <div key={action.id} className="mobile-histori-list-slot">
-                        <button
-                          type="button"
-                          className="mobile-row-card mobile-histori-row-card"
-                          style={{
-                            flexDirection: 'column',
-                            alignItems: 'flex-start',
-                            cursor: 'pointer',
-                          }}
+                        <MobileHistoriActionCard
+                          action={action}
+                          variant="dynamic"
+                          dateTime={formatActionDateTime(action.data, action.ora)}
+                          summary={
+                            <>
+                              {productCountLabel(action.item_count)}
+                              {trackPrice ? <> · {fmtEuro(action.totali)}</> : null}
+                            </>
+                          }
                           onClick={() => setScreen({ mode: 'detail', batchId: action.id })}
-                        >
-                          <div className="row" style={{ gap: 8, alignItems: 'center', width: '100%' }}>
-                            <MobileLlojiBadge lloji={action.lloji} />
-                            <span className="mobile-card-meta">
-                              {formatActionDateTime(action.data, action.ora)}
-                            </span>
-                          </div>
-                          {action.pershkrimi?.trim() ? (
-                            <div
-                              className="mobile-card-meta mobile-card-meta-secondary mobile-meta-truncate"
-                              title={action.pershkrimi.trim()}
-                            >
-                              {action.pershkrimi.trim()}
-                            </div>
-                          ) : null}
-                          <div
-                            className="mobile-card-meta row"
-                            style={{ gap: 6, marginTop: 6, alignItems: 'center' }}
-                          >
-                            {formatLocationRoute(action)}
-                          </div>
-                          <div className="mobile-card-meta" style={{ marginTop: 6 }}>
-                            {productCountLabel(action.item_count)}
-                            {trackPrice ? <> · {fmtEuro(action.totali)}</> : null}
-                          </div>
-                        </button>
+                        />
                       </div>
                     )
                   })}
@@ -273,15 +284,27 @@ export function DynamicHistoriTab(props: {
               )}
             </div>
 
-            {history.total > 0 ? (
-              <MobilePagination
-                page={history.page}
-                totalPages={history.totalPages}
-                total={history.total}
-                pageSize={HISTORY_PAGE_SIZE}
-                onPageChange={(nextPage) => history.setPage(nextPage)}
+            <div
+              className={`mobile-histori-footer${history.total > 0 ? '' : ' mobile-histori-footer--export-only'}`}
+            >
+              <HistoryExportActions
+                variant="mobile-footer"
+                serverFilters={history.filters}
+                clientFilters={appliedClientFilters}
+                trackPrice={trackPrice}
+                onNotify={props.notify}
               />
-            ) : null}
+              {history.total > 0 ? (
+                <MobilePagination
+                  compact
+                  page={history.page}
+                  totalPages={history.totalPages}
+                  total={history.total}
+                  pageSize={HISTORY_PAGE_SIZE}
+                  onPageChange={(nextPage) => history.setPage(nextPage)}
+                />
+              ) : null}
+            </div>
           </div>
 
           <BottomSheet open={llojiOpen} title="Veprimi" onClose={() => setLlojiOpen(false)}>
@@ -364,14 +387,19 @@ export function DynamicHistoriTab(props: {
         open={advancedFiltersOpen}
         onClose={closeAdvancedFilters}
         draft={draftClientFilters}
-        dateFrom={history.filters.dateFrom ?? ''}
-        dateTo={history.filters.dateTo ?? ''}
-        shenim={history.filters.shenim ?? ''}
+        dateFrom={draftDateFrom}
+        dateTo={draftDateTo}
+        shenim={draftShenim}
+        rangeIssues={rangeIssues}
         showTotali={trackPrice}
         onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
-        onDateFromChange={(v) => history.updateFilters({ dateFrom: v || undefined })}
-        onDateToChange={(v) => history.updateFilters({ dateTo: v || undefined })}
-        onShenimChange={(v) => history.updateFilters({ shenim: v || undefined })}
+        onOraFromChange={(value) => tryDraftOraChange({ oraFrom: value })}
+        onOraToChange={(value) => tryDraftOraChange({ oraDeri: value })}
+        onDateRangeChange={(from, to) => {
+          setDraftDateFrom(from)
+          setDraftDateTo(to)
+        }}
+        onShenimChange={setDraftShenim}
         onApply={applyAdvancedFilters}
         onClear={clearAdvancedFilters}
       />

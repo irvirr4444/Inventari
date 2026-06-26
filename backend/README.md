@@ -1,6 +1,6 @@
 # Inventari Backend
 
-Fastify API for the Inventari inventory platform. Handles authentication, tenant-scoped Supabase access, action batches, analytics, and Excel exports.
+Fastify API for the Inventari inventory platform. Handles authentication, tenant-scoped Supabase access, action batches, analytics, and Excel/PDF/DOCX exports.
 
 ## Stack
 
@@ -9,6 +9,8 @@ Fastify API for the Inventari inventory platform. Handles authentication, tenant
 - Zod validation via `@inventari/shared`
 - bcrypt password hashing
 - ExcelJS for `.xlsx` exports
+- PDFKit + DejaVu fonts for Historiku `.pdf` (Unicode / Albanian text)
+- `docx` package for Historiku `.docx`
 - Cookie-based HMAC sessions (`inventari_session`); optional Google ID token login
 
 ## Setup
@@ -92,6 +94,11 @@ backend/src/
     lokacioniService.ts Location CRUD
     tenantConfigService.ts Tenant onboarding config (track_price, onboarding_complete, tutorial_seen)
     exportsService.ts   CSV + Excel (legacy vs dynamic templates; tenant-config column sets)
+    historyExportService.ts  Historiku xlsx export (legacy/dynamic Excel templates)
+    historyExportFilters.ts  Server-side client-filter mirror for exports (ora, pershkrimi, totals, …)
+    historyReportData.ts     Shared report document builder for PDF/DOCX (batch details, filter summary)
+    historyReportPdf.ts      A4 PDF buffer (card-per-action layout)
+    historyReportDocx.ts     Word document buffer
     legacyDtoService.ts Legacy XK/AL response shape
     inventariExcel.ts   Template load, stock replay, Permbledhje rows
   auth/
@@ -104,7 +111,7 @@ backend/src/
     products.ts         /api/products CRUD
     actions.ts          POST/GET /api/actions
     analytics.ts        /api/analytics/stock, /summary
-    exports.ts          CSV + products.xlsx + Permbledhje template xlsx
+    exports.ts          CSV + products.xlsx + Permbledhje template xlsx + Historiku xlsx/pdf/docx
     lokacionet.ts       /api/lokacionet CRUD
     tenantConfig.ts     /api/tenant-config GET/POST/PATCH + complete + tutorial-seen
   actionBatches.ts      /api/action-batches/* routes
@@ -142,6 +149,10 @@ backend/scripts/
 | GET | `/api/exports/products.xlsx` | Product export |
 | GET | `/api/exports/actions.xlsx` | Permbledhje export |
 | GET | `/api/exports/actions.csv` | Raw actions CSV |
+| GET | `/api/exports/history.xlsx` | Historiku Excel (query params: type, dates, client filters) |
+| POST | `/api/exports/history.xlsx` | Historiku Excel — body `{ batchIds[], lloji?, shteti?, dateFrom?, dateTo?, oraFrom?, oraDeri?, pershkrimi?, totaliMin/Max?, produkteMin/Max?, locationId?, trackPrice?, locationLabel?, filterLines? }` (preferred; matches UI filter scope) |
+| POST | `/api/exports/history.pdf` | Historiku PDF — same body as POST xlsx; card-per-action A4 report |
+| POST | `/api/exports/history.docx` | Historiku Word — same body as POST xlsx |
 
 Protected routes require the `inventari_session` cookie except login, signup, google, logout, session, and health.
 
@@ -207,6 +218,12 @@ Session payload includes `uiLloji`, `isLegacy`, `has_locations`, and nested `ten
   - **Permbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`); value columns omitted when not tracking price
 - Products export: legacy two stock columns vs dynamic N location columns.
 
+### Historiku exports (`historyExportService`, `historyReportData`)
+
+- **Excel** — legacy uses `buildHistoryLegacyExcelBuffer` (Permbledhje-style template rows); dynamic uses `buildHistoryDynamicExcelBuffer`. Filtered `batchIds` from POST body, or full query on GET.
+- **PDF / DOCX** — `buildHistoryReportDocument()` loads batch details (including legacy `legacy:…` ids), applies the same client filters as Excel (`historyExportFilters.ts`), then renders card-per-action layout matching the frontend print preview. PDF uses PDFKit + DejaVu Sans; DOCX uses the `docx` package. Respects `track_price` for euro columns. Report header uses **24-hour** timestamps (`DD/MM/YYYY, HH:mm`) and omits the username; active filters are listed from client-supplied `filterLines` (or derived from query fields).
+- **Filter parity** — `HistoryExportBodySchema` accepts full client filter fields (`oraFrom`, `oraDeri`, `pershkrimi`, `totaliMin/Max`, `produkteMin/Max`, `dateFrom`, `dateTo`, `shenim`, `locationId`, `locationLabel`, `filterLines`). `assertHistoryExportFilterRanges` rejects invalid min/max pairs server-side; frontend validates the same rules before calling export endpoints.
+
 ## Database
 
 SQL migrations live in `docs/sql/`. Run in order.
@@ -247,7 +264,9 @@ Covers `actionsService`, `inventariExcel`, `legacyBatches`, `lokacioniKodi`, and
 
 ## Related docs
 
-- [Frontend UI and product behavior](../frontend/README.md)
+- [Frontend index](../frontend/README.md) — setup, auth, API
+- [Frontend desktop UI](../frontend/README-DESKTOP.md)
+- [Frontend mobile UI](../frontend/README-MOBILE.md)
 - [Repo root quick start](../README.md)
 - [Local development](../docs/local-dev.md)
 - [Render deployment](../docs/render.md)

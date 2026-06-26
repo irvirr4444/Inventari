@@ -1,12 +1,14 @@
-import type { HistoryClientFilters } from '../../lib/historyClientFilters'
+import type { HistoryClientFilters, HistoryFilterRangeIssue } from '../../lib/historyClientFilters'
+import { getHistoryFilterRangeIssueMessage } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { InputClearButton } from '../../components/InputClearButton'
 import { NumericInput } from '../../components/NumericInput'
-import { OraInput } from '../../components/OraInput'
+import { OraRangeInput, type OraRangeChangeHandler } from '../../components/OraRangeInput'
 import { parseNumericFilterValue } from '../../lib/numericInput'
+import { HistoryFilterRangeError } from '../../features/history/HistoryFilterRangeError'
 import { BottomSheet } from './BottomSheet'
 import { SheetFooterRow } from './SheetActions'
-import { MobileDateInput } from './MobileDateInput'
+import { MobileDateRangeInput } from './MobileDateRangeInput'
 
 type HistoriAdvancedFiltersPanelProps = {
   open: boolean
@@ -15,10 +17,12 @@ type HistoriAdvancedFiltersPanelProps = {
   dateFrom: string
   dateTo: string
   shenim: string
+  rangeIssues?: HistoryFilterRangeIssue[]
   showTotali?: boolean
   onDraftChange: (patch: Partial<HistoryClientFilters>) => void
-  onDateFromChange: (value: string) => void
-  onDateToChange: (value: string) => void
+  onOraFromChange: OraRangeChangeHandler
+  onOraToChange: OraRangeChangeHandler
+  onDateRangeChange: (from: string, to: string) => void
   onShenimChange: (value: string) => void
   onApply: () => void
   onClear: () => void
@@ -32,9 +36,11 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
     dateFrom,
     dateTo,
     shenim,
+    rangeIssues = [],
     onDraftChange,
-    onDateFromChange,
-    onDateToChange,
+    onOraFromChange,
+    onOraToChange,
+    onDateRangeChange,
     onShenimChange,
     onApply,
     onClear,
@@ -62,60 +68,31 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
       <div className="mobile-advanced-filters-sheet">
         <div className="mobile-advanced-filters-section">
           <div className="mobile-section-label">Data</div>
-          <div className="mobile-advanced-filters-grid">
-            <div>
-              <label className="mobile-label">Nga</label>
-              <MobileDateInput
-                value={dateFrom}
-                placeholder="Nga"
-                aria-label="Nga data"
-                clearable
-                onChange={onDateFromChange}
-              />
-            </div>
-            <div>
-              <label className="mobile-label">Deri</label>
-              <MobileDateInput
-                value={dateTo}
-                placeholder="Deri"
-                aria-label="Deri data"
-                clearable
-                onChange={onDateToChange}
-              />
-            </div>
-          </div>
+          <MobileDateRangeInput
+            from={dateFrom}
+            to={dateTo}
+            clearable
+            fromPlaceholder="Nga"
+            toPlaceholder="Deri"
+            onRangeChange={onDateRangeChange}
+          />
+          <HistoryFilterRangeError message={getHistoryFilterRangeIssueMessage(rangeIssues, 'date')} />
         </div>
 
         <div className="mobile-advanced-filters-section">
           <div className="mobile-section-label">Ora</div>
-          <div className="mobile-advanced-filters-grid">
-            <div>
-              <label className="mobile-label" htmlFor="histori-filter-ora-from">
-                Nga ora
-              </label>
-              <OraInput
-                id="histori-filter-ora-from"
-                className="mobile-input"
-                value={draft.oraFrom}
-                placeholder="Nga"
-                clearable
-                onChange={(v) => onDraftChange({ oraFrom: v })}
-              />
-            </div>
-            <div>
-              <label className="mobile-label" htmlFor="histori-filter-ora-deri">
-                Deri ora
-              </label>
-              <OraInput
-                id="histori-filter-ora-deri"
-                className="mobile-input"
-                value={draft.oraDeri}
-                placeholder="Deri"
-                clearable
-                onChange={(v) => onDraftChange({ oraDeri: v })}
-              />
-            </div>
-          </div>
+          <OraRangeInput
+            clearable
+            from={draft.oraFrom}
+            to={draft.oraDeri}
+            fromClassName="mobile-input"
+            toClassName="mobile-input"
+            fromPlaceholder="Nga"
+            toPlaceholder="Deri"
+            onFromChange={onOraFromChange}
+            onToChange={onOraToChange}
+          />
+          <HistoryFilterRangeError message={getHistoryFilterRangeIssueMessage(rangeIssues, 'ora')} />
         </div>
 
         <div className="mobile-advanced-filters-section">
@@ -185,6 +162,7 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
                 />
               </div>
             </div>
+            <HistoryFilterRangeError message={getHistoryFilterRangeIssueMessage(rangeIssues, 'totali')} />
           </div>
         ) : null}
 
@@ -224,6 +202,7 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
               />
             </div>
           </div>
+          <HistoryFilterRangeError message={getHistoryFilterRangeIssueMessage(rangeIssues, 'produkte')} />
         </div>
       </div>
     </BottomSheet>

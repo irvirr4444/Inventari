@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { listActionBatches } from '../lib/api'
 import type { HistoryServerFilters } from '../lib/historyClientFilters'
 import { queryKeys } from '../lib/queryKeys'
+import { queryRefreshState } from '../lib/queryRefreshState'
 
 export function useHistoryBatchListQuery(
   userId: string | undefined,
@@ -22,12 +23,8 @@ export function useHistoryBatchListQuery(
 }
 
 export function historyListRefreshState(query: {
-  isLoading: boolean
   isFetching: boolean
-  isPlaceholderData: boolean
+  data: unknown
 }) {
-  return {
-    isInitialLoad: query.isLoading,
-    isRefreshing: query.isFetching && query.isPlaceholderData,
-  }
+  return queryRefreshState(query)
 }

@@ -4,8 +4,13 @@ import { isAppError, parseOrThrow } from '../errors.js'
 import {
   ActionsExportQuerySchema,
   exportActionsCsv,
+  exportHistoryDocx,
+  exportHistoryPdf,
+  exportHistoryXlsx,
   exportInventariXlsx,
   exportProductsXlsx,
+  HistoryExportQuerySchema,
+  HistoryExportBodySchema,
   ProductsExportQuerySchema,
 } from '../services/exportsService.js'
 
@@ -61,6 +66,82 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      )
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+      return buffer
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
+  })
+
+  app.get('/api/exports/history.xlsx', async (req, reply) => {
+    try {
+      const query = parseOrThrow(
+        HistoryExportQuerySchema,
+        (req.query ?? {}) as Record<string, unknown>,
+      )
+      const { buffer, filename } = await exportHistoryXlsx(supabase, req.user, query)
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      )
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+      return buffer
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
+  })
+
+  app.post('/api/exports/history.xlsx', async (req, reply) => {
+    try {
+      const body = parseOrThrow(HistoryExportBodySchema, req.body ?? {})
+      const { buffer, filename } = await exportHistoryXlsx(supabase, req.user, body)
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      )
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+      return buffer
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
+  })
+
+  app.post('/api/exports/history.pdf', async (req, reply) => {
+    try {
+      const body = parseOrThrow(HistoryExportBodySchema, req.body ?? {})
+      const { buffer, filename } = await exportHistoryPdf(supabase, req.user, body)
+      reply.header('Content-Type', 'application/pdf')
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+      return buffer
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
+  })
+
+  app.post('/api/exports/history.docx', async (req, reply) => {
+    try {
+      const body = parseOrThrow(HistoryExportBodySchema, req.body ?? {})
+      const { buffer, filename } = await exportHistoryDocx(supabase, req.user, body)
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       )
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer

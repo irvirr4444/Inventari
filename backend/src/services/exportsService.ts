@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
+import { BatchLlojiSchema, CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
 import { z } from 'zod'
 import type { SessionUser } from '../domain/user.js'
 import { autoSizeColumns, applyBordersToDataRows, styleHeaderRow } from '../excel.js'
@@ -12,6 +12,7 @@ import {
   buildInventariExcelBuffer,
   formatExportTimestamp,
 } from './inventariExcel.js'
+import { exportHistoryXlsx, type HistoryExportQuery } from './historyExportService.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 import { listProduktet, listGjendjeForProducts } from '../repositories/produktiRepository.js'
 import {
@@ -231,3 +232,50 @@ export const ProductsExportQuerySchema = z.object({
   sortKey: z.enum(['kodi', 'emri', 'gjendje_kosove', 'gjendje_shqiperi']).default('kodi'),
   sortDirection: z.enum(['asc', 'desc']).default('asc'),
 })
+
+export const HistoryExportQuerySchema = z.object({
+  lloji: BatchLlojiSchema.optional(),
+  shteti: CountrySchema.optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  shenim: z.string().optional(),
+  locationId: z.string().optional(),
+  oraFrom: z.string().optional(),
+  oraDeri: z.string().optional(),
+  pershkrimi: z.string().optional(),
+  totaliMin: z.coerce.number().optional(),
+  totaliMax: z.coerce.number().optional(),
+  produkteMin: z.coerce.number().optional(),
+  produkteMax: z.coerce.number().optional(),
+  trackPrice: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
+})
+
+export const HistoryExportBodySchema = z.object({
+  batchIds: z.array(z.string().min(1)).min(1),
+  lloji: BatchLlojiSchema.optional(),
+  shteti: CountrySchema.optional(),
+  locationId: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  shenim: z.string().optional(),
+  oraFrom: z.string().optional(),
+  oraDeri: z.string().optional(),
+  pershkrimi: z.string().optional(),
+  totaliMin: z.coerce.number().optional(),
+  totaliMax: z.coerce.number().optional(),
+  produkteMin: z.coerce.number().optional(),
+  produkteMax: z.coerce.number().optional(),
+  trackPrice: z.boolean().optional(),
+  locationLabel: z.string().optional(),
+  filterLines: z.array(z.string()).optional(),
+})
+
+export {
+  exportHistoryDocx,
+  exportHistoryPdf,
+  exportHistoryXlsx,
+  type HistoryExportQuery,
+} from './historyExportService.js'

@@ -74,7 +74,7 @@ Do **not** use **Regjistrohu** with an email address — that creates a new acco
 
 | Package | Path | Description |
 | --- | --- | --- |
-| `backend` | `backend/` | Fastify API, Supabase access, auth, Excel exports |
+| `backend` | `backend/` | Fastify API, Supabase access, auth, Excel/PDF/DOCX exports |
 | `frontend` | `frontend/` | React dashboard + mobile UI |
 | `@inventari/shared` | `packages/shared/` | Zod schemas, shared types, `productLabel`, summary builders |
 
@@ -121,8 +121,9 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 ## Documentation
 
-- **Frontend UI and product behavior:** [frontend/README.md](frontend/README.md)
+- **Frontend UI:** [frontend/README.md](frontend/README.md) — setup, auth, API; links to [desktop](frontend/README-DESKTOP.md) and [mobile](frontend/README-MOBILE.md) UI docs
 - **Backend API and architecture:** [backend/README.md](backend/README.md)
+- **Android APK (planned):** [docs/android-apk.md](docs/android-apk.md) — Capacitor guide to package the mobile web UI as an installable app
 - **Local development:** [docs/local-dev.md](docs/local-dev.md)
 - **Deploy (Render):** [docs/render.md](docs/render.md)
 - **SQL migrations:** [docs/sql/](docs/sql/)
@@ -143,8 +144,9 @@ The browser does not use Supabase keys directly. All data goes through the backe
 - Location `kodi` is server-derived (UI shows emoji + name only); edit locations at `/settings/locations` (includes read-only tenant config summary)
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)
-- **Historiku** — paginated batches, server filters (type, date) + client filters (location checkboxes for dynamic, Ora, Pershkrimi, Totali, Produkte); edit and delete with stock rollback
-- Product search by code or name; sortable products table; date-range summary panel
+- **Historiku** — paginated batches, server filters (type, date range) + client filters (location checkboxes for dynamic, Ora range, Pershkrimi, Totali, Produkte); invalid min/max ranges blocked with snackbar feedback; edit and delete with stock rollback
+- **Historiku exports** — single **Shkarko** dropdown (Excel `.xlsx`, PDF `.pdf`, Word `.docx`) on desktop and mobile; exports respect **all** active filters (server + client), not just type/location. Optional A4 print preview at `/history/print` (toolbar: **Mbyll**, **Shkarko** PDF, **Printo**)
+- Product search by code or name; sortable products table; date-range summary panel (`DateRangeInput` on desktop, `MobileDateRangeInput` on mobile — per-field pickers auto-swap when **Nga** would be after **Deri**)
 
 ### Exports
 
@@ -152,11 +154,15 @@ The browser does not use Supabase keys directly. All data goes through the backe
 | --- | --- | --- |
 | Products `.xlsx` | Kodi, Emri, Gjendje Kosove, Gjendje Shqiperi | Kodi, Emri, one column per location |
 | Permbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** + **Permbledhje** sheets; omits price/value columns when `track_price = false` |
+| Historiku `.xlsx` / `.pdf` / `.docx` | Filtered action batches via **Shkarko** dropdown (card layout for PDF/Word; Excel uses legacy/dynamic templates) | Same; location filter + `track_price` respected server-side |
+
+Historiku file downloads use `POST /api/exports/history.{xlsx,pdf,docx}` with `batchIds` plus full filter metadata (`filterLines`, client ora/totali/produkte bounds, etc.) after the frontend applies the same client filters as the UI. PDF and Word use the same card-per-action layout as the print preview (24-hour timestamps; no username in the report header). The print preview route is `/history/print` (query params mirror active filters).
 
 ### Desktop vs mobile
 
 - **Legacy:** full desktop (`DashboardPage`) + mobile (`src/mobile/MobileApp.tsx`) for Kosovo/Albania.
 - **Dynamic:** full desktop (`DynamicDashboardPage`) + purpose-built mobile tabs (`src/features/dynamic/mobile/`) with the same five bottom tabs as legacy. Dynamic mobile Produkte shows all location stock inline on each product card; header and bottom nav share the `--surface` theme.
 - **Permbledhje on mobile:** bottom **Permbledhje** tab (not a separate route). Dynamic accounts get per-location **Hyrje/Dalje sasi and vlerë** for every `show_in_summary` location, including zeros when the date range has no activity; legacy shows Kosovo + Albania blocks with the same four metrics.
-- **Mobile sheets & overlays:** date/time pickers slide up from the bottom (`DatePickerSheet`, `TimePickerSheet`). Dismiss by tapping the dimmed backdrop closes the sheet/modal without triggering buttons underneath (`lib/pointerDismissGuard.ts`).
+- **Mobile sheets & overlays:** date/time pickers slide up from the bottom (`DatePickerSheet`, `DateRangePickerSheet`, `TimePickerSheet`). **Nga** / **Deri** date fields open the calendar for that bound only; if the chosen date would invert the range, values swap automatically. Dismiss by tapping the dimmed backdrop closes the sheet/modal without triggering buttons underneath (`lib/pointerDismissGuard.ts`).
+- **Histori tab (mobile):** structured action cards (`MobileHistoriActionCard`); sticky footer with **Shkarko** dropdown (~30%) + compact pagination (~70%); same filtered export scope as desktop.
 - **Transfer tab (mobile):** `Nga` / `Te` and **Data** / **Ora** use two-column `mobile-field-row` layouts (half width each).

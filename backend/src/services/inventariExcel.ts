@@ -1372,3 +1372,266 @@ export function formatExportTimestamp() {
   const now = new Date()
   return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
+
+export type HistoryExportLocation = { key: string; emri: string }
+
+export type HistoryExportSheetPlan = {
+  kind: 'hyrje' | 'dalje' | 'transfer'
+  locationKey: string | null
+  title: string
+}
+
+export function resolveHistoryExportSheets(input: {
+  lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
+  locationKeys: string[]
+  locations: HistoryExportLocation[]
+}): HistoryExportSheetPlan[] {
+  const { lloji, locationKeys, locations } = input
+  const selectedLocations =
+    locationKeys.length > 0
+      ? locations.filter((loc) => locationKeys.includes(loc.key))
+      : locations
+
+  if (lloji === 'Transfer') {
+    return [{ kind: 'transfer', locationKey: null, title: 'Transferta' }]
+  }
+
+  if (lloji === 'Hyrje') {
+    return selectedLocations.map((loc) => ({
+      kind: 'hyrje' as const,
+      locationKey: loc.key,
+      title: `${loc.emri} Hyrje`,
+    }))
+  }
+
+  if (lloji === 'Dalje') {
+    return selectedLocations.map((loc) => ({
+      kind: 'dalje' as const,
+      locationKey: loc.key,
+      title: `${loc.emri} Dalje`,
+    }))
+  }
+
+  const plans: HistoryExportSheetPlan[] = []
+  for (const loc of selectedLocations) {
+    plans.push({ kind: 'hyrje', locationKey: loc.key, title: `${loc.emri} Hyrje` })
+    plans.push({ kind: 'dalje', locationKey: loc.key, title: `${loc.emri} Dalje` })
+  }
+  plans.push({ kind: 'transfer', locationKey: null, title: 'Transferta' })
+  return plans
+}
+
+function finalizeHistoryWorkbook(
+  workbook: ExcelJS.Workbook,
+  plans: HistoryExportSheetPlan[],
+  navigation: {
+    hyrjeRows: Map<string, NavSheetRow[]>
+    daljeRows: Map<string, NavSheetRow[]>
+    transferRows: NavSheetRow[]
+  },
+  transferLocationEmri?: string,
+) {
+  const usedNames = new Set<string>()
+  let sheetCount = 0
+
+  for (const plan of plans) {
+    let rows: NavSheetRow[] = []
+    if (plan.kind === 'transfer') {
+      rows = navigation.transferRows
+      if (transferLocationEmri) {
+        rows = rows.filter(
+          (row) => row[0] === transferLocationEmri || row[1] === transferLocationEmri,
+        )
+      }
+      if (rows.length === 0) continue
+      createListSheet(
+        workbook,
+        plan.title,
+        TRANSFER_SHEET_HEADERS,
+        rows,
+        usedNames,
+        TRANSFER_SHEET_PRICE_COLS,
+        TRANSFER_SHEET_QTY_COLS,
+      )
+      sheetCount += 1
+      continue
+    }
+
+    rows =
+      plan.kind === 'hyrje'
+        ? (navigation.hyrjeRows.get(plan.locationKey!) ?? [])
+        : (navigation.daljeRows.get(plan.locationKey!) ?? [])
+    if (rows.length === 0) continue
+
+    createListSheet(
+      workbook,
+      plan.title,
+      VEPRIM_DETAIL_HEADERS,
+      rows,
+      usedNames,
+      LIST_SHEET_PRICE_COLS,
+      LIST_SHEET_QTY_COLS,
+    )
+    sheetCount += 1
+  }
+
+  if (sheetCount === 0) {
+    const sheet = workbook.addWorksheet('Histori')
+    sheet.addRow([...VEPRIM_DETAIL_HEADERS])
+    sheet.addRow(['', ERR_NO_ACTIONS_IN_PERIOD])
+    styleHeaderRow(sheet)
+    applyBordersToDataRows(sheet, 2)
+    autoSizeColumns(sheet, 120)
+  }
+}
+
+export async function buildHistoryLegacyExcelBuffer(
+  productRows: ProductExportRow[],
+  actionRows: ActionExportRow[],
+  allowedActionIds: Set<string>,
+  plans: HistoryExportSheetPlan[],
+  locations: HistoryExportLocation[],
+  query: { from?: string; to?: string },
+  transferLocationEmri?: string,
+) {
+  const locationCount = INVENTARI_LEGACY_LOCATION_COUNT
+  const sortedActions = sortActionExportRows(actionRows)
+  const productsByCode = new Map(productRows.map((p) => [p.kodi, p]))
+
+  const currentStock = new Map<string, { XK: number; AL: number }>()
+  const runningStock = new Map<string, { XK: number; AL: number }>()
+
+  for (const p of productRows) {
+    currentStock.set(p.kodi, {
+      XK: Number(p.gjendje_kosove ?? 0),
+      AL: Number(p.gjendje_shqiperi ?? 0),
+    })
+  }
+
+  for (const action of sortedActions) {
+    const stock = currentStock.get(action.kodi_produktit)
+    if (!stock) continue
+    stock[action.shteti] -= signedQty(action)
+  }
+
+  for (const [kodi, stock] of currentStock) {
+    runningStock.set(kodi, { ...stock })
+  }
+
+  const navLocations = locations.length > 0 ? locations : [...LEGACY_NAV_LOCATIONS]
+  const navigation = initNavRowBuckets(navLocations.map((loc) => loc.key))
+
+  for (const action of sortedActions) {
+    if (!allowedActionIds.has(action.id)) continue
+
+    const product = productsByCode.get(action.kodi_produktit)
+    const stock = runningStock.get(action.kodi_produktit)
+    if (!product || !stock) continue
+
+    const qty = signedQty(action)
+    stock[action.shteti] += qty
+
+    if (!isWithinExportRange(action, query)) continue
+    if (isLegacyTransferDestinationRow(action)) continue
+
+    const destinationShteti = legacyTransferDestination(action, sortedActions)
+    const transferDestGjendje =
+      destinationShteti && action.lloji === 'Dalje'
+        ? stock[destinationShteti] + Number(action.sasia ?? 0)
+        : undefined
+
+    collectLegacyNavigationRow(
+      navigation,
+      navLocations,
+      product,
+      action,
+      qty,
+      action.shteti === 'XK' ? stock.XK : stock.AL,
+      sortedActions,
+      transferDestGjendje,
+    )
+  }
+
+  const workbook = new ExcelJS.Workbook()
+  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri)
+  return workbook.xlsx.writeBuffer()
+}
+
+export async function buildHistoryDynamicExcelBuffer(
+  productRows: DynamicProductExportRow[],
+  actionRows: DynamicActionExportRow[],
+  locationIds: string[],
+  locations: HistoryExportLocation[],
+  allowedActionIds: Set<string>,
+  plans: HistoryExportSheetPlan[],
+  query: { from?: string; to?: string },
+  transferLocationEmri?: string,
+) {
+  const locationIndex = new Map(locationIds.map((id, index) => [id, index]))
+  const sortedActions = sortDynamicActionExportRows(actionRows)
+  const productsByCode = new Map(productRows.map((p) => [p.kodi, p]))
+
+  const currentStock = new Map<string, Map<string, number>>()
+  const runningStock = new Map<string, Map<string, number>>()
+
+  for (const product of productRows) {
+    const stock = new Map<string, number>()
+    for (const locationId of locationIds) {
+      stock.set(locationId, Number(product.stockByLocation.get(locationId) ?? 0))
+    }
+    currentStock.set(product.kodi, stock)
+  }
+
+  for (const action of sortedActions) {
+    const stock = currentStock.get(action.kodi_produktit)
+    const locationId = action.lokacioni_id
+    if (!stock || !locationId) continue
+    stock.set(locationId, (stock.get(locationId) ?? 0) - signedQty(action))
+  }
+
+  for (const [kodi, stock] of currentStock) {
+    runningStock.set(kodi, new Map(stock))
+  }
+
+  const navLocations = locationIds.map((id, index) => ({
+    key: id,
+    emri: locations[index]?.emri ?? id,
+  }))
+  const navigation = initNavRowBuckets(locationIds)
+
+  for (const action of sortedActions) {
+    if (!allowedActionIds.has(action.id)) continue
+
+    const product = productsByCode.get(action.kodi_produktit)
+    const stock = runningStock.get(action.kodi_produktit)
+    const locationId = action.lokacioni_id
+    const blockIndex = locationId ? locationIndex.get(locationId) : undefined
+    if (!product || !stock || !locationId || blockIndex === undefined) continue
+
+    const qty = signedQty(action)
+    const batch = resolveBatchMeta(action)
+    stock.set(locationId, (stock.get(locationId) ?? 0) + qty)
+
+    if (!isWithinExportRange(action, query)) continue
+    if (isTransferDestinationRow(action)) continue
+
+    collectDynamicNavigationRow(
+      navigation,
+      navLocations,
+      locationIds,
+      product,
+      action,
+      qty,
+      stock.get(locationId) ?? 0,
+      batch?.lloji === 'Transfer' &&
+        action.lloji === 'Dalje' &&
+        batch.destination_lokacioni_id
+        ? (stock.get(batch.destination_lokacioni_id) ?? 0) + Number(action.sasia ?? 0)
+        : undefined,
+    )
+  }
+
+  const workbook = new ExcelJS.Workbook()
+  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri)
+  return workbook.xlsx.writeBuffer()
+}

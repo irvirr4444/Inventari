@@ -32,6 +32,54 @@ export function combineOraParts(hour: string, minute: string): string {
   return `${hour}:${minute}`
 }
 
+export function oraToMinutes(value: string): number | null {
+  const normalized = normalizeOraInput(value)
+  if (!normalized) return null
+  const [hour, minute] = normalized.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+export function normalizeOraMinutesRange(from: string, to: string): [number | null, number | null] {
+  const fromMin = oraToMinutes(from)
+  const toMin = oraToMinutes(to)
+  if (fromMin === null || toMin === null) return [fromMin, toMin]
+  if (fromMin > toMin) return [toMin, fromMin]
+  return [fromMin, toMin]
+}
+
+export function isOraMinutesInRange(
+  minutes: number,
+  from: string,
+  to: string,
+  options?: { includeFrom?: boolean; includeTo?: boolean },
+): boolean {
+  const [start, end] = normalizeOraMinutesRange(from, to)
+  if (start === null || end === null) return false
+  const includeFrom = options?.includeFrom ?? true
+  const includeTo = options?.includeTo ?? true
+  if (minutes < start || minutes > end) return false
+  if (!includeFrom && minutes === start) return false
+  if (!includeTo && minutes === end) return false
+  return true
+}
+
+export function isHourInOraRange(hour: string, from: string, to: string): boolean {
+  const hourNum = Number(hour)
+  if (!Number.isFinite(hourNum)) return false
+  const hourStart = hourNum * 60
+  const hourEnd = hourNum * 60 + 59
+  const [start, end] = normalizeOraMinutesRange(from, to)
+  if (start === null || end === null) return false
+  return hourStart <= end && hourEnd >= start
+}
+
+export function isMinuteInOraRange(hour: string, minute: string, from: string, to: string): boolean {
+  const hourNum = Number(hour)
+  const minuteNum = Number(minute)
+  if (!Number.isFinite(hourNum) || !Number.isFinite(minuteNum)) return false
+  return isOraMinutesInRange(hourNum * 60 + minuteNum, from, to)
+}
+
 export function parseOraDigits(value: string): [string, string, string, string] {
   const normalized = normalizeOraInput(value)
   if (!normalized) return ['', '', '', '']

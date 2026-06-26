@@ -37,6 +37,47 @@ export function sameDay(a: Date, b: Date) {
   )
 }
 
+export function compareIsoDates(a: string, b: string): number {
+  return a.localeCompare(b)
+}
+
+export function normalizeIsoDateRange(from: string, to: string): [string, string] {
+  if (!from || !to) return [from, to]
+  if (compareIsoDates(from, to) > 0) return [to, from]
+  return [from, to]
+}
+
+export type DateRangeDayState = 'start' | 'end' | 'single' | 'in-range' | null
+
+export function getDateRangeDayState(
+  iso: string,
+  from: string,
+  to: string,
+  hoverIso?: string,
+): DateRangeDayState {
+  let rangeFrom = from
+  let rangeTo = to
+
+  if (rangeFrom && !rangeTo && hoverIso) {
+    ;[rangeFrom, rangeTo] = normalizeIsoDateRange(rangeFrom, hoverIso)
+  } else if (rangeFrom && rangeTo) {
+    ;[rangeFrom, rangeTo] = normalizeIsoDateRange(rangeFrom, rangeTo)
+  }
+
+  if (!rangeFrom) return null
+  if (!rangeTo) {
+    return iso === rangeFrom ? 'single' : null
+  }
+
+  if (iso === rangeFrom && iso === rangeTo) return 'single'
+  if (iso === rangeFrom) return 'start'
+  if (iso === rangeTo) return 'end'
+  if (compareIsoDates(iso, rangeFrom) > 0 && compareIsoDates(iso, rangeTo) < 0) {
+    return 'in-range'
+  }
+  return null
+}
+
 export function buildMonthGrid(viewMonth: Date) {
   const year = viewMonth.getFullYear()
   const month = viewMonth.getMonth()

@@ -22,13 +22,17 @@ export function MobilePagination(props: {
   total: number
   pageSize: number
   onPageChange: (page: number) => void
+  compact?: boolean
 }) {
-  const { page, totalPages, total, pageSize } = props
+  const { page, totalPages, total, pageSize, compact } = props
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, total)
 
   return (
-    <nav className="mobile-pagination" aria-label="Faqet">
+    <nav
+      className={`mobile-pagination${compact ? ' mobile-pagination--compact' : ''}`}
+      aria-label="Faqet"
+    >
       <p className="mobile-pagination-summary">
         {total > 0 ? (
           <>

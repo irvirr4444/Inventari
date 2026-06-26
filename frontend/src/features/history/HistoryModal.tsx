@@ -13,8 +13,11 @@ import {
 import {
   applyHistoryClientFilters,
   EMPTY_CLIENT_FILTERS,
+  getHistoryFilterRangeIssues,
   hasActiveClientFilters,
   hasActiveServerFilters,
+  mergeHistoryServerFilters,
+  notifyHistoryFilterRangeIssues,
   type HistoryClientFilters,
   type HistoryServerFilters,
 } from '../../lib/historyClientFilters'
@@ -64,25 +67,28 @@ export function HistoryModal(props: {
   const [error, setError] = React.useState<string | null>(null)
 
   const updateFilters = (patch: Partial<HistoryServerFilters>) => {
-    setFilters((prev) => {
-      const next = { ...prev }
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined || value === '') {
-          delete next[key as keyof HistoryServerFilters]
-        } else {
-          ;(next as Record<string, unknown>)[key] = value
-        }
-      }
-      return next
-    })
+    const next = mergeHistoryServerFilters(filters, patch)
+    const issues = getHistoryFilterRangeIssues(next, clientFilters)
+    if (issues.length > 0) {
+      notifyHistoryFilterRangeIssues(issues, onNotify)
+      return
+    }
+    setFilters(next)
     setPage(1)
     setExpandedIds(new Set())
     setError(null)
   }
 
-  const updateClientFilters = (patch: Partial<HistoryClientFilters>) => {
-    setClientFilters((prev) => ({ ...prev, ...patch }))
+  const updateClientFilters = (patch: Partial<HistoryClientFilters>): boolean => {
+    const next = { ...clientFilters, ...patch }
+    const issues = getHistoryFilterRangeIssues(filters, next)
+    if (issues.length > 0) {
+      notifyHistoryFilterRangeIssues(issues, onNotify)
+      return false
+    }
+    setClientFilters(next)
     setExpandedIds(new Set())
+    return true
   }
 
   const clearAllFilters = () => {
@@ -107,7 +113,7 @@ export function HistoryModal(props: {
 
   const listQuery = useHistoryBatchListQuery(user?.id, filters, page, PAGE_SIZE)
   const { isInitialLoad, isRefreshing } = historyListRefreshState(listQuery)
-  const isTableLoading = isInitialLoad || isRefreshing
+  const showSkeleton = isInitialLoad
 
   const prefetchDetail = React.useCallback(
     (actionId: string) => {
@@ -201,10 +207,14 @@ export function HistoryModal(props: {
               onClientFilterChange={updateClientFilters}
               onClearAll={clearAllFilters}
               showClearLink={showClearLink}
+              onNotify={onNotify}
             />
           </div>
 
-          <div className="history-table-wrap history-table-wrap--fixed-body">
+          <div
+            className={`history-table-wrap history-table-wrap--fixed-body${isRefreshing ? ' history-table-wrap--refreshing' : ''}`}
+          >
+            {isRefreshing ? <div className="history-table-refresh-bar" aria-hidden="true" /> : null}
             <table className="table history-table">
               <colgroup>
                 <col className="history-col-expand" />
@@ -230,7 +240,7 @@ export function HistoryModal(props: {
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
-              {isTableLoading ? (
+              {showSkeleton ? (
                 <HistorySkeletonTable />
               ) : listQuery.isError && !listQuery.data ? (
                 <HistoryTableEmptyBody
@@ -342,7 +352,7 @@ export function HistoryModal(props: {
             </div>
           )}
 
-          {!isTableLoading && (
+          {!showSkeleton && (
             <HistoryPagination
               page={page}
               totalPages={totalPages}

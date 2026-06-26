@@ -3,34 +3,131 @@ import {
   MONTHS_SQ,
   WEEKDAYS_SQ,
   buildMonthGrid,
+  getDateRangeDayState,
   isoToDate,
+  normalizeIsoDateRange,
   sameDay,
   toIsoDate,
 } from '../lib/datePicker'
 
-export function DatePickerCalendar(props: {
-  value: string
-  onChange: (iso: string) => void
+type DatePickerCalendarProps = {
   className?: string
   clearable?: boolean
-}) {
-  const [viewMonth, setViewMonth] = React.useState(
-    () => isoToDate(props.value) ?? new Date(),
-  )
+  value?: string
+  onChange?: (iso: string) => void
+  rangeFrom?: string
+  rangeTo?: string
+  selectingEndpoint?: 'from' | 'to'
+  onRangeChange?: (from: string, to: string) => void
+  onRangeComplete?: () => void
+}
+
+export function DatePickerCalendar(props: DatePickerCalendarProps) {
+  const isRangeMode = Boolean(props.onRangeChange)
+  const rangeFrom = props.rangeFrom ?? ''
+  const rangeTo = props.rangeTo ?? ''
+
+  const [viewMonth, setViewMonth] = React.useState(() => {
+    const seed = props.value || rangeFrom || rangeTo
+    return isoToDate(seed) ?? new Date()
+  })
+  const [hoverIso, setHoverIso] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    if (!props.value) return
-    const next = isoToDate(props.value)
+    const seed = props.value || rangeFrom || rangeTo
+    if (!seed) return
+    const next = isoToDate(seed)
     if (next) setViewMonth(next)
-  }, [props.value])
+  }, [props.value, rangeFrom, rangeTo])
 
-  const selected = isoToDate(props.value)
+  const selected = isoToDate(props.value ?? '')
   const today = React.useMemo(() => new Date(), [])
   const grid = React.useMemo(() => buildMonthGrid(viewMonth), [viewMonth])
 
-  const pickDate = (iso: string) => {
-    props.onChange(iso)
+  const pickSingleDate = (iso: string) => {
+    props.onChange?.(iso)
   }
+
+  const pickRangeEndpointOnly = (iso: string) => {
+    if (!props.onRangeChange) return
+
+    const endpoint = props.selectingEndpoint ?? 'from'
+    const nextFrom = endpoint === 'from' ? iso : rangeFrom
+    const nextTo = endpoint === 'to' ? iso : rangeTo
+    const [from, to] = normalizeIsoDateRange(nextFrom, nextTo)
+    props.onRangeChange(from, to)
+    props.onRangeComplete?.()
+  }
+
+  const pickRangeDate = (iso: string) => {
+    if (!props.onRangeChange) return
+
+    if (props.selectingEndpoint) {
+      pickRangeEndpointOnly(iso)
+      return
+    }
+
+    const endpoint = props.selectingEndpoint ?? 'from'
+
+    if (endpoint === 'to' && rangeFrom) {
+      const [from, to] = normalizeIsoDateRange(rangeFrom, iso)
+      props.onRangeChange(from, to)
+      props.onRangeComplete?.()
+      return
+    }
+
+    if (endpoint === 'from' && rangeTo) {
+      const [from, to] = normalizeIsoDateRange(iso, rangeTo)
+      props.onRangeChange(from, to)
+      props.onRangeComplete?.()
+      return
+    }
+
+    if (!rangeFrom || (rangeFrom && rangeTo)) {
+      props.onRangeChange(iso, '')
+      return
+    }
+
+    const [from, to] = normalizeIsoDateRange(rangeFrom, iso)
+    props.onRangeChange(from, to)
+    props.onRangeComplete?.()
+  }
+
+  const pickDate = (iso: string) => {
+    if (isRangeMode) pickRangeDate(iso)
+    else pickSingleDate(iso)
+  }
+
+  const clickDeferRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleRangeClick = (iso: string) => {
+    if (clickDeferRef.current) clearTimeout(clickDeferRef.current)
+    clickDeferRef.current = setTimeout(() => {
+      clickDeferRef.current = null
+      pickDate(iso)
+    }, 220)
+  }
+
+  const handleDayDoubleClick = (iso: string) => {
+    if (!isRangeMode) return
+    if (clickDeferRef.current) {
+      clearTimeout(clickDeferRef.current)
+      clickDeferRef.current = null
+    }
+    pickRangeEndpointOnly(iso)
+  }
+
+  React.useEffect(() => {
+    return () => {
+      if (clickDeferRef.current) clearTimeout(clickDeferRef.current)
+    }
+  }, [])
+
+  const clearRange = () => {
+    props.onRangeChange?.('', '')
+  }
+
+  const hasRangeSelection = Boolean(rangeFrom || rangeTo)
 
   return (
     <div className={['date-picker-calendar', props.className].filter(Boolean).join(' ')}>
@@ -64,10 +161,17 @@ export function DatePickerCalendar(props: {
         ))}
       </div>
 
-      <div className="date-picker-grid">
+      <div
+        className="date-picker-grid"
+        onMouseLeave={() => setHoverIso(null)}
+      >
         {grid.map((cell) => {
-          const isSelected = selected ? sameDay(cell.date, selected) : false
+          const isSelected = !isRangeMode && selected ? sameDay(cell.date, selected) : false
           const isToday = sameDay(cell.date, today)
+          const rangeState = isRangeMode
+            ? getDateRangeDayState(cell.iso, rangeFrom, rangeTo, hoverIso ?? undefined)
+            : null
+
           return (
             <button
               key={cell.iso}
@@ -77,12 +181,27 @@ export function DatePickerCalendar(props: {
                 !cell.inMonth && 'muted',
                 isSelected && 'selected',
                 isToday && 'today',
+                rangeState === 'single' && 'range-single',
+                rangeState === 'start' && 'range-start',
+                rangeState === 'end' && 'range-end',
+                rangeState === 'in-range' && 'in-range',
               ]
                 .filter(Boolean)
                 .join(' ')}
-              onClick={() => pickDate(cell.iso)}
+              onMouseEnter={() => {
+                if (isRangeMode && rangeFrom && !rangeTo) setHoverIso(cell.iso)
+              }}
+              onClick={() => {
+                if (isRangeMode) {
+                  if (props.selectingEndpoint) pickRangeEndpointOnly(cell.iso)
+                  else scheduleRangeClick(cell.iso)
+                } else {
+                  pickDate(cell.iso)
+                }
+              }}
+              onDoubleClick={() => handleDayDoubleClick(cell.iso)}
             >
-              {cell.date.getDate()}
+              <span className="date-picker-day-label">{cell.date.getDate()}</span>
             </button>
           )
         })}
@@ -100,8 +219,11 @@ export function DatePickerCalendar(props: {
           <button
             type="button"
             className="date-picker-footer-btn"
-            disabled={!props.value}
-            onClick={() => pickDate('')}
+            disabled={isRangeMode ? !hasRangeSelection : !props.value}
+            onClick={() => {
+              if (isRangeMode) clearRange()
+              else pickSingleDate('')
+            }}
           >
             Pastro
           </button>

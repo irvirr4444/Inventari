@@ -3,8 +3,9 @@ import { useSummaryDateRange } from '../../../../hooks/useSummaryQuery'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { exportUrl } from '../../../../lib/api'
 import { fmt, fmtInt } from '../../../../lib/format'
+import { queryRefreshState } from '../../../../lib/queryRefreshState'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
-import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
+import { MobileDateRangeInput } from '../../../../mobile/components/MobileDateRangeInput'
 import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
 
 function LocationSummaryCard(props: {
@@ -57,21 +58,23 @@ export function DynamicPermbledhjeTab() {
     .filter((l) => l.show_in_summary)
     .sort((a, b) => a.rradhitja - b.rradhitja)
 
-  const loading = query.isLoading || query.isFetching
+  const { isInitialLoad, isRefreshing } = queryRefreshState(query)
   const summaryData = (query.data ?? {}) as Record<string, CountrySummaryData>
   const scrollableList = summaryLocations.length > 6
 
   return (
     <div className="mobile-tab-panel dynamic-permbledhje-panel">
-      <div className="mobile-field-row dynamic-permbledhje-dates">
-        <div>
-          <label className="mobile-label">Nga</label>
-          <MobileDateInput value={from} onChange={setFrom} aria-label="Nga" placeholder="Nga" />
-        </div>
-        <div>
-          <label className="mobile-label">Deri</label>
-          <MobileDateInput value={to} onChange={setTo} aria-label="Deri" placeholder="Deri" />
-        </div>
+      <div className="mobile-field-row mobile-field-row--date-range dynamic-permbledhje-dates">
+        <MobileDateRangeInput
+          from={from}
+          to={to}
+          onRangeChange={(nextFrom, nextTo) => {
+            setFrom(nextFrom)
+            setTo(nextTo)
+          }}
+          fromPlaceholder="Nga"
+          toPlaceholder="Deri"
+        />
       </div>
 
       {query.error ? (
@@ -84,13 +87,13 @@ export function DynamicPermbledhjeTab() {
         <div className="mobile-empty">
           <div className="mobile-empty-title">Nuk ka lokacione te shfaqura ne permbledhje.</div>
         </div>
-      ) : loading ? (
+      ) : isInitialLoad ? (
         <div className="dynamic-mobile-summary-list">
           <SkeletonRow count={Math.min(summaryLocations.length, 6)} />
         </div>
       ) : (
         <div
-          className={`dynamic-mobile-summary-list${scrollableList ? ' dynamic-mobile-summary-list--scrollable' : ''}`}
+          className={`dynamic-mobile-summary-list${scrollableList ? ' dynamic-mobile-summary-list--scrollable' : ''}${isRefreshing ? ' is-refreshing' : ''}`}
         >
           {summaryLocations.map((loc) => (
             <LocationSummaryCard

@@ -163,6 +163,27 @@
   color: var(--text);
 }
 
+.time-picker-range-track {
+  position: relative;
+  height: 8px;
+  margin: 0 4px 12px;
+}
+
+.time-picker-range-track-rail {
+  position: absolute;
+  inset: 2px 0;
+  border-radius: 999px;
+  background: rgba(47, 125, 246, 0.1);
+}
+
+.time-picker-range-track-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(47, 125, 246, 0.45), rgba(47, 125, 246, 0.75));
+}
+
 .time-picker-quick {
   display: flex;
   flex-wrap: nowrap;
@@ -319,6 +340,30 @@
   color: var(--primary);
   font-size: 18px;
   font-weight: 700;
+}
+
+.time-picker-column-item.in-range:not(.selected) {
+  color: var(--primary);
+  background: rgba(47, 125, 246, 0.1);
+  border-radius: 8px;
+}
+
+.time-range-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.time-range-input .time-range-input-trigger {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.time-range-input.open .time-range-input-trigger.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(47, 125, 246, 0.14);
 }
 
 .time-picker-footer {

@@ -64,7 +64,7 @@
   position: fixed;
   left: 50%;
   bottom: 24px;
-  z-index: 80;
+  z-index: 200;
   max-width: min(560px, calc(100vw - 32px));
   transform: translateX(-50%);
   background: rgba(12, 31, 54, 0.96);
@@ -75,7 +75,14 @@
   box-shadow: var(--shadow-lg);
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
   animation: snackbarIn 0.2s ease;
+}
+
+.snackbar.error,
+.snackbar.success {
+  border-radius: 14px;
 }
 
 .snackbar.success {

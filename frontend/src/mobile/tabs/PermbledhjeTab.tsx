@@ -1,7 +1,8 @@
 import { useSummaryDateRange } from '../../hooks/useSummaryQuery'
 import { exportUrl } from '../../lib/api'
 import { fmt, fmtInt } from '../../lib/format'
-import { MobileDateInput } from '../components/MobileDateInput'
+import { queryRefreshState } from '../../lib/queryRefreshState'
+import { MobileDateRangeInput } from '../components/MobileDateRangeInput'
 import { SkeletonRow } from '../components/SkeletonRow'
 
 function SummarySection(props: {
@@ -52,10 +53,11 @@ function SummarySection(props: {
 
 export function PermbledhjeTab() {
   const { from, setFrom, to, setTo, query, emptySummary } = useSummaryDateRange()
-  const loading = query.isLoading || query.isFetching
+  const { isInitialLoad, isRefreshing } = queryRefreshState(query)
 
   const allEmpty =
-    !loading &&
+    !isInitialLoad &&
+    !isRefreshing &&
     !query.error &&
     (query.data?.XK ?? emptySummary).in_qty === 0 &&
     (query.data?.XK ?? emptySummary).out_qty === 0 &&
@@ -64,15 +66,17 @@ export function PermbledhjeTab() {
 
   return (
     <div className="mobile-tab-panel">
-      <div className="mobile-field-row">
-        <div>
-          <label className="mobile-label">Nga</label>
-          <MobileDateInput value={from} onChange={setFrom} aria-label="Nga" placeholder="Nga" />
-        </div>
-        <div>
-          <label className="mobile-label">Deri</label>
-          <MobileDateInput value={to} onChange={setTo} aria-label="Deri" placeholder="Deri" />
-        </div>
+      <div className="mobile-field-row mobile-field-row--date-range">
+        <MobileDateRangeInput
+          from={from}
+          to={to}
+          onRangeChange={(nextFrom, nextTo) => {
+            setFrom(nextFrom)
+            setTo(nextTo)
+          }}
+          fromPlaceholder="Nga"
+          toPlaceholder="Deri"
+        />
       </div>
 
       {query.error ? (
@@ -86,20 +90,20 @@ export function PermbledhjeTab() {
           <div className="mobile-empty-title">Nuk ka të dhëna për këtë periudhë.</div>
         </div>
       ) : (
-        <>
+        <div className={isRefreshing ? 'mobile-summary-refreshing' : undefined}>
           <SummarySection
             name="Kosovo"
             flagSrc="/Flag_of_Kosovo.webp"
-            loading={loading}
+            loading={isInitialLoad}
             summary={query.data?.XK ?? emptySummary}
           />
           <SummarySection
             name="Albania"
             flagSrc="/Flag_of_Albania.svg"
-            loading={loading}
+            loading={isInitialLoad}
             summary={query.data?.AL ?? emptySummary}
           />
-        </>
+        </div>
       )}
 
       <a className="mobile-btn-outline" href={exportUrl('xlsx', { from, to })} style={{ textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

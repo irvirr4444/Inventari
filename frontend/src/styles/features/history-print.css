@@ -1,0 +1,379 @@
+:root {
+  --history-print-a4-width: 210mm;
+  --history-print-a4-height: 297mm;
+  --history-print-a4-margin: 14mm;
+}
+
+.history-print-page {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.history-print-toolbar {
+  position: relative;
+  z-index: 1000;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  isolation: isolate;
+}
+
+.history-print-toolbar-count {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.history-print-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.history-print-toolbar-actions .btn {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.history-print-toolbar-error {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 20px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.history-print-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 16px 48px;
+}
+
+.history-print-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.history-print-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--history-print-a4-width);
+  max-width: 100%;
+  height: var(--history-print-a4-height);
+  flex: 0 0 auto;
+  background: #fff;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.history-print-document {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--history-print-a4-margin);
+  overflow: hidden;
+}
+
+.history-print-page-number {
+  position: absolute;
+  right: var(--history-print-a4-margin);
+  bottom: 6mm;
+  font-size: 10px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.history-print-measure {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.history-print-measure .history-print-sheet {
+  height: auto;
+  box-shadow: none;
+}
+
+.history-print-measure .history-print-document {
+  height: auto;
+  overflow: visible;
+}
+
+.history-print-layout-loading {
+  width: var(--history-print-a4-width);
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 48px 24px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  color: #6b7280;
+}
+
+.history-print-header {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #111827;
+}
+
+.history-print-title {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.history-print-subtitle {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.history-print-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-print-filter-chip {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.history-print-summary {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.history-print-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-print-card {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-print-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-print-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.history-print-card-date {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.history-print-card-route,
+.history-print-card-pershkrimi {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.history-print-card-pershkrimi {
+  font-style: italic;
+}
+
+.history-print-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.history-print-card-badge--hyrje {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.history-print-card-badge--dalje {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.history-print-card-badge--transfer {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.history-print-card-body {
+  padding: 10px 16px 14px;
+}
+
+.history-print-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 12px;
+}
+
+.history-print-item:last-child {
+  border-bottom: none;
+}
+
+.history-print-item-name {
+  min-width: 0;
+}
+
+.history-print-item-shenim {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.history-print-item-qty,
+.history-print-item-total {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-print-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.history-print-empty,
+.history-print-loading,
+.history-print-error {
+  width: var(--history-print-a4-width);
+  max-width: calc(100% - 32px);
+  margin: 48px auto;
+  padding: 24px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  .history-print-page {
+    position: static;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .history-print-toolbar,
+  .history-print-toolbar-error {
+    display: none !important;
+  }
+
+  .history-print-viewport {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .history-print-pages {
+    gap: 0;
+  }
+
+  .history-print-sheet {
+    width: auto;
+    max-width: none;
+    height: auto;
+    min-height: auto;
+    margin: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+
+  .history-print-sheet:last-child {
+    page-break-after: auto;
+  }
+
+  .history-print-document {
+    height: auto;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .history-print-page-number {
+    display: none;
+  }
+
+  .history-print-measure,
+  .history-print-layout-loading {
+    display: none !important;
+  }
+
+  .history-print-card {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .history-print-header {
+    margin-bottom: 18px;
+  }
+
+  .history-print-card-badge--hyrje,
+  .history-print-card-badge--dalje,
+  .history-print-card-badge--transfer {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

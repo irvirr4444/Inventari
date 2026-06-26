@@ -1,21 +1,24 @@
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
-import { DateInput } from '../../components/DateInput'
+import { DateRangeInput } from '../../components/DateRangeInput'
 import { NumericInput } from '../../components/NumericInput'
-import { OraInput } from '../../components/OraInput'
+import { OraRangeInput } from '../../components/OraRangeInput'
 import { parseNumericFilterValue } from '../../lib/numericInput'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { HistoryFilterClearButton } from '../history/HistoryFilterClearButton'
+import { HistoryExportActions } from '../history/HistoryExportActions'
 
 export function DynamicHistoryFilterBar(props: {
   serverFilters: HistoryServerFilters
   clientFilters: HistoryClientFilters
   locations: Lokacioni[]
   onServerFilterChange: (patch: Partial<HistoryServerFilters>) => void
-  onClientFilterChange: (patch: Partial<HistoryClientFilters>) => void
+  onClientFilterChange: (patch: Partial<HistoryClientFilters>) => boolean | void
   onClearAll: () => void
   showClearLink: boolean
   showTotali?: boolean
+  trackPrice?: boolean
+  onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const {
     serverFilters,
@@ -76,19 +79,20 @@ export function DynamicHistoryFilterBar(props: {
       <div className="history-filter-group history-filter-group-labeled history-filter-group-dates">
         <span className="history-filter-group-label">Data</span>
         <div className="history-filter-pair history-filter-pair-dates">
-          <DateInput
-            className="history-filter-date"
+          <DateRangeInput
             clearable
-            value={serverFilters.dateFrom ?? ''}
-            placeholder="Nga"
-            onChange={(v) => onServerFilterChange({ dateFrom: v || undefined })}
-          />
-          <DateInput
-            className="history-filter-date"
-            clearable
-            value={serverFilters.dateTo ?? ''}
-            placeholder="Deri"
-            onChange={(v) => onServerFilterChange({ dateTo: v || undefined })}
+            from={serverFilters.dateFrom ?? ''}
+            to={serverFilters.dateTo ?? ''}
+            fromClassName="history-filter-date"
+            toClassName="history-filter-date"
+            fromPlaceholder="Nga"
+            toPlaceholder="Deri"
+            onRangeChange={(from, to) =>
+              onServerFilterChange({
+                dateFrom: from || undefined,
+                dateTo: to || undefined,
+              })
+            }
           />
         </div>
       </div>
@@ -98,19 +102,16 @@ export function DynamicHistoryFilterBar(props: {
       <div className="history-filter-group history-filter-group-labeled history-filter-group-ora">
         <span className="history-filter-group-label">Ora</span>
         <div className="history-filter-pair history-filter-pair-ora">
-          <OraInput
-            wrapperClassName="history-filter-ora-wrap"
+          <OraRangeInput
             clearable
-            value={clientFilters.oraFrom}
-            placeholder="Nga"
-            onChange={(v) => onClientFilterChange({ oraFrom: v })}
-          />
-          <OraInput
-            wrapperClassName="history-filter-ora-wrap"
-            clearable
-            value={clientFilters.oraDeri}
-            placeholder="Deri"
-            onChange={(v) => onClientFilterChange({ oraDeri: v })}
+            from={clientFilters.oraFrom}
+            to={clientFilters.oraDeri}
+            fromWrapperClassName="history-filter-ora-wrap"
+            toWrapperClassName="history-filter-ora-wrap"
+            fromPlaceholder="Nga"
+            toPlaceholder="Deri"
+            onFromChange={(v) => onClientFilterChange({ oraFrom: v })}
+            onToChange={(v) => onClientFilterChange({ oraDeri: v })}
           />
         </div>
       </div>
@@ -198,6 +199,12 @@ export function DynamicHistoryFilterBar(props: {
         </div>
 
         {showClearLink ? <HistoryFilterClearButton onClick={onClearAll} /> : null}
+        <HistoryExportActions
+          serverFilters={serverFilters}
+          clientFilters={clientFilters}
+          trackPrice={props.trackPrice}
+          onNotify={props.onNotify}
+        />
       </div>
     </div>
   )

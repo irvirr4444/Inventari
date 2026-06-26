@@ -38,6 +38,9 @@ const DynamicMobileApp = React.lazy(() =>
     default: m.DynamicMobileApp,
   })),
 )
+const HistoryPrintPage = React.lazy(() =>
+  import('./features/history/HistoryPrintPage').then((m) => ({ default: m.HistoryPrintPage })),
+)
 
 function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
@@ -211,6 +214,16 @@ export default function App() {
             <RequireAuth>
               <RouteSuspense>
                 <LocationsSettingsPage />
+              </RouteSuspense>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/history/print"
+          element={
+            <RequireAuth>
+              <RouteSuspense>
+                <HistoryPrintPage />
               </RouteSuspense>
             </RequireAuth>
           }

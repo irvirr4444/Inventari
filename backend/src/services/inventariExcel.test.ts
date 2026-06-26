@@ -4,6 +4,7 @@ import {
   accumulatePermbledhjeTotals,
   buildInventariExcelBuffer,
   buildPermbledhjeTotalRow,
+  resolveHistoryExportSheets,
   buildVeprimListTotalRow,
   configureInventariLocationHeaders,
   createInventariWorkbook,
@@ -202,6 +203,37 @@ describe('inventariExcel helpers', () => {
     expect(row[7]).toBe(0)
     expect(row[15]).toBe(2)
     expect(row[16]).toBe(150.5)
+  })
+
+  it('resolveHistoryExportSheets maps filter combinations to sheet tabs', () => {
+    const locations = [
+      { key: 'loc-1', emri: 'Kosova' },
+      { key: 'loc-2', emri: 'Shqiperi' },
+    ]
+
+    expect(resolveHistoryExportSheets({ locations, locationKeys: [] }).map((p) => p.title)).toEqual([
+      'Kosova Hyrje',
+      'Kosova Dalje',
+      'Shqiperi Hyrje',
+      'Shqiperi Dalje',
+      'Transferta',
+    ])
+
+    expect(
+      resolveHistoryExportSheets({ lloji: 'Transfer', locations, locationKeys: [] }).map(
+        (p) => p.title,
+      ),
+    ).toEqual(['Transferta'])
+
+    expect(
+      resolveHistoryExportSheets({ lloji: 'Hyrje', locations, locationKeys: [] }).map(
+        (p) => p.title,
+      ),
+    ).toEqual(['Kosova Hyrje', 'Shqiperi Hyrje'])
+
+    expect(
+      resolveHistoryExportSheets({ locations, locationKeys: ['loc-1'] }).map((p) => p.title),
+    ).toEqual(['Kosova Hyrje', 'Kosova Dalje', 'Transferta'])
   })
 
   it('buildVeprimListTotalRow sums sasi and vlefta', () => {

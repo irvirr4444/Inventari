@@ -1,5 +1,5 @@
 import type { CountrySummary as CountrySummaryData } from '@inventari/shared'
-import { DateInput } from '../../components/DateInput'
+import { DateRangeInput } from '../../components/DateRangeInput'
 import { ErrorAlert } from '../../components/ErrorAlert'
 import { DownloadIcon } from '../../components/icons'
 import { exportUrl } from '../../lib/api'
@@ -95,16 +95,14 @@ export function DynamicSummaryPanel(props: {
 
       <div className="summary-period">
         <label className="label">Periudha</label>
-        <div className="form-row-equal summary-date-grid">
-          <div className="form-group">
-            <span className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Nga</span>
-            <DateInput value={props.from} onChange={props.onFromChange} style={{ width: '100%' }} />
-          </div>
-          <div className="form-group">
-            <span className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Deri</span>
-            <DateInput value={props.to} onChange={props.onToChange} style={{ width: '100%' }} />
-          </div>
-        </div>
+        <DateRangeInput
+          from={props.from}
+          to={props.to}
+          onRangeChange={(from, to) => {
+            props.onFromChange(from)
+            props.onToChange(to)
+          }}
+        />
       </div>
 
       {props.error != null && (

@@ -12,6 +12,7 @@
 @import './components/auth.css';
 @import './components/modals.css';
 @import './features/history.css';
+@import './features/history-print.css';
 @import './features/locations.css';
 @import './features/dynamic-dashboard.css';
 @import './features/onboarding-wizard.css';

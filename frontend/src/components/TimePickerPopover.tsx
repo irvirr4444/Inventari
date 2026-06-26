@@ -10,7 +10,10 @@ import {
   combineOraParts,
   currentOraValue,
   getCenteredListValue,
+  isHourInOraRange,
+  isMinuteInOraRange,
   loopPickerMiddleOffset,
+  normalizeOraMinutesRange,
   maybeRecenterLoopedPicker,
   parseOraParts,
   scrollPickerToLoopIndex,
@@ -25,6 +28,7 @@ function TimeColumnWheel(props: {
   onSelect: (value: string) => void
   listRef: React.RefObject<HTMLDivElement | null>
   scrollSelectRef: React.MutableRefObject<boolean>
+  isValueInRange?: (value: string) => boolean
 }) {
   const scrollRafRef = React.useRef<number | null>(null)
 
@@ -87,7 +91,7 @@ function TimeColumnWheel(props: {
             type="button"
             data-value={item.value}
             data-loop-index={item.loopIndex}
-            className={`time-picker-column-item${props.selected === item.value ? ' selected' : ''}`}
+            className={`time-picker-column-item${props.selected === item.value ? ' selected' : ''}${props.isValueInRange?.(item.value) ? ' in-range' : ''}`}
             onClick={() => props.onSelect(item.value)}
           >
             {item.value}
@@ -98,11 +102,33 @@ function TimeColumnWheel(props: {
   )
 }
 
+function TimePickerRangeTrack(props: { from: string; to: string }) {
+  const [start, end] = normalizeOraMinutesRange(props.from, props.to)
+  if (start === null || end === null) return null
+
+  const left = (start / 1439) * 100
+  const width = Math.max(((end - start) / 1439) * 100, 1.5)
+
+  return (
+    <div className="time-picker-range-track" aria-hidden="true">
+      <div className="time-picker-range-track-rail" />
+      <div
+        className="time-picker-range-track-fill"
+        style={{ left: `${left}%`, width: `${width}%` }}
+      />
+    </div>
+  )
+}
+
 export function TimePickerPopover(props: {
   value: string
   onConfirm: (value: string) => void
   onClear: () => void
   className?: string
+  rangeFrom?: string
+  rangeTo?: string
+  activeEndpoint?: 'from' | 'to'
+  previewLabel?: string
 }) {
   const initial = React.useMemo(() => parseOraParts(props.value), [props.value])
   const [hour, setHour] = React.useState(initial.hour)
@@ -118,6 +144,9 @@ export function TimePickerPopover(props: {
   const preview = combineOraParts(hour, minute)
   const previewRef = React.useRef(preview)
   previewRef.current = preview
+  const rangeFrom = props.rangeFrom ?? ''
+  const rangeTo = props.rangeTo ?? ''
+  const showRange = Boolean(rangeFrom && rangeTo)
 
   useEnterToConfirm(() => props.onConfirm(previewRef.current), { enabled: true })
 
@@ -163,9 +192,13 @@ export function TimePickerPopover(props: {
   return (
     <div className={`time-picker${props.className ? ` ${props.className}` : ''}`}>
       <div className="time-picker-preview" aria-live="polite">
-        <span className="time-picker-preview-label">Ora e veprimit</span>
+        <span className="time-picker-preview-label">
+          {props.previewLabel ?? 'Ora e veprimit'}
+        </span>
         <span className="time-picker-preview-value num">{preview}</span>
       </div>
+
+      {showRange ? <TimePickerRangeTrack from={rangeFrom} to={rangeTo} /> : null}
 
       <div className="time-picker-quick" role="group" aria-label="Zgjedhje te shpejta">
         {TIME_QUICK_PICKS.map((pick) => {
@@ -196,6 +229,9 @@ export function TimePickerPopover(props: {
           onSelect={setHour}
           listRef={hourListRef}
           scrollSelectRef={hourScrollSelectRef}
+          isValueInRange={
+            showRange ? (value) => isHourInOraRange(value, rangeFrom, rangeTo) : undefined
+          }
         />
         <span className="time-picker-colon" aria-hidden="true">:</span>
         <TimeColumnWheel
@@ -206,6 +242,11 @@ export function TimePickerPopover(props: {
           onSelect={setMinute}
           listRef={minuteListRef}
           scrollSelectRef={minuteScrollSelectRef}
+          isValueInRange={
+            showRange
+              ? (value) => isMinuteInOraRange(hour, value, rangeFrom, rangeTo)
+              : undefined
+          }
         />
       </div>
 

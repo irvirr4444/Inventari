@@ -204,6 +204,14 @@
   gap: var(--dynamic-summary-list-gap);
   min-height: 0;
   flex-shrink: 0;
+  transition:
+    opacity 0.28s ease,
+    filter 0.28s ease;
+}
+
+.dynamic-mobile-summary-list.is-refreshing {
+  opacity: 0.72;
+  filter: saturate(0.9);
 }
 
 .dynamic-mobile-summary-list--scrollable {

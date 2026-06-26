@@ -40,6 +40,9 @@ function parseCorsOrigin(value: string | undefined): boolean | string | string[]
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
+  if (!origins.includes('https://localhost')) {
+    origins.push('https://localhost')
+  }
   if (origins.length === 0) return true
   if (origins.length === 1) return origins[0]
   return origins

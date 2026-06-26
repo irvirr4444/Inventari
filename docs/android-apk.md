@@ -125,7 +125,7 @@ Build with `CAPACITOR=1` when syncing to Android (`npm run android:build`).
 Create root `.env.production` (gitignored; Vite `envDir` is repo root):
 
 ```env
-VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com/api
+VITE_API_BASE_URL=https://inventari-frontend.onrender.com/api
 VITE_GOOGLE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 ```
 

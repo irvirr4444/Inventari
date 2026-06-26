@@ -21,7 +21,7 @@ Capacitor wrapper that packages the mobile web UI (`frontend/dist`) as an instal
 1. Create root `.env.production` with your production API URL:
 
    ```env
-   VITE_API_BASE_URL=https://YOUR-BACKEND.example.com/api
+   VITE_API_BASE_URL=https://inventari-frontend.onrender.com/api
    ```
 
 2. Ensure backend `CORS_ORIGIN` includes `https://localhost` (comma-separated with your web frontend URL).

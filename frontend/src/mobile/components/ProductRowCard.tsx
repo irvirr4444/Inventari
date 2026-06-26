@@ -13,9 +13,10 @@ export function ProductRowCard(props: {
   const price = Number(props.item.cmimi_njesi) || 0
   const qty = Number(props.item.sasia) || 0
   const total = price * qty
+  const shenim = props.item.shenim.trim()
 
   return (
-    <div className="mobile-row-card">
+    <div className="mobile-row-card mobile-action-product-row">
       <div
         className="mobile-row-card-body"
         role="button"
@@ -30,6 +31,11 @@ export function ProductRowCard(props: {
           {fmtEuro(price)} × {qty} cop
         </div>
         <div className="mobile-row-card-total">Total: {fmtEuro(total)}</div>
+        {shenim ? (
+          <div className="mobile-action-product-shenim" title={shenim}>
+            {shenim}
+          </div>
+        ) : null}
       </div>
       <div className="mobile-row-card-actions">
         <button

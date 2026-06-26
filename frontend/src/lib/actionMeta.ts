@@ -11,5 +11,5 @@ export function formatActionDateTime(
 ): string {
   const date = formatDisplayDate(data)
   const time = formatDisplayTime(ora)
-  return time ? `${date} · ${time}` : date
+  return time ? `${time} · ${date}` : date
 }

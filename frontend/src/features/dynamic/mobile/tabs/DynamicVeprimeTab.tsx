@@ -86,14 +86,17 @@ export function DynamicVeprimeTab(props: {
   return (
     <>
       <div className="mobile-tab-panel mobile-tab-panel--action">
-        <SegmentedControl<'Hyrje' | 'Dalje'>
-          value={entry.lloji}
-          options={[
-            { value: 'Hyrje', label: 'Hyrje', tone: 'success' },
-            { value: 'Dalje', label: 'Dalje', tone: 'danger' },
-          ]}
-          onChange={entry.setLloji}
-        />
+        <div className="mobile-action-top-slot">
+          <div className="mobile-section-label">Lloji i veprimit</div>
+          <SegmentedControl<'Hyrje' | 'Dalje'>
+            value={entry.lloji}
+            options={[
+              { value: 'Hyrje', label: 'Hyrje', tone: 'success' },
+              { value: 'Dalje', label: 'Dalje', tone: 'danger' },
+            ]}
+            onChange={entry.setLloji}
+          />
+        </div>
 
         <div className="mobile-field-row">
           <DynamicLocationField
@@ -125,7 +128,7 @@ export function DynamicVeprimeTab(props: {
             />
           </div>
           <div>
-            <label className="mobile-label" htmlFor="dynamic-veprime-pershkrimi">Pershkrimi</label>
+            <label className="mobile-label" htmlFor="dynamic-veprime-pershkrimi">Përshkrimi</label>
             <span
               className={`clearable-field${entry.actionPershkrimi.trim() ? ' clearable-field--has-value' : ''}`}
             >
@@ -146,7 +149,7 @@ export function DynamicVeprimeTab(props: {
           </div>
         </div>
 
-        <div>
+        <div className="mobile-action-products-slot">
           <div className="mobile-section-label">Produktet</div>
           <button type="button" className="mobile-btn-outline" onClick={openAdd}>
             + Shto Produkt
@@ -176,7 +179,7 @@ export function DynamicVeprimeTab(props: {
       </div>
 
       <StickyCta
-        label="FINALIZO"
+        label="FINALIZO VEPRIMIN"
         disabled={!hasValidItems}
         loading={entry.mutation.isPending}
         onClick={entry.requestFinalize}

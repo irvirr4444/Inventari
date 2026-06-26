@@ -76,7 +76,7 @@ const TABS: {
   tutorialId?: string
 }[] = [
   { id: 'veprime', label: 'Veprime', Icon: VeprimeNavIcon, tutorialId: 'tab-veprime' },
-  { id: 'transfer', label: 'Transfer', Icon: TransferNavIcon, tutorialId: 'tab-transfer' },
+  { id: 'transfer', label: 'Transfero', Icon: TransferNavIcon, tutorialId: 'tab-transfer' },
   { id: 'produkte', label: 'Produkte', Icon: ProdukteNavIcon, tutorialId: 'tab-produkte' },
   { id: 'histori', label: 'Histori', Icon: HistoriNavIcon, tutorialId: 'tab-histori' },
   { id: 'permblehdje', label: 'Përmbledhje', Icon: TotaletNavIcon, tutorialId: 'tab-permbledhje' },

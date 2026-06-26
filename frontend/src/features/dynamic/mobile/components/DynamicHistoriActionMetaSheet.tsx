@@ -117,7 +117,7 @@ export function DynamicHistoriActionMetaSheet(props: {
               </div>
               <div>
                 <label className="mobile-label" htmlFor="dynamic-action-meta-pershkrimi">
-                  Pershkrimi
+                  Përshkrimi
                 </label>
                 <input
                   id="dynamic-action-meta-pershkrimi"

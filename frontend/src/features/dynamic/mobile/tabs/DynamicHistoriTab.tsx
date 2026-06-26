@@ -46,6 +46,7 @@ const LLOJI_FILTER_OPTIONS = [
 export function DynamicHistoriTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onHeaderChange: (header: MobileHeaderState) => void
+  onNavigateToHistori?: () => void
 }) {
   const productsQuery = useDynamicProductsQuery()
   const { trackPrice } = useTenantConfig()
@@ -173,6 +174,10 @@ export function DynamicHistoriTab(props: {
   }
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
+  const handleSaveSuccess = React.useCallback(() => {
+    props.onNavigateToHistori?.()
+    goToList()
+  }, [goToList, props.onNavigateToHistori])
   const { onHeaderChange } = props
 
   React.useEffect(() => {
@@ -192,7 +197,7 @@ export function DynamicHistoriTab(props: {
           onDeleteRequest={(batch) => setDeleteTarget(batch)}
           onHeaderChange={props.onHeaderChange}
           onBackToList={goToList}
-          onBatchIdChange={(batchId) => setScreen({ mode: 'detail', batchId })}
+          onSaveSuccess={handleSaveSuccess}
         />
       ) : (
         <>

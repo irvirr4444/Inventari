@@ -344,6 +344,12 @@
   color: var(--mobile-sheet-text-muted);
 }
 
+.mobile-sheet.mobile-sheet--chrome .mobile-action-review-scroll-affordance {
+  color: var(--mobile-sheet-text-subtle);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 .mobile-sheet.mobile-sheet--chrome .mobile-action-review-meta-line {
   color: var(--mobile-sheet-text-subtle);
 }

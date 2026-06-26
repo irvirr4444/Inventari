@@ -190,7 +190,7 @@ export function DynamicProdukteTab(props: {
 
   return (
     <>
-      <div className="mobile-tab-panel dynamic-produkte-panel">
+      <div className="mobile-tab-panel mobile-tab-panel--action dynamic-produkte-panel">
         <div className="dynamic-produkte-toolbar">
           <div className="mobile-search-wrap">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

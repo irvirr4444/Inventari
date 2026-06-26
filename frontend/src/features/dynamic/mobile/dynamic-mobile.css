@@ -40,16 +40,6 @@
   font-size: 14px;
 }
 
-.dynamic-produkte-panel .mobile-btn-outline {
-  border-color: rgba(255, 255, 255, 0.14);
-  color: var(--mobile-sheet-accent-muted, rgba(126, 184, 232, 0.95));
-}
-
-.dynamic-produkte-panel .mobile-btn-outline:active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--mobile-sheet-selected-border, rgba(47, 125, 246, 0.45));
-}
-
 .dynamic-produkte-list {
   display: flex;
   flex-direction: column;
@@ -345,6 +335,10 @@
   gap: 12px;
 }
 
+.dynamic-histori-detail-panel--dirty {
+  padding-bottom: calc(56px + var(--mobile-space-sm));
+}
+
 .dynamic-histori-detail-section {
   display: flex;
   flex-direction: column;
@@ -419,4 +413,63 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.dynamic-histori-add-product-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.dynamic-histori-detail-action-card--dirty {
+  border-color: var(--mobile-sheet-selected-border, rgba(47, 125, 246, 0.45));
+  background: rgba(47, 125, 246, 0.08);
+}
+
+.dynamic-histori-detail-item--new {
+  border-color: rgba(52, 199, 89, 0.42);
+  background: rgba(52, 199, 89, 0.1);
+}
+
+.dynamic-histori-detail-item--modified {
+  border-color: rgba(47, 125, 246, 0.42);
+  background: rgba(47, 125, 246, 0.08);
+}
+
+.mobile-row-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-row-card-title-row .mobile-row-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.dynamic-histori-detail-item-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+}
+
+.dynamic-histori-detail-item-badge--new {
+  color: var(--success);
+  background: rgba(52, 199, 89, 0.16);
+  border: 1px solid rgba(52, 199, 89, 0.35);
+}
+
+.dynamic-histori-detail-item-badge--modified {
+  color: var(--primary);
+  background: rgba(47, 125, 246, 0.14);
+  border: 1px solid rgba(47, 125, 246, 0.35);
+}
+
+.mobile-histori-row-card__header .dynamic-histori-detail-item-badge--modified {
+  margin-left: auto;
 }

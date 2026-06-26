@@ -271,7 +271,7 @@ export function ActionEditForm(props: {
           </div>
           <div className="form-group history-edit-pershkrimi">
             <label className="label" htmlFor="history-edit-pershkrimi">
-              Pershkrimi
+              Përshkrimi
             </label>
             <input
               id="history-edit-pershkrimi"

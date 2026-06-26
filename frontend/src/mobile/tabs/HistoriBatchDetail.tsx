@@ -262,7 +262,7 @@ function HistoriBatchEditView(props: {
               </div>
               <div className="mobile-history-meta-field">
                 <label className="mobile-label" htmlFor="batch-edit-pershkrimi">
-                  Pershkrimi
+                  Përshkrimi
                 </label>
                 <input
                   id="batch-edit-pershkrimi"

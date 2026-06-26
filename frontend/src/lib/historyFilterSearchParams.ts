@@ -82,7 +82,7 @@ export function formatHistoryPrintFilterSummary(
     lines.push(`Ora: ${client.oraFrom.trim() || '…'} – ${client.oraDeri.trim() || '…'}`)
   }
   if (client.pershkriminQuery.trim()) {
-    lines.push(`Pershkrimi: "${client.pershkriminQuery.trim()}"`)
+    lines.push(`Përshkrimi: "${client.pershkriminQuery.trim()}"`)
   }
   if (server.shenim?.trim()) lines.push(`Shenim: "${server.shenim.trim()}"`)
   if (trackPrice && (client.totaliMin !== '' || client.totaliMax !== '')) {

@@ -96,7 +96,7 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
         </div>
 
         <div className="mobile-advanced-filters-section">
-          <div className="mobile-section-label">Pershkrimi</div>
+          <div className="mobile-section-label">Përshkrimi</div>
           <span
             className={`clearable-field${draft.pershkriminQuery.trim() ? ' clearable-field--has-value' : ''}`}
           >

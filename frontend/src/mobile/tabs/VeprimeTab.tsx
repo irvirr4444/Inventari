@@ -67,14 +67,17 @@ export function VeprimeTab(props: {
   return (
     <>
       <div className="mobile-tab-panel mobile-tab-panel--action">
-        <SegmentedControl<'Hyrje' | 'Dalje'>
-          value={entry.lloji}
-          options={[
-            { value: 'Hyrje', label: 'Hyrje', tone: 'success' },
-            { value: 'Dalje', label: 'Dalje', tone: 'danger' },
-          ]}
-          onChange={entry.setLloji}
-        />
+        <div>
+          <div className="mobile-section-label">Lloji i veprimit</div>
+          <SegmentedControl<'Hyrje' | 'Dalje'>
+            value={entry.lloji}
+            options={[
+              { value: 'Hyrje', label: 'Hyrje', tone: 'success' },
+              { value: 'Dalje', label: 'Dalje', tone: 'danger' },
+            ]}
+            onChange={entry.setLloji}
+          />
+        </div>
 
         <div className="mobile-field-row">
           <button type="button" className="mobile-tap-field" onClick={() => setCountryOpen(true)}>
@@ -107,7 +110,7 @@ export function VeprimeTab(props: {
         </div>
         <div>
           <label className="mobile-label" htmlFor="veprime-pershkrimi">
-            Pershkrimi
+            Përshkrimi
           </label>
           <input
             id="veprime-pershkrimi"
@@ -148,7 +151,7 @@ export function VeprimeTab(props: {
       </div>
 
       <StickyCta
-        label="FINALIZO"
+        label="FINALIZO VEPRIMIN"
         disabled={!entry.hasValidItems}
         loading={entry.mutation.isPending}
         onClick={entry.requestFinalize}

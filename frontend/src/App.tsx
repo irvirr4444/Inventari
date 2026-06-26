@@ -7,6 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { AuthLoading } from './components/AuthLoading'
 import { useAuth } from './lib/auth/AuthProvider'
 import { useMobileClient } from './hooks/useMobileClient'
 import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
@@ -44,17 +45,6 @@ const HistoryPrintPage = React.lazy(() =>
 
 function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
-}
-
-function AuthLoading() {
-  return (
-    <main className="container auth-container">
-      <section className="card auth-card">
-        <h1>Inventari</h1>
-        <p className="muted">Duke kontrolluar sesionin...</p>
-      </section>
-    </main>
-  )
 }
 
 function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }) {

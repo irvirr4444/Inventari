@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { LogOutIcon } from '../../../components/icons'
+import { MobileAppHeader } from '../../../mobile/components/MobileAppHeader'
 import { Snackbar } from '../../../components/Snackbar'
 import { useSnackbar } from '../../../hooks/useSnackbar'
 import { useOverscrollLock } from '../../../hooks/useOverscrollLock'
@@ -20,7 +20,7 @@ import './dynamic-mobile.css'
 
 const TAB_TITLES: Record<TabId, string> = {
   veprime: 'Veprime',
-  transfer: 'Transfer',
+  transfer: 'Transfero',
   produkte: 'Produkte',
   histori: 'Histori',
   permblehdje: 'Totalet',
@@ -65,29 +65,10 @@ export function DynamicMobileApp(props: {
   const contentClass = CTA_TABS.includes(tab)
     ? 'mobile-content mobile-content-with-cta'
     : 'mobile-content'
-  const headerTitle = header.kind === 'sub' ? header.title : TAB_TITLES[tab]
 
   return (
     <div className="mobile-app dynamic-mobile-app">
-      <header className="mobile-header">
-        <div className="mobile-header-start">
-          {header.kind === 'sub' ? (
-            <button
-              type="button"
-              className="mobile-header-back"
-              aria-label="Kthehu"
-              onClick={header.onBack}
-            >
-              ←
-            </button>
-          ) : null}
-          <span className="mobile-header-title">{headerTitle}</span>
-        </div>
-        <button type="button" className="mobile-header-logout" onClick={props.onLogout}>
-          <LogOutIcon />
-          <span>Dil</span>
-        </button>
-      </header>
+      <MobileAppHeader header={header} tabTitle={TAB_TITLES[tab]} onLogout={props.onLogout} />
 
       <main ref={contentRef} className={contentClass}>
         <MobileTabSlot tab="veprime" activeTab={tab}>
@@ -100,7 +81,11 @@ export function DynamicMobileApp(props: {
           <DynamicProdukteTab notify={notify} />
         </MobileTabSlot>
         <MobileTabSlot tab="histori" activeTab={tab}>
-          <DynamicHistoriTab notify={notify} onHeaderChange={setHeader} />
+          <DynamicHistoriTab
+            notify={notify}
+            onHeaderChange={setHeader}
+            onNavigateToHistori={() => setTab('histori')}
+          />
         </MobileTabSlot>
         <MobileTabSlot tab="permblehdje" activeTab={tab}>
           <DynamicPermbledhjeTab />

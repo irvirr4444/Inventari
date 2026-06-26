@@ -167,7 +167,7 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
 
       <div className="history-filters-search-row">
         <div className="history-filter-group history-filter-group-labeled history-filter-search">
-          <span className="history-filter-group-label">Pershkrimi</span>
+          <span className="history-filter-group-label">Përshkrimi</span>
           <DebouncedSearchInput
             className="input history-filter-pershkrimi"
             clearable

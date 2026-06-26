@@ -58,7 +58,7 @@ export function ActionMetaFields(props: {
           />
         </div>
         <div className="action-header-control action-header-control-pershkrimi">
-          <span className="muted action-header-control-label">Pershkrimi</span>
+          <span className="muted action-header-control-label">Përshkrimi</span>
           <PershkrimiInput
             id="action-meta-pershkrimi"
             className="input action-meta-pershkrimi-input"
@@ -106,7 +106,7 @@ export function ActionMetaFields(props: {
         </div>
         <div className="action-meta-field action-meta-field-pershkrimi">
           <label className="label" htmlFor="action-meta-pershkrimi">
-            Pershkrimi
+            Përshkrimi
           </label>
           <PershkrimiInput
             id="action-meta-pershkrimi"
@@ -138,7 +138,7 @@ export function ActionMetaFields(props: {
       </div>
       <div className="action-meta-field action-meta-field-grow">
         <label className="label" htmlFor="action-meta-pershkrimi">
-          Pershkrimi
+          Përshkrimi
         </label>
         <PershkrimiInput
           id="action-meta-pershkrimi"

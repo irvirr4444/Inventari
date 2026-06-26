@@ -83,8 +83,9 @@ html.mobile-client .mobile-sheet {
   z-index: 1;
 }
 
-.mobile-auth-loading .auth-card {
-  width: 100%;
+.mobile-auth-loading {
+  min-height: 100dvh;
+  background: var(--bg);
 }
 
 .mobile-date-field .date-input-placeholder {

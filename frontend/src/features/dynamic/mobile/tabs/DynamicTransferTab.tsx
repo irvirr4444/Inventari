@@ -82,19 +82,21 @@ export function DynamicTransferTab(props: {
   return (
     <>
       <div className="mobile-tab-panel mobile-tab-panel--action">
-        <div className="mobile-field-row">
-          <DynamicLocationField
-            label="Nga"
-            value={entry.transferFrom}
-            locations={sortedLocations}
-            onOpen={() => setFromOpen(true)}
-          />
-          <DynamicLocationField
-            label="Te"
-            value={entry.transferTo}
-            locations={sortedLocations}
-            onOpen={() => setToOpen(true)}
-          />
+        <div className="mobile-action-top-slot">
+          <div className="mobile-field-row mobile-action-top-loco-row">
+            <DynamicLocationField
+              label="Nga"
+              value={entry.transferFrom}
+              locations={sortedLocations}
+              onOpen={() => setFromOpen(true)}
+            />
+            <DynamicLocationField
+              label="Te"
+              value={entry.transferTo}
+              locations={sortedLocations}
+              onOpen={() => setToOpen(true)}
+            />
+          </div>
         </div>
 
         <div className="mobile-field-row">
@@ -117,8 +119,8 @@ export function DynamicTransferTab(props: {
             />
           </div>
         </div>
-        <div>
-          <label className="mobile-label" htmlFor="dynamic-transfer-pershkrimi">Pershkrimi</label>
+        <div className="mobile-action-pershkrimi-row">
+          <label className="mobile-label" htmlFor="dynamic-transfer-pershkrimi">Përshkrimi</label>
           <input
             id="dynamic-transfer-pershkrimi"
             type="text"
@@ -130,7 +132,7 @@ export function DynamicTransferTab(props: {
           />
         </div>
 
-        <div>
+        <div className="mobile-action-products-slot">
           <div className="mobile-section-label">Produktet</div>
           <button type="button" className="mobile-btn-outline" onClick={openAdd}>
             + Shto Produkt

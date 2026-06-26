@@ -232,7 +232,7 @@ export function HistoryModal(props: {
                   <th className="history-col-expand" />
                   <th className="history-col-date">Data</th>
                   <th className="history-col-ora">Ora</th>
-                  <th className="history-col-pershkrimi">Pershkrimi</th>
+                  <th className="history-col-pershkrimi">Përshkrimi</th>
                   <th className="history-col-lloji">Lloji</th>
                   <th className="history-col-shteti">Shteti</th>
                   <th className="history-col-products">Produkte</th>

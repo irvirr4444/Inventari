@@ -119,7 +119,7 @@ export function getReviewLineTotal(item: ActionItemDraft, showPrice: boolean): n
 }
 
 export const REVIEW_VISIBLE_ROWS = 10
-export const MOBILE_REVIEW_VISIBLE_ROWS = 4
+export const MOBILE_REVIEW_VISIBLE_ROWS = 5
 
 export function reviewProductCountLabel(count: number): string {
   return count === 1 ? '1 produkt' : `${count} produkte`
@@ -127,4 +127,10 @@ export function reviewProductCountLabel(count: number): string {
 
 export function reviewScrollHint(count: number): string {
   return `↕ ${count} produkte — scroll për të parë të gjitha`
+}
+
+export function mobileReviewScrollAffordance(hiddenCount: number): string {
+  if (hiddenCount <= 0) return 'Scroll për të parë të gjitha'
+  if (hiddenCount === 1) return '1 më shumë'
+  return `${hiddenCount} më shumë`
 }

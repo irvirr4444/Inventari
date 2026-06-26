@@ -97,7 +97,7 @@ function ProductPickerForm(props: {
         <span className="mobile-picker-empty-text">
           {selectedProduct
             ? productLabel(selectedProduct.emri, selectedProduct.kodi)
-            : 'Zgjidh nje produkt nga lista'}
+            : 'Zgjidh një produkt nga lista'}
         </span>
         {selectedProduct ? (
           <span className="mobile-picker-empty-check" aria-hidden="true">

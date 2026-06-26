@@ -123,7 +123,7 @@ function formatFilterLines(
   if (query.oraFrom || query.oraDeri) {
     lines.push(`Ora: ${query.oraFrom ?? '…'} – ${query.oraDeri ?? '…'}`)
   }
-  if (query.pershkrimi?.trim()) lines.push(`Pershkrimi: "${query.pershkrimi.trim()}"`)
+  if (query.pershkrimi?.trim()) lines.push(`Përshkrimi: "${query.pershkrimi.trim()}"`)
   if (query.shenim?.trim()) lines.push(`Shenim: "${query.shenim.trim()}"`)
   if (trackPrice && (query.totaliMin !== undefined || query.totaliMax !== undefined)) {
     lines.push(

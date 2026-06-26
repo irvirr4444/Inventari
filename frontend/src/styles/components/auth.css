@@ -120,3 +120,114 @@
 .auth-error-slot {
   margin-top: 4px;
 }
+
+/* Full-screen session / route loading */
+.auth-loading-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+.auth-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: min(100%, 320px);
+  text-align: center;
+}
+
+.auth-loading-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.auth-loading-orbit {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-loading-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--primary);
+  border-right-color: rgba(47, 125, 246, 0.28);
+  animation: auth-loading-spin 1.15s cubic-bezier(0.55, 0.15, 0.35, 0.85) infinite;
+}
+
+.auth-loading-orbit-ring--delayed {
+  inset: 6px;
+  border-top-color: rgba(126, 184, 232, 0.9);
+  border-right-color: transparent;
+  border-bottom-color: rgba(47, 125, 246, 0.15);
+  animation-duration: 1.65s;
+  animation-direction: reverse;
+}
+
+.auth-loading-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 10px;
+  animation: auth-loading-logo-pulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 14px rgba(47, 125, 246, 0.35));
+}
+
+.auth-loading-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.auth-loading-status {
+  margin: 0;
+  min-height: 22px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.58);
+  animation: auth-loading-status-in 0.45s ease-out;
+}
+
+@keyframes auth-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-loading-logo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.92;
+  }
+}
+
+@keyframes auth-loading-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

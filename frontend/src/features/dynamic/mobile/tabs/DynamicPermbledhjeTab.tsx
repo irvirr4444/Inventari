@@ -63,7 +63,7 @@ export function DynamicPermbledhjeTab() {
   const scrollableList = summaryLocations.length > 6
 
   return (
-    <div className="mobile-tab-panel dynamic-permbledhje-panel">
+    <div className="mobile-tab-panel mobile-tab-panel--action dynamic-permbledhje-panel">
       <div className="mobile-field-row mobile-field-row--date-range dynamic-permbledhje-dates">
         <MobileDateRangeInput
           from={from}

@@ -1,3 +1,4 @@
+import * as React from 'react'
 import type { ActionBatch, ProductListItem } from '../../lib/api'
 import { type Country } from '../../lib/country'
 import { fmtEuro } from '../../lib/format'
@@ -7,8 +8,8 @@ import {
   MOBILE_REVIEW_VISIBLE_ROWS,
   type ReviewLocation,
   ReviewRouteMeta,
+  mobileReviewScrollAffordance,
   reviewProductCountLabel,
-  reviewScrollHint,
 } from '../../features/actions/actionReviewShared'
 import { BottomSheet } from './BottomSheet'
 import { SheetActionFooter } from './SheetActions'
@@ -34,6 +35,9 @@ type MobileActionReviewSheetProps = {
   actionOra: string
   actionPershkrimi: string
   showPrice?: boolean
+  title?: string
+  confirmLabel?: string
+  totalLabel?: string
   onCancel: () => void
   onConfirm: () => void
 } & (
@@ -61,13 +65,72 @@ type MobileActionReviewSheetProps = {
     ))
 )
 
+type ReviewListScrollState = 'none' | 'more' | 'end'
+
+function useReviewListScrollState(
+  listRef: React.RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+  open: boolean,
+  itemCount: number,
+) {
+  const [state, setState] = React.useState<ReviewListScrollState>('none')
+  const [hiddenCount, setHiddenCount] = React.useState(0)
+
+  React.useLayoutEffect(() => {
+    const el = listRef.current
+    if (!el || !enabled || !open) {
+      setState('none')
+      setHiddenCount(0)
+      return
+    }
+
+    const update = () => {
+      const { scrollHeight, clientHeight, scrollTop } = el
+      if (scrollHeight <= clientHeight + 2) {
+        setState('none')
+        setHiddenCount(0)
+        return
+      }
+
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 10
+      setState(atBottom ? 'end' : 'more')
+
+      const row = el.querySelector('.mobile-action-review-row')
+      const rowHeight = row instanceof HTMLElement ? row.offsetHeight : 84
+      const gap = 8
+      const visibleRows = Math.max(1, Math.floor((clientHeight + gap) / (rowHeight + gap)))
+      setHiddenCount(Math.max(0, itemCount - visibleRows))
+    }
+
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => {
+      el.removeEventListener('scroll', update)
+      observer.disconnect()
+    }
+  }, [enabled, open, itemCount, listRef])
+
+  return { state, hiddenCount }
+}
+
 export function MobileActionReviewSheet(props: MobileActionReviewSheetProps) {
   const showPrice = props.showPrice ?? true
   const displayItems = props.items.filter((i) => i.kodi_produktit.trim())
-  const showScrollHint = displayItems.length > MOBILE_REVIEW_VISIBLE_ROWS
+  const listScrollable = displayItems.length > MOBILE_REVIEW_VISIBLE_ROWS
+  const listRef = React.useRef<HTMLDivElement>(null)
+  const { state: listScrollState, hiddenCount } = useReviewListScrollState(
+    listRef,
+    listScrollable,
+    props.open,
+    displayItems.length,
+  )
+  const showScrollAffordance = listScrollable && listScrollState === 'more'
   const isTransfer = props.lloji === 'Transfer'
-  const title = isTransfer ? 'Finalizo transfertën?' : 'Finalizo veprimin?'
-  const totalLabel = isTransfer ? 'Totali i transfertës' : 'Totali i veprimit'
+  const title = props.title ?? (isTransfer ? 'Finalizo transfertën?' : 'Finalizo veprimin?')
+  const totalLabel = props.totalLabel ?? (isTransfer ? 'Totali i transfertës' : 'Totali i veprimit')
+  const confirmLabel = props.confirmLabel ?? (props.loading ? 'Duke finalizuar…' : 'Konfirmo')
   const dateTime = formatActionDateTime(props.actionDate, props.actionOra)
   const pershkrimi = props.actionPershkrimi.trim()
 
@@ -80,7 +143,7 @@ export function MobileActionReviewSheet(props: MobileActionReviewSheetProps) {
       footer={
         <SheetActionFooter
           onCancel={props.onCancel}
-          confirmLabel={props.loading ? 'Duke finalizuar…' : 'Konfirmo'}
+          confirmLabel={confirmLabel}
           confirmLoading={props.loading}
           onConfirm={props.onConfirm}
         />
@@ -102,22 +165,36 @@ export function MobileActionReviewSheet(props: MobileActionReviewSheetProps) {
         </div>
       </div>
 
-      <div className="mobile-list-stack mobile-action-review-list">
-        {displayItems.map((item) => (
-          <MobileActionReviewProductRow
-            key={item.key}
-            item={item}
-            products={props.products}
-            showPrice={showPrice}
-          />
-        ))}
+      <div className="mobile-action-review-list-wrap">
+        <div
+          ref={listRef}
+          className={`mobile-list-stack mobile-action-review-list${listScrollable ? ' mobile-action-review-list--scrollable' : ''}`}
+        >
+          {displayItems.map((item) => (
+            <MobileActionReviewProductRow
+              key={item.key}
+              item={item}
+              products={props.products}
+              showPrice={showPrice}
+            />
+          ))}
+        </div>
+        {showScrollAffordance ? (
+          <>
+            <div className="mobile-action-review-list-fade" aria-hidden="true" />
+            <div
+              className="mobile-action-review-scroll-affordance"
+              aria-live="polite"
+              aria-hidden={!showScrollAffordance}
+            >
+              <span className="mobile-action-review-scroll-chevron" aria-hidden="true">
+                ↓
+              </span>
+              <span>{mobileReviewScrollAffordance(hiddenCount)}</span>
+            </div>
+          </>
+        ) : null}
       </div>
-
-      {showScrollHint ? (
-        <p className="mobile-action-review-scroll-hint" aria-live="polite">
-          {reviewScrollHint(displayItems.length)}
-        </p>
-      ) : null}
 
       {showPrice ? (
         <div className="mobile-total-row mobile-action-review-total">

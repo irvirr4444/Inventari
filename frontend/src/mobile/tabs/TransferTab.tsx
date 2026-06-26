@@ -145,7 +145,7 @@ export function TransferTab(props: {
         </div>
         <div>
           <label className="mobile-label" htmlFor="transfer-pershkrimi">
-            Pershkrimi
+            Përshkrimi
           </label>
           <input
             id="transfer-pershkrimi"

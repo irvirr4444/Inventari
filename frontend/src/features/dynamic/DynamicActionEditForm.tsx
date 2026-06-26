@@ -135,7 +135,7 @@ export function DynamicActionEditForm(props: {
             />
           </div>
           <div className="form-group history-edit-pershkrimi">
-            <label className="label">Pershkrimi</label>
+            <label className="label">Përshkrimi</label>
             <input
               className="input"
               value={meta.pershkrimi}

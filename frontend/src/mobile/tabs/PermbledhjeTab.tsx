@@ -65,7 +65,7 @@ export function PermbledhjeTab() {
     (query.data?.AL ?? emptySummary).out_qty === 0
 
   return (
-    <div className="mobile-tab-panel">
+    <div className="mobile-tab-panel mobile-tab-panel--action">
       <div className="mobile-field-row mobile-field-row--date-range">
         <MobileDateRangeInput
           from={from}

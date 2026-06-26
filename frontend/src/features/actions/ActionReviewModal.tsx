@@ -1,9 +1,8 @@
 import * as React from 'react'
 import type { ProductListItem } from '../../lib/api'
-import { COUNTRY_META, type Country } from '../../lib/country'
-import { countryHistoryLabel, countryLabel, fmt, productLabel } from '../../lib/format'
+import { type Country } from '../../lib/country'
+import { fmt } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
-import { effectiveSasia } from '../../types/actionItem'
 import { NumericInput } from '../../components/NumericInput'
 import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
@@ -13,10 +12,18 @@ import { LlojiBadge } from '../history/historyBadges'
 import { ActionMetaDisplay } from './ActionMetaDisplay'
 import { ActionItemShenim } from './ActionItemShenim'
 import { formatActionDateTime } from '../../lib/actionMeta'
+import {
+  getReviewLineTotal,
+  getReviewProductLabel,
+  type ReviewLocation,
+  ReviewRouteMeta,
+  REVIEW_VISIBLE_ROWS,
+  reviewProductCountLabel,
+  reviewScrollHint,
+} from './actionReviewShared'
 
 const REVIEW_TABLE_COL_WIDTHS_FULL = ['34%', '10%', '17%', '14%', '25%'] as const
 const REVIEW_TABLE_COL_WIDTHS_NO_PRICE = ['58%', '20%', '22%'] as const
-const REVIEW_VISIBLE_ROWS = 10
 
 function ReviewTableColgroup(props: { widths: readonly string[] }) {
   return (
@@ -25,86 +32,6 @@ function ReviewTableColgroup(props: { widths: readonly string[] }) {
         <col key={i} style={{ width }} />
       ))}
     </colgroup>
-  )
-}
-
-type ReviewLocation = { emri: string; flagEmoji?: string | null }
-
-function ReviewLocationEndpoint(props: { location: ReviewLocation }) {
-  return (
-    <span className="action-review-transfer-endpoint">
-      {props.location.flagEmoji ? (
-        <span className="action-review-transfer-badge" aria-hidden="true">
-          {props.location.flagEmoji}
-        </span>
-      ) : null}
-      <span className="action-review-transfer-name">{props.location.emri}</span>
-    </span>
-  )
-}
-
-function ReviewCountryEndpoint(props: { country: Country }) {
-  const meta = COUNTRY_META[props.country]
-  return (
-    <span className="action-review-transfer-endpoint">
-      <img className="flagIcon" src={meta.flagSrc} alt="" />
-      <span className="action-review-transfer-name">{countryHistoryLabel(props.country)}</span>
-    </span>
-  )
-}
-
-function ReviewRouteMeta(
-  props:
-    | { country: Country; location?: never; transferFrom?: never; transferTo?: never; transferFromLocation?: never; transferToLocation?: never }
-    | { location: ReviewLocation; country?: never; transferFrom?: never; transferTo?: never; transferFromLocation?: never; transferToLocation?: never }
-    | { transferFrom: Country; transferTo: Country; country?: never; location?: never; transferFromLocation?: never; transferToLocation?: never }
-    | {
-        transferFromLocation: ReviewLocation
-        transferToLocation: ReviewLocation
-        country?: never
-        location?: never
-        transferFrom?: never
-        transferTo?: never
-      },
-) {
-  if ('transferFrom' in props && props.transferFrom) {
-    return (
-      <span className="action-review-transfer-route">
-        <ReviewCountryEndpoint country={props.transferFrom} />
-        <span className="action-review-transfer-arrow" aria-hidden="true">
-          →
-        </span>
-        <ReviewCountryEndpoint country={props.transferTo} />
-      </span>
-    )
-  }
-
-  if ('transferFromLocation' in props && props.transferFromLocation) {
-    return (
-      <span className="action-review-transfer-route">
-        <ReviewLocationEndpoint location={props.transferFromLocation} />
-        <span className="action-review-transfer-arrow" aria-hidden="true">
-          →
-        </span>
-        <ReviewLocationEndpoint location={props.transferToLocation} />
-      </span>
-    )
-  }
-
-  if ('location' in props && props.location) {
-    return (
-      <span className="action-review-meta-country">
-        <ReviewLocationEndpoint location={props.location} />
-      </span>
-    )
-  }
-
-  const countryMeta = COUNTRY_META[props.country!]
-  return (
-    <span className="action-review-meta-country">
-      <img className="flagIcon" src={countryMeta.flagSrc} alt="" />
-      {countryLabel(props.country!)}
-    </span>
   )
 }
 
@@ -131,7 +58,12 @@ type ActionReviewModalProps = {
   | ({
       lloji: 'Transfer'
     } & (
-      | { transferFrom: Country; transferTo: Country; transferFromLocation?: never; transferToLocation?: never }
+      | {
+          transferFrom: Country
+          transferTo: Country
+          transferFromLocation?: never
+          transferToLocation?: never
+        }
       | {
           transferFromLocation: ReviewLocation
           transferToLocation: ReviewLocation
@@ -154,7 +86,6 @@ export function ActionReviewModal(props: ActionReviewModalProps) {
   const title = isTransfer ? 'Finalizo transfertën?' : 'Finalizo veprimin?'
   const totalLabel = isTransfer ? 'Totali i transfertës' : 'Totali i veprimit'
 
-  const productByKodi = new Map(props.products.map((p) => [p.kodi, p]))
   const contentRef = React.useRef<HTMLDivElement>(null)
 
   useEnterToConfirm(props.onConfirm, { disabled: props.loading })
@@ -192,7 +123,7 @@ export function ActionReviewModal(props: ActionReviewModalProps) {
           </span>
           <span className="muted">{formatActionDateTime(props.actionDate, props.actionOra)}</span>
           <span className="action-review-meta-count muted">
-            {displayItems.length === 1 ? '1 produkt' : `${displayItems.length} produkte`}
+            {reviewProductCountLabel(displayItems.length)}
           </span>
         </div>
         <ActionMetaDisplay
@@ -223,12 +154,8 @@ export function ActionReviewModal(props: ActionReviewModalProps) {
               <ReviewTableColgroup widths={columnWidths} />
               <tbody>
                 {displayItems.map((it) => {
-                  const product = productByKodi.get(it.kodi_produktit)
-                  const label = product
-                    ? productLabel(product.emri, product.kodi)
-                    : it.kodi_produktit
-                  const lineTotal =
-                    (Number(it.cmimi_njesi) || 0) * effectiveSasia(it.sasia)
+                  const label = getReviewProductLabel(it.kodi_produktit, props.products)
+                  const lineTotal = getReviewLineTotal(it, showPrice)
 
                   return (
                     <tr key={it.key}>
@@ -302,9 +229,7 @@ export function ActionReviewModal(props: ActionReviewModalProps) {
             aria-live="polite"
             aria-hidden={!showScrollHint}
           >
-            {showScrollHint
-              ? `↕ ${displayItems.length} produkte — scroll për të parë të gjitha`
-              : null}
+            {showScrollHint ? reviewScrollHint(displayItems.length) : null}
           </p>
         </div>
 

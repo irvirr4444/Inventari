@@ -124,12 +124,13 @@ function HistoriEditProductRow(props: {
             onChange={(value) => props.onDraftChange({ shenim: value })}
             onNotify={props.onNotify}
             disabled={props.disabled}
-            className="mobile-icon-btn"
+            icon="edit"
+            className="mobile-row-card-action-btn mobile-row-card-action-btn--edit"
           />
           {props.canRemove ? (
             <button
               type="button"
-              className="mobile-icon-btn"
+              className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
               aria-label="Fshi produktin"
               disabled={props.disabled}
               onClick={props.onRemove}

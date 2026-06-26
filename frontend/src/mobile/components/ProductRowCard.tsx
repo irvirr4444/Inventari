@@ -1,16 +1,13 @@
-import { DeleteIcon } from '../../components/icons'
+import { DeleteIcon, EditIcon } from '../../components/icons'
 import { fmtEuro, productLabel } from '../../lib/format'
 import type { ActionItemDraft } from '../../types/actionItem'
 import type { Produkti } from '../../lib/api'
-import { ActionItemShenim, type ShenimNotify } from '../../features/actions/ActionItemShenim'
 
 export function ProductRowCard(props: {
   item: ActionItemDraft
   products: Produkti[]
   onTap: () => void
   onRemove: () => void
-  onShenimChange: (value: string) => void
-  onNotify?: ShenimNotify
 }) {
   const product = props.products.find((p) => p.kodi === props.item.kodi_produktit)
   const price = Number(props.item.cmimi_njesi) || 0
@@ -35,15 +32,20 @@ export function ProductRowCard(props: {
         <div className="mobile-row-card-total">Total: {fmtEuro(total)}</div>
       </div>
       <div className="mobile-row-card-actions">
-        <ActionItemShenim
-          value={props.item.shenim}
-          onChange={props.onShenimChange}
-          onNotify={props.onNotify}
-          className="mobile-icon-btn"
-        />
         <button
           type="button"
-          className="mobile-icon-btn"
+          className={`mobile-row-card-action-btn mobile-row-card-action-btn--edit${props.item.shenim.trim() ? ' has-note' : ''}`}
+          aria-label="Ndrysho produktin"
+          onClick={(e) => {
+            e.stopPropagation()
+            props.onTap()
+          }}
+        >
+          <EditIcon />
+        </button>
+        <button
+          type="button"
+          className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
           aria-label="Fshi produktin"
           onClick={(e) => {
             e.stopPropagation()

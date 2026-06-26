@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { HoverTooltip } from '../../components/HoverTooltip'
-import { NoteIcon } from '../../components/icons'
+import { EditIcon, NoteIcon } from '../../components/icons'
 import { useMobileClient } from '../../hooks/useMobileClient'
 import { ShenimPopup } from './ShenimPopup'
 
@@ -32,6 +32,7 @@ export function ActionItemShenim(props: {
   className?: string
   hideWhenEmpty?: boolean
   variant?: 'default' | 'review'
+  icon?: 'note' | 'edit'
 }) {
   const isMobile = useMobileClient()
   const [open, setOpen] = React.useState(false)
@@ -39,6 +40,7 @@ export function ActionItemShenim(props: {
   const readOnly = props.readOnly ?? false
   const editable = Boolean(props.onChange) && !readOnly
   const variant = props.variant ?? 'default'
+  const icon = props.icon ?? 'note'
 
   if (props.hideWhenEmpty && !filled) {
     return null
@@ -91,7 +93,7 @@ export function ActionItemShenim(props: {
             : 'Shenim per produktin'
       }
     >
-      <NoteIcon filled={filled} />
+      {icon === 'edit' ? <EditIcon /> : <NoteIcon filled={filled} />}
     </button>
   )
 

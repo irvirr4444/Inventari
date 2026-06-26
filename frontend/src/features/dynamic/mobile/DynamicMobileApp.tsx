@@ -5,6 +5,7 @@ import { Snackbar } from '../../../components/Snackbar'
 import { useSnackbar } from '../../../hooks/useSnackbar'
 import { useOverscrollLock } from '../../../hooks/useOverscrollLock'
 import { BottomNav } from '../../../mobile/components/BottomNav'
+import { MobileTabSlot } from '../../../mobile/components/MobileTabSlot'
 import type { MobileHeaderState, TabId } from '../../../mobile/types'
 import { DynamicHistoriTab } from './tabs/DynamicHistoriTab'
 import { DynamicPermbledhjeTab } from './tabs/DynamicPermbledhjeTab'
@@ -89,13 +90,21 @@ export function DynamicMobileApp(props: {
       </header>
 
       <main ref={contentRef} className={contentClass}>
-        {tab === 'veprime' && <DynamicVeprimeTab notify={notify} />}
-        {tab === 'transfer' && <DynamicTransferTab notify={notify} />}
-        {tab === 'produkte' && <DynamicProdukteTab notify={notify} />}
-        {tab === 'histori' && (
+        <MobileTabSlot tab="veprime" activeTab={tab}>
+          <DynamicVeprimeTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="transfer" activeTab={tab}>
+          <DynamicTransferTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="produkte" activeTab={tab}>
+          <DynamicProdukteTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="histori" activeTab={tab}>
           <DynamicHistoriTab notify={notify} onHeaderChange={setHeader} />
-        )}
-        {tab === 'permblehdje' && <DynamicPermbledhjeTab />}
+        </MobileTabSlot>
+        <MobileTabSlot tab="permblehdje" activeTab={tab}>
+          <DynamicPermbledhjeTab />
+        </MobileTabSlot>
       </main>
 
       <BottomNavPortal

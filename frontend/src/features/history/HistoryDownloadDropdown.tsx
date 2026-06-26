@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { BottomSheet } from '../../mobile/components/BottomSheet'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
 import {
@@ -103,8 +104,9 @@ export function HistoryDownloadDropdown(props: {
 
   const isBusy = loadingFormat !== null
   const isDisabled = disabled || isBusy
+  const useBottomSheet = variant === 'mobile-footer' || variant === 'mobile'
 
-  useEscapeToClose(() => setOpen(false), { enabled: open })
+  useEscapeToClose(() => setOpen(false), { enabled: open && !useBottomSheet })
 
   const repositionMenu = React.useCallback(() => {
     const trigger = triggerRef.current
@@ -123,14 +125,14 @@ export function HistoryDownloadDropdown(props: {
   }, [])
 
   React.useLayoutEffect(() => {
-    if (!open) return
+    if (!open || useBottomSheet) return
     repositionMenu()
     const raf = requestAnimationFrame(repositionMenu)
     return () => cancelAnimationFrame(raf)
-  }, [open, repositionMenu])
+  }, [open, repositionMenu, useBottomSheet])
 
   React.useEffect(() => {
-    if (!open) return
+    if (!open || useBottomSheet) return
     const onScrollOrResize = () => repositionMenu()
     window.addEventListener('resize', onScrollOrResize)
     window.addEventListener('scroll', onScrollOrResize, true)
@@ -138,10 +140,10 @@ export function HistoryDownloadDropdown(props: {
       window.removeEventListener('resize', onScrollOrResize)
       window.removeEventListener('scroll', onScrollOrResize, true)
     }
-  }, [open, repositionMenu])
+  }, [open, repositionMenu, useBottomSheet])
 
   React.useEffect(() => {
-    if (!open) return
+    if (!open || useBottomSheet) return
     const onDown = (event: MouseEvent) => {
       const target = event.target
       if (!(target instanceof Node)) return
@@ -150,7 +152,7 @@ export function HistoryDownloadDropdown(props: {
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  }, [open, useBottomSheet])
 
   const handleSelect = React.useCallback(
     async (format: HistoryDocumentFormat) => {
@@ -186,8 +188,24 @@ export function HistoryDownloadDropdown(props: {
         ? 'history-export-dropdown history-export-dropdown--mobile'
         : 'history-export-dropdown'
 
+  const exportOptions = EXPORT_OPTIONS.map(({ format, ext }) => (
+    <button
+      key={format}
+      type="button"
+      role="menuitem"
+      className={
+        useBottomSheet ? 'history-export-sheet-option' : 'history-export-menu-item'
+      }
+      disabled={isBusy}
+      onClick={() => void handleSelect(format)}
+    >
+      <FileFormatIcon format={format} />
+      <span>{ext}</span>
+    </button>
+  ))
+
   const menu =
-    open && menuPos && !isDisabled
+    open && !useBottomSheet && menuPos && !isDisabled
       ? createPortal(
           <div
             ref={menuRef}
@@ -199,21 +217,20 @@ export function HistoryDownloadDropdown(props: {
               minWidth: menuPos.minWidth,
             }}
           >
-            {EXPORT_OPTIONS.map(({ format, ext }) => (
-              <button
-                key={format}
-                type="button"
-                role="menuitem"
-                className="history-export-menu-item"
-                disabled={isBusy}
-                onClick={() => void handleSelect(format)}
-              >
-                <FileFormatIcon format={format} />
-                <span>{ext}</span>
-              </button>
-            ))}
+            {exportOptions}
           </div>,
           document.body,
+        )
+      : null
+
+  const sheet =
+    useBottomSheet && !isDisabled
+      ? (
+          <BottomSheet open={open} title="Shkarko" onClose={() => setOpen(false)}>
+            <div className="history-export-sheet-row" role="menu">
+              {exportOptions}
+            </div>
+          </BottomSheet>
         )
       : null
 
@@ -254,6 +271,7 @@ export function HistoryDownloadDropdown(props: {
         </button>
       </div>
       {menu}
+      {sheet}
     </div>
   )
 }

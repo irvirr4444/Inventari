@@ -4,12 +4,10 @@ import { useDynamicTransferEntry } from '../../../../hooks/useDynamicTransferEnt
 import { OraInput } from '../../../../components/OraInput'
 import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
-import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { createEmptyActionItem } from '../../../../types/actionItem'
-import { BottomSheet } from '../../../../mobile/components/BottomSheet'
-import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
+import { MobileActionReviewSheet } from '../../../../mobile/components/MobileActionReviewSheet'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
 import { ProductPickerSheet, type ProductPickerSaveData } from '../../../../mobile/components/ProductPickerSheet'
 import { ProductRowCard } from '../../../../mobile/components/ProductRowCard'
@@ -83,7 +81,7 @@ export function DynamicTransferTab(props: {
 
   return (
     <>
-      <div className="mobile-tab-panel">
+      <div className="mobile-tab-panel mobile-tab-panel--action">
         <div className="mobile-field-row">
           <DynamicLocationField
             label="Nga"
@@ -148,8 +146,6 @@ export function DynamicTransferTab(props: {
                 products={pickerProducts}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
-                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
-                onNotify={props.notify}
               />
             ))}
           </div>
@@ -211,37 +207,28 @@ export function DynamicTransferTab(props: {
         onSave={handleSave}
       />
 
-      <BottomSheet
+      <MobileActionReviewSheet
         open={entry.confirmOpen}
-        title="Finalizo transfertën?"
-        onClose={() => entry.setConfirmOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => entry.setConfirmOpen(false)}
-            confirmLabel={entry.mutation.isPending ? 'Duke finalizuar…' : 'Konfirmo'}
-            confirmLoading={entry.mutation.isPending}
-            onConfirm={() => entry.mutation.mutate()}
-          />
-        }
-      >
-        <p className="mobile-card-meta">
-          Transfer nga {entry.fromLabel} ne {entry.toLabel},{' '}
-          {filledItems.length} produkte
-          {trackPrice ? (
-            <>
-              , total <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>
-            </>
-          ) : null}
-          .
-          {entry.transferOra || entry.transferPershkrimi.trim() ? (
-            <>
-              {' '}
-              {formatActionDateTime(entry.transferDate, entry.transferOra)}
-              {entry.transferPershkrimi.trim() ? ` — ${entry.transferPershkrimi.trim()}` : ''}
-            </>
-          ) : null}
-        </p>
-      </BottomSheet>
+        lloji="Transfer"
+        transferFromLocation={{
+          emri: entry.fromLabel,
+          flagEmoji: sortedLocations.find((l) => l.id === entry.transferFrom)?.flag_emoji,
+        }}
+        transferToLocation={{
+          emri: entry.toLabel,
+          flagEmoji: sortedLocations.find((l) => l.id === entry.transferTo)?.flag_emoji,
+        }}
+        items={entry.itemsState.items}
+        products={products}
+        total={entry.itemsState.total}
+        actionDate={entry.transferDate}
+        actionOra={entry.transferOra}
+        actionPershkrimi={entry.transferPershkrimi}
+        showPrice={trackPrice}
+        loading={entry.mutation.isPending}
+        onCancel={() => entry.setConfirmOpen(false)}
+        onConfirm={() => entry.mutation.mutate()}
+      />
     </>
   )
 }

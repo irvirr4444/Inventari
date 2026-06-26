@@ -1,3 +1,5 @@
+/// <reference types="@capacitor-community/safe-area" />
+
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
@@ -6,6 +8,15 @@ const config: CapacitorConfig = {
   webDir: '../frontend/dist',
   server: {
     androidScheme: 'https',
+  },
+  android: {
+    adjustMarginsForEdgeToEdge: 'disable',
+  },
+  plugins: {
+    SafeArea: {
+      detectViewportFitCoverChanges: true,
+      initialViewportFitCover: true,
+    },
   },
 }
 

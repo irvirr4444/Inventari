@@ -5,12 +5,10 @@ import { InputClearButton } from '../../../../components/InputClearButton'
 import { OraInput } from '../../../../components/OraInput'
 import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
-import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { createEmptyActionItem } from '../../../../types/actionItem'
-import { BottomSheet } from '../../../../mobile/components/BottomSheet'
-import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
+import { MobileActionReviewSheet } from '../../../../mobile/components/MobileActionReviewSheet'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
 import { ProductPickerSheet, type ProductPickerSaveData } from '../../../../mobile/components/ProductPickerSheet'
 import { ProductRowCard } from '../../../../mobile/components/ProductRowCard'
@@ -87,7 +85,7 @@ export function DynamicVeprimeTab(props: {
 
   return (
     <>
-      <div className="mobile-tab-panel">
+      <div className="mobile-tab-panel mobile-tab-panel--action">
         <SegmentedControl<'Hyrje' | 'Dalje'>
           value={entry.lloji}
           options={[
@@ -164,8 +162,6 @@ export function DynamicVeprimeTab(props: {
                 products={pickerProducts}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
-                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
-                onNotify={props.notify}
               />
             ))}
           </div>
@@ -218,37 +214,24 @@ export function DynamicVeprimeTab(props: {
         onSave={handleSave}
       />
 
-      <BottomSheet
+      <MobileActionReviewSheet
         open={entry.confirmOpen}
-        title="Finalizo veprimin?"
-        onClose={() => entry.setConfirmOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => entry.setConfirmOpen(false)}
-            confirmLabel={entry.mutation.isPending ? 'Duke finalizuar…' : 'Konfirmo'}
-            confirmLoading={entry.mutation.isPending}
-            onConfirm={() => entry.mutation.mutate()}
-          />
-        }
-      >
-        <p className="mobile-card-meta">
-          {entry.lloji} ne {selectedLocation?.emri ?? 'lokacion'}
-          {trackPrice ? (
-            <>
-              {' '}
-              me total <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>
-            </>
-          ) : null}
-          .
-          {entry.actionOra || entry.actionPershkrimi.trim() ? (
-            <>
-              {' '}
-              {formatActionDateTime(entry.actionDate, entry.actionOra)}
-              {entry.actionPershkrimi.trim() ? ` — ${entry.actionPershkrimi.trim()}` : ''}
-            </>
-          ) : null}
-        </p>
-      </BottomSheet>
+        lloji={entry.lloji}
+        location={{
+          emri: selectedLocation?.emri ?? 'lokacion',
+          flagEmoji: selectedLocation?.flag_emoji,
+        }}
+        items={entry.itemsState.items}
+        products={products}
+        total={entry.itemsState.total}
+        actionDate={entry.actionDate}
+        actionOra={entry.actionOra}
+        actionPershkrimi={entry.actionPershkrimi}
+        showPrice={trackPrice}
+        loading={entry.mutation.isPending}
+        onCancel={() => entry.setConfirmOpen(false)}
+        onConfirm={() => entry.mutation.mutate()}
+      />
     </>
   )
 }

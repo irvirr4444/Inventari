@@ -5,10 +5,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--mobile-space-sm);
-  padding: max(var(--mobile-space-sm), env(safe-area-inset-top)) var(--mobile-space-md) var(--mobile-space-sm);
+  padding: max(6px, env(safe-area-inset-top)) var(--mobile-space-md) 6px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  min-height: 48px;
+  min-height: 44px;
 }
 
 .mobile-header-start {
@@ -21,8 +21,8 @@
 
 .mobile-header-back {
   flex-shrink: 0;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   margin-left: -8px;
   border: none;
   background: transparent;
@@ -44,9 +44,9 @@
 }
 
 .mobile-header-logout {
-  min-height: 48px;
-  min-width: 48px;
-  padding: 0 12px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 8px;
   border: none;
   background: transparent;
   color: #fff;
@@ -72,9 +72,10 @@
 }
 
 .mobile-content-with-cta {
+  padding-top: var(--mobile-space-sm);
   padding-bottom: calc(
     var(--mobile-tab-height) + var(--mobile-cta-height) + env(safe-area-inset-bottom) +
-      var(--mobile-space-lg)
+      var(--mobile-space-md)
   );
 }
 
@@ -85,16 +86,155 @@
   min-height: 100%;
 }
 
-html.mobile-client .mobile-content:has(.mobile-tab-panel--histori-list) {
+/* Veprime / Transfer: tighter vertical rhythm so ≤3 products fit without scroll */
+.mobile-tab-panel--action {
+  gap: 12px;
+}
+
+.mobile-tab-panel--action .mobile-segmented-btn {
+  min-height: 40px;
+}
+
+.mobile-tab-panel--action .mobile-label {
+  margin-bottom: 4px;
+}
+
+.mobile-tab-panel--action .mobile-input,
+.mobile-tab-panel--action .mobile-select,
+.mobile-tab-panel--action .mobile-tap-field {
+  min-height: 44px;
+}
+
+.mobile-tab-panel--action .mobile-section-label {
+  margin-bottom: var(--mobile-space-xs);
+}
+
+.mobile-tab-panel--action .mobile-btn-outline {
+  min-height: 44px;
+}
+
+.mobile-tab-panel--action .mobile-list-stack {
+  gap: 6px;
+}
+
+.mobile-tab-panel--action .mobile-row-card {
+  padding: 10px 12px;
+  min-height: 48px;
+}
+
+.mobile-tab-panel--action .mobile-row-card-sub {
+  margin-top: 1px;
+}
+
+.mobile-tab-panel--action .mobile-row-card-total {
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.mobile-tab-panel--action .mobile-total-row {
+  padding: 10px 0;
+}
+
+.mobile-tab-slot:not([hidden]) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-tab-slot:not([hidden]) > .mobile-tab-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+.mobile-tab-slot[hidden] {
+  display: none !important;
+}
+
+html.mobile-client .mobile-content:has(
+    .mobile-tab-slot[data-tab='histori']:not([hidden]) .mobile-tab-panel--histori-list
+  ) {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  padding-top: var(--mobile-space-sm);
+  padding-bottom: calc(var(--mobile-tab-height) + env(safe-area-inset-bottom) + var(--mobile-space-sm));
 }
 
 .mobile-tab-panel--histori-list {
   flex: 1;
   min-height: 0;
-  gap: var(--mobile-space-md);
+  gap: 8px;
+}
+
+.mobile-tab-panel--histori-list .mobile-filter-field {
+  min-height: 44px;
+  padding: 5px 8px 6px;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-footer {
+  margin-top: 0;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-list {
+  gap: 6px;
+  align-content: start;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-row-card {
+  padding: 8px 12px;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-row-card__route {
+  margin-top: 2px;
+  min-height: 16px;
+  font-size: 13px;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-row-card__footer {
+  min-height: 14px;
+  font-size: 12px;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-row-card__pershkrimi {
+  font-size: 11px;
+}
+
+.mobile-tab-panel--histori-list .mobile-histori-row-card__datetime {
+  font-size: 12px;
+}
+
+.mobile-tab-panel--histori-list .mobile-badge-hyrje {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--success);
+}
+
+.mobile-tab-panel--histori-list .mobile-badge-dalje {
+  background: rgba(255, 59, 48, 0.12);
+  color: var(--danger);
+}
+
+.mobile-tab-panel--histori-list .mobile-badge-transfer {
+  background: rgba(47, 125, 246, 0.15);
+  color: var(--mobile-sheet-accent-muted, rgba(126, 184, 232, 0.95));
+}
+
+.mobile-tab-panel--histori-list .mobile-badge {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.mobile-tab-panel--histori-list .history-export-dropdown--mobile-footer .history-export-trigger {
+  min-height: 44px;
+}
+
+.mobile-tab-panel--histori-list .mobile-pagination--compact {
+  padding: 6px 8px;
+}
+
+.mobile-tab-panel--histori-list .mobile-pagination--compact .mobile-pagination-nav {
+  width: 32px;
+  height: 32px;
 }
 
 .mobile-bottom-nav {

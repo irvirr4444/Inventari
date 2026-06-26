@@ -40,6 +40,14 @@ npm run android:sync
 
 Then rebuild in Android Studio (**Build → Build APK(s)** or click Run).
 
+## Native dependencies
+
+| Package | Purpose |
+| --- | --- |
+| `@capacitor-community/safe-area` | Bottom/top safe insets in WebView (system nav / status bar vs. app chrome) |
+
+Configured in `capacitor.config.ts` (`adjustMarginsForEdgeToEdge: 'disable'`) and `MainActivity` (`EdgeToEdge.enable`). See [docs/android-apk.md](../docs/android-apk.md#safe-area--system-navigation-bar).
+
 ## Project layout
 
 ```text

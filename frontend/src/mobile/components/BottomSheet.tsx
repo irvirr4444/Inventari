@@ -108,7 +108,7 @@ export function BottomSheet(props: BottomSheetProps) {
         aria-hidden={false}
       />
       <div
-        className={`mobile-sheet open${props.className ? ` ${props.className}` : ''}`}
+        className={`mobile-sheet open mobile-sheet--chrome${props.className ? ` ${props.className}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-sheet-title"

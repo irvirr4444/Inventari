@@ -12,4 +12,17 @@
   --mobile-cta-height: 52px;
   --mobile-edit-footer-height: 108px;
   --mobile-sheet-radius: 16px;
+  --mobile-sheet-bg: var(--surface);
+  --mobile-sheet-text: #fff;
+  --mobile-sheet-text-muted: rgba(255, 255, 255, 0.58);
+  --mobile-sheet-text-subtle: rgba(255, 255, 255, 0.78);
+  --mobile-sheet-panel-bg: rgba(255, 255, 255, 0.06);
+  --mobile-sheet-panel-border: rgba(255, 255, 255, 0.1);
+  --mobile-sheet-panel-border-strong: rgba(255, 255, 255, 0.14);
+  --mobile-sheet-handle: rgba(255, 255, 255, 0.22);
+  --mobile-sheet-footer-border: rgba(255, 255, 255, 0.1);
+  --mobile-sheet-accent-muted: rgba(126, 184, 232, 0.95);
+  --mobile-sheet-selected-bg: rgba(47, 125, 246, 0.12);
+  --mobile-histori-page-rows: 8;
+  --mobile-histori-slot-height: 83px;
 }

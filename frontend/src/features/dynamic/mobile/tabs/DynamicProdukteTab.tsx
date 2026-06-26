@@ -22,6 +22,7 @@ import {
 import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
 import { DynamicProductCard } from '../components/DynamicProductCard'
 import { DynamicMobileStockLevels } from '../components/DynamicMobileStockLevels'
+import { LocationAddModal } from '../../../locations/LocationAddModal'
 
 function DynamicProductFormFields(props: {
   kodi: string
@@ -78,6 +79,7 @@ export function DynamicProdukteTab(props: {
   const [search, setSearch] = React.useState('')
   const [detailProduct, setDetailProduct] = React.useState<DynamicProdukti | null>(null)
   const [addOpen, setAddOpen] = React.useState(false)
+  const [addLocationOpen, setAddLocationOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
 
@@ -202,10 +204,23 @@ export function DynamicProdukteTab(props: {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          {!productsQuery.isLoading && products.length > 0 ? (
-            <button type="button" className="mobile-btn-outline dynamic-produkte-add-btn" onClick={openAdd}>
-              + Shto produkt
-            </button>
+          {!productsQuery.isLoading ? (
+            <div className="dynamic-produkte-add-row">
+              <button
+                type="button"
+                className="mobile-btn-outline dynamic-produkte-add-btn"
+                onClick={openAdd}
+              >
+                + Shto produkt
+              </button>
+              <button
+                type="button"
+                className="mobile-btn-outline dynamic-produkte-add-btn"
+                onClick={() => setAddLocationOpen(true)}
+              >
+                + Shto lokacion
+              </button>
+            </div>
           ) : null}
         </div>
 
@@ -214,9 +229,6 @@ export function DynamicProdukteTab(props: {
         ) : products.length === 0 ? (
           <div className="mobile-empty">
             <div className="mobile-empty-title">Nuk ka produkte</div>
-            <button type="button" className="mobile-btn-outline" onClick={openAdd}>
-              + Shto produkt
-            </button>
           </div>
         ) : (
           <div className="dynamic-produkte-list">
@@ -354,6 +366,15 @@ export function DynamicProdukteTab(props: {
           </p>
         ) : null}
       </BottomSheet>
+
+      <LocationAddModal
+        open={addLocationOpen}
+        onClose={() => setAddLocationOpen(false)}
+        onCreated={() => {
+          setAddLocationOpen(false)
+          props.notify('Lokacioni u shtua me sukses.', 'success')
+        }}
+      />
     </>
   )
 }

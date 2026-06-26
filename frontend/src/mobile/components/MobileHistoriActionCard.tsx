@@ -128,19 +128,23 @@ export function MobileHistoriActionCard(props: {
         <span className="mobile-histori-row-card__datetime">{dateTime}</span>
       </div>
 
-      {pershkrimi ? (
-        <p className="mobile-histori-row-card__pershkrimi" title={pershkrimi}>
-          {pershkrimi}
-        </p>
-      ) : null}
-
       {variant === 'dynamic' ? (
         <DynamicLocationRoute action={action} />
       ) : (
         <LegacyLocationRoute action={action} />
       )}
 
-      <div className="mobile-histori-row-card__footer">{summary}</div>
+      <div
+        className="mobile-histori-row-card__footer"
+        title={pershkrimi ? pershkrimi : undefined}
+      >
+        <span className="mobile-histori-row-card__summary">{summary}</span>
+        {pershkrimi ? (
+          <span className="mobile-histori-row-card__pershkrimi">
+            <span className="mobile-histori-row-card__pershkrimi-text">{pershkrimi}</span>
+          </span>
+        ) : null}
+      </div>
     </button>
   )
 }

@@ -26,8 +26,28 @@
   gap: 10px;
 }
 
+.dynamic-produkte-add-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
 .dynamic-produkte-add-btn {
-  align-self: flex-start;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: 14px;
+}
+
+.dynamic-produkte-panel .mobile-btn-outline {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--mobile-sheet-accent-muted, rgba(126, 184, 232, 0.95));
+}
+
+.dynamic-produkte-panel .mobile-btn-outline:active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--mobile-sheet-selected-border, rgba(47, 125, 246, 0.45));
 }
 
 .dynamic-produkte-list {
@@ -43,15 +63,21 @@
   appearance: none;
   -webkit-appearance: none;
   font-family: inherit;
-  background: var(--card);
-  border: 1px solid var(--border-light);
+  background: var(--mobile-sheet-panel-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.1));
   border-radius: 12px;
   padding: 10px 12px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
+  color: var(--mobile-sheet-text, #fff);
+}
+
+.dynamic-product-card:active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--mobile-sheet-selected-border, rgba(47, 125, 246, 0.45));
 }
 
 .dynamic-product-card-heading {
@@ -65,14 +91,14 @@
 .dynamic-product-card-name {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--mobile-sheet-text-subtle, rgba(255, 255, 255, 0.78));
   line-height: 1.3;
 }
 
 .dynamic-product-card-code {
   font-size: 13px;
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--mobile-sheet-text-muted, rgba(255, 255, 255, 0.58));
   flex-shrink: 0;
 }
 
@@ -92,21 +118,21 @@
   gap: 4px;
   padding: 4px 8px;
   border-radius: 8px;
-  border: 1px solid var(--border-light);
-  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   font-size: 12px;
   line-height: 1.3;
   white-space: nowrap;
 }
 
 .dynamic-mobile-stock-stat-chip--zero {
-  border-color: var(--border);
-  background: rgba(98, 116, 142, 0.06);
-  color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--mobile-sheet-text-muted, rgba(255, 255, 255, 0.58));
 }
 
 .dynamic-mobile-stock-stat-chip--zero .dynamic-mobile-stock-stat-chip-qty {
-  color: var(--text-muted);
+  color: var(--mobile-sheet-text-muted, rgba(255, 255, 255, 0.58));
   font-weight: 500;
 }
 
@@ -117,20 +143,20 @@
 
 .dynamic-mobile-stock-stat-chip-name {
   font-weight: 500;
-  color: var(--text);
+  color: var(--mobile-sheet-text-subtle, rgba(255, 255, 255, 0.78));
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .dynamic-mobile-stock-stat-chip--zero .dynamic-mobile-stock-stat-chip-name {
-  color: var(--text-muted);
+  color: var(--mobile-sheet-text-muted, rgba(255, 255, 255, 0.58));
 }
 
 .dynamic-mobile-stock-stat-chip-qty {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text);
+  color: var(--mobile-sheet-text, #fff);
 }
 
 /* ── Other dynamic mobile styles ── */
@@ -227,11 +253,11 @@
 
 .dynamic-mobile-summary-card {
   flex-shrink: 0;
-  background: var(--card);
-  border: 1px solid var(--border-light);
+  background: var(--mobile-sheet-panel-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.1));
   border-radius: 12px;
   padding: 8px 10px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   min-height: var(--dynamic-summary-card-height);
 }
 
@@ -252,7 +278,7 @@
 .dynamic-mobile-summary-card-name {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--mobile-sheet-text-subtle, rgba(255, 255, 255, 0.78));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -274,13 +300,13 @@
 }
 
 .dynamic-mobile-summary-stat--in {
-  background: var(--success-bg, rgba(34, 197, 94, 0.1));
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: rgba(52, 199, 89, 0.12);
+  border: 1px solid rgba(52, 199, 89, 0.28);
 }
 
 .dynamic-mobile-summary-stat--out {
-  background: var(--danger-bg, rgba(239, 68, 68, 0.08));
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.26);
 }
 
 .dynamic-mobile-summary-stat-label {
@@ -303,12 +329,12 @@
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--text);
+  color: var(--mobile-sheet-text, #fff);
 }
 
 .dynamic-mobile-summary-stat-value {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.2;
-  color: var(--text-muted);
+  color: var(--mobile-sheet-text-muted, rgba(255, 255, 255, 0.58));
 }

@@ -4,10 +4,9 @@ import { useProductsQuery } from '../../hooks/useProductsQuery'
 import type { Country } from '../../lib/country'
 import { COUNTRY_META } from '../../lib/country'
 import { countryLabel, fmtEuro } from '../../lib/format'
-import { formatActionDateTime } from '../../lib/actionMeta'
 import { createEmptyActionItem } from '../../types/actionItem'
 import { BottomSheet } from '../components/BottomSheet'
-import { SheetActionFooter } from '../components/SheetActions'
+import { MobileActionReviewSheet } from '../components/MobileActionReviewSheet'
 import { MobileDateInput } from '../components/MobileDateInput'
 import { ProductPickerSheet, type ProductPickerSaveData } from '../components/ProductPickerSheet'
 import { ProductRowCard } from '../components/ProductRowCard'
@@ -116,7 +115,7 @@ export function TransferTab(props: {
 
   return (
     <>
-      <div className="mobile-tab-panel">
+      <div className="mobile-tab-panel mobile-tab-panel--action">
         <div className="mobile-field-row">
           <TransferCountryField label="Nga" value={entry.transferFrom} onOpen={() => setFromOpen(true)} />
           <TransferCountryField label="Te" value={entry.transferTo} onOpen={() => setToOpen(true)} />
@@ -175,8 +174,6 @@ export function TransferTab(props: {
                 products={products}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
-                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
-                onNotify={props.notify}
               />
             ))}
           </div>
@@ -230,32 +227,21 @@ export function TransferTab(props: {
         onSave={handleSave}
       />
 
-      <BottomSheet
+      <MobileActionReviewSheet
         open={entry.confirmOpen}
-        title="Finalizo transfertën?"
-        onClose={() => entry.setConfirmOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => entry.setConfirmOpen(false)}
-            confirmLabel={entry.mutation.isPending ? 'Duke finalizuar…' : 'Konfirmo'}
-            confirmLoading={entry.mutation.isPending}
-            onConfirm={() => entry.mutation.mutate()}
-          />
-        }
-      >
-        <p className="mobile-card-meta">
-          Transfer nga {countryLabel(entry.transferFrom)} ne {countryLabel(entry.transferTo)},{' '}
-          {filledItems.length} produkte, total{' '}
-          <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
-          {entry.transferOra || entry.transferPershkrimi.trim() ? (
-            <>
-              {' '}
-              {formatActionDateTime(entry.transferDate, entry.transferOra)}
-              {entry.transferPershkrimi.trim() ? ` — ${entry.transferPershkrimi.trim()}` : ''}
-            </>
-          ) : null}
-        </p>
-      </BottomSheet>
+        lloji="Transfer"
+        transferFrom={entry.transferFrom}
+        transferTo={entry.transferTo}
+        items={entry.itemsState.items}
+        products={products}
+        total={entry.itemsState.total}
+        actionDate={entry.transferDate}
+        actionOra={entry.transferOra}
+        actionPershkrimi={entry.transferPershkrimi}
+        loading={entry.mutation.isPending}
+        onCancel={() => entry.setConfirmOpen(false)}
+        onConfirm={() => entry.mutation.mutate()}
+      />
     </>
   )
 }

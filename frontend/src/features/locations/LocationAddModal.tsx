@@ -1,18 +1,24 @@
 import * as React from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
+import { useMobileClient } from '../../hooks/useMobileClient'
 import { createLokacioni } from '../../lib/api/lokacionet'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import { queryKeys } from '../../lib/queryKeys'
+import { BottomSheet } from '../../mobile/components/BottomSheet'
+import { SheetActionFooter } from '../../mobile/components/SheetActions'
 import { DEFAULT_LOCATION_EMOJI, LocationEmojiPicker } from './LocationEmojiPicker'
+
+const LOCATION_ADD_FORM_ID = 'location-add-form'
 
 export function LocationAddModal(props: {
   open: boolean
   onClose: () => void
   onCreated: (loc: Lokacioni) => void
 }) {
+  const isMobile = useMobileClient()
   const { lokacionet, refresh } = useLokacioni()
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -58,6 +64,78 @@ export function LocationAddModal(props: {
   }
 
   const formRef = React.useRef<HTMLFormElement>(null)
+  const emriInputId = isMobile ? 'location-add-emri-mobile' : 'location-add-emri'
+
+  const emojiField = (
+    <div className={isMobile ? undefined : 'form-group'} style={isMobile ? undefined : { marginBottom: 14 }}>
+      <span className={isMobile ? 'mobile-label' : 'label'}>Ikona</span>
+      <LocationEmojiPicker
+        value={flagEmoji}
+        onChange={setFlagEmoji}
+        disabled={saving}
+        className="location-emoji-picker-wide"
+      />
+    </div>
+  )
+
+  const nameField = (
+    <div className={isMobile ? undefined : 'form-group'}>
+      <label className={isMobile ? 'mobile-label' : 'label'} htmlFor={emriInputId}>
+        Emri
+      </label>
+      <input
+        id={emriInputId}
+        className={isMobile ? 'mobile-input' : 'input'}
+        value={emri}
+        maxLength={40}
+        placeholder="Emri i lokacionit"
+        disabled={saving}
+        onChange={(e) => setEmri(e.target.value)}
+      />
+    </div>
+  )
+
+  const errorBlock = error ? (
+    isMobile ? (
+      <div className="mobile-inline-error">{error}</div>
+    ) : (
+      <p className="error-text" style={{ marginTop: 10 }}>
+        {error}
+      </p>
+    )
+  ) : null
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={props.open}
+        title="Shto lokacion"
+        onClose={props.onClose}
+        footer={
+          <SheetActionFooter
+            onCancel={props.onClose}
+            confirmLabel={saving ? 'Duke shtuar…' : 'Shto'}
+            confirmLoading={saving}
+            confirmDisabled={!emri.trim()}
+            confirmType="submit"
+            confirmIcon="plus"
+            form={LOCATION_ADD_FORM_ID}
+          />
+        }
+      >
+        <form
+          id={LOCATION_ADD_FORM_ID}
+          ref={formRef}
+          className="mobile-list-stack"
+          onSubmit={submit}
+        >
+          {emojiField}
+          {nameField}
+          {errorBlock}
+        </form>
+      </BottomSheet>
+    )
+  }
 
   return (
     <Modal
@@ -69,28 +147,9 @@ export function LocationAddModal(props: {
       enterConfirmDisabled={saving || !emri.trim()}
     >
       <form ref={formRef} onSubmit={submit}>
-        <div className="form-group" style={{ marginBottom: 14 }}>
-          <span className="label">Ikona</span>
-          <LocationEmojiPicker
-            value={flagEmoji}
-            onChange={setFlagEmoji}
-            disabled={saving}
-            className="location-emoji-picker-wide"
-          />
-        </div>
-        <div className="form-group">
-          <label className="label" htmlFor="location-add-emri">Emri</label>
-          <input
-            id="location-add-emri"
-            className="input"
-            value={emri}
-            maxLength={40}
-            placeholder="Emri i lokacionit"
-            disabled={saving}
-            onChange={(e) => setEmri(e.target.value)}
-          />
-        </div>
-        {error ? <p className="error-text" style={{ marginTop: 10 }}>{error}</p> : null}
+        {emojiField}
+        {nameField}
+        {errorBlock}
         <div className="confirm-modal-actions">
           <button type="button" className="btn" disabled={saving} onClick={props.onClose}>
             Anulo

@@ -5,6 +5,7 @@ import { Snackbar } from '../components/Snackbar'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOverscrollLock } from '../hooks/useOverscrollLock'
 import { BottomNav } from './components/BottomNav'
+import { MobileTabSlot } from './components/MobileTabSlot'
 import { HistoriTab } from './tabs/HistoriTab'
 import { PermbledhjeTab } from './tabs/PermbledhjeTab'
 import { ProdukteTab } from './tabs/ProdukteTab'
@@ -66,11 +67,21 @@ export function MobileApp(props: { onLogout: () => void }) {
       </header>
 
       <main ref={contentRef} className={contentClass}>
-        {tab === 'veprime' && <VeprimeTab notify={notify} />}
-        {tab === 'transfer' && <TransferTab notify={notify} />}
-        {tab === 'produkte' && <ProdukteTab notify={notify} />}
-        {tab === 'histori' && <HistoriTab notify={notify} onHeaderChange={setHeader} />}
-        {tab === 'permblehdje' && <PermbledhjeTab />}
+        <MobileTabSlot tab="veprime" activeTab={tab}>
+          <VeprimeTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="transfer" activeTab={tab}>
+          <TransferTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="produkte" activeTab={tab}>
+          <ProdukteTab notify={notify} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="histori" activeTab={tab}>
+          <HistoriTab notify={notify} onHeaderChange={setHeader} />
+        </MobileTabSlot>
+        <MobileTabSlot tab="permblehdje" activeTab={tab}>
+          <PermbledhjeTab />
+        </MobileTabSlot>
       </main>
 
       <BottomNavPortal active={tab} onChange={setTab} />

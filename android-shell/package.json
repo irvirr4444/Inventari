@@ -9,6 +9,7 @@
     "cap:add:android": "npx cap add android"
   },
   "dependencies": {
+    "@capacitor-community/safe-area": "^7.0.0",
     "@capacitor/android": "^7.4.2",
     "@capacitor/core": "^7.4.2"
   },

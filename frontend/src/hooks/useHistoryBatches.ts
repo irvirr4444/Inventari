@@ -18,7 +18,7 @@ export type HistoryFilterState = {
   shenim?: string
 }
 
-export const HISTORY_PAGE_SIZE = 5
+export const HISTORY_PAGE_SIZE = 8
 
 export function useHistoryBatches(options?: {
   onNotify?: (message: string, variant?: 'success' | 'default') => void

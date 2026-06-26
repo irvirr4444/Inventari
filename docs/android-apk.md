@@ -87,7 +87,8 @@ High-level checklist:
 7. **Root npm scripts** — `android:build`, `android:sync`, `android:open`.
 8. **Backend CORS** — comma-separated `CORS_ORIGIN` including `https://localhost`.
 9. **Cookie policy** — verify login session in WebView (see below); adjust `sameSite` if needed.
-10. **Google Sign-In** — if used, add Android OAuth client + SHA-1 in Google Cloud (Web client alone is not enough in WebView).
+10. **Safe area** — `@capacitor-community/safe-area` + `EdgeToEdge` in `MainActivity` (see [Safe area / system navigation bar](#safe-area--system-navigation-bar)).
+11. **Google Sign-In** — if used, add Android OAuth client + SHA-1 in Google Cloud (Web client alone is not enough in WebView).
 
 ---
 
@@ -187,11 +188,24 @@ No separate “APK mode” flag is required today.
 | Bootstrap viewport | `lib/mobileBootstrap.ts` | Android viewport width fix |
 | Shell selection | `lib/mobileClient.ts` + `App.tsx` | Android UA → `MobileApp` / `DynamicMobileApp` |
 | Mobile CSS bundle | `App.tsx` imports `mobile/styles/mobile.css` | Required — do not remove |
+| Safe area (system nav) | `@capacitor-community/safe-area` + `EdgeToEdge` in `MainActivity` | WebView respects bottom inset; same CSS as mobile browser (`env(safe-area-inset-*)`) |
 
 Optional hardening for APK-only builds:
 
 - Set `sessionStorage.setItem('inventari-mobile', '1')` once at Capacitor `app` launch so the mobile shell is forced even on large tablets.
 - Hide “open desktop site” affordances if you add any later.
+
+### Safe area / system navigation bar
+
+Mobile web already uses `viewport-fit=cover` and `env(safe-area-inset-*)` in `frontend/src/mobile/styles/mobile-layout.css`. **No separate web CSS changes are needed** — the APK must report those insets correctly inside the WebView.
+
+The Android shell uses:
+
+1. **`@capacitor-community/safe-area`** — polyfill for Chromium WebViews that return `0px` insets; applies WebView padding on older Chromium, passes real `env()` values on Chromium 140+.
+2. **`EdgeToEdge.enable(this)`** in `MainActivity` — edge-to-edge layout on Android.
+3. **`adjustMarginsForEdgeToEdge: 'disable'`** in `capacitor.config.ts` — full-screen WebView; CSS handles insets (same as mobile browser).
+
+After changing native config, run `npm run android:sync` and rebuild the APK. Test on an emulator or device with **gesture navigation** and **3-button navigation** — bottom tab labels should sit above the system bar.
 
 ---
 

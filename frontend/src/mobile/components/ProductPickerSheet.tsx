@@ -63,7 +63,8 @@ function ProductPickerForm(props: {
       setError('Zgjidh produktin.')
       return
     }
-    if (Number(qty) <= 0) {
+    const effectiveQty = qty.trim() === '' ? '1' : qty.trim()
+    if (Number(effectiveQty) <= 0) {
       setError('Sasia duhet te jete > 0.')
       return
     }
@@ -74,7 +75,7 @@ function ProductPickerForm(props: {
     props.onSave({
       kodi_produktit: kodi,
       cmimi_njesi: showPrice ? price : '0',
-      sasia: qty,
+      sasia: effectiveQty,
       shenim: shenim.trim(),
     })
     props.onClose()

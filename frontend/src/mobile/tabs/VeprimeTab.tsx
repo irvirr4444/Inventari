@@ -3,10 +3,8 @@ import { useActionEntry } from '../../hooks/useActionEntry'
 import { useProductsQuery } from '../../hooks/useProductsQuery'
 import { COUNTRY_META, useCountry } from '../../lib/country'
 import { countryLabel, fmtEuro } from '../../lib/format'
-import { formatActionDateTime } from '../../lib/actionMeta'
 import { createEmptyActionItem } from '../../types/actionItem'
-import { BottomSheet } from '../components/BottomSheet'
-import { SheetActionFooter } from '../components/SheetActions'
+import { MobileActionReviewSheet } from '../components/MobileActionReviewSheet'
 import { CountryPickerSheet } from '../components/CountryPickerSheet'
 import { MobileDateInput } from '../components/MobileDateInput'
 import { ProductPickerSheet, type ProductPickerSaveData } from '../components/ProductPickerSheet'
@@ -68,7 +66,7 @@ export function VeprimeTab(props: {
 
   return (
     <>
-      <div className="mobile-tab-panel">
+      <div className="mobile-tab-panel mobile-tab-panel--action">
         <SegmentedControl<'Hyrje' | 'Dalje'>
           value={entry.lloji}
           options={[
@@ -138,8 +136,6 @@ export function VeprimeTab(props: {
                 products={products}
                 onTap={() => openEdit(item.key)}
                 onRemove={() => entry.itemsState.removeItem(item.key)}
-                onShenimChange={(value) => entry.itemsState.updateItem(item.key, 'shenim', value)}
-                onNotify={props.notify}
               />
             ))}
           </div>
@@ -186,31 +182,20 @@ export function VeprimeTab(props: {
         onSave={handleSave}
       />
 
-      <BottomSheet
+      <MobileActionReviewSheet
         open={entry.confirmOpen}
-        title="Finalizo veprimin?"
-        onClose={() => entry.setConfirmOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => entry.setConfirmOpen(false)}
-            confirmLabel={entry.mutation.isPending ? 'Duke finalizuar…' : 'Konfirmo'}
-            confirmLoading={entry.mutation.isPending}
-            onConfirm={() => entry.mutation.mutate()}
-          />
-        }
-      >
-        <p className="mobile-card-meta">
-          {entry.lloji} ne {countryLabel(country)} me total{' '}
-          <strong className="mobile-num">{fmtEuro(entry.itemsState.total)}</strong>.
-          {entry.actionOra || entry.actionPershkrimi.trim() ? (
-            <>
-              {' '}
-              {formatActionDateTime(entry.actionDate, entry.actionOra)}
-              {entry.actionPershkrimi.trim() ? ` — ${entry.actionPershkrimi.trim()}` : ''}
-            </>
-          ) : null}
-        </p>
-      </BottomSheet>
+        lloji={entry.lloji}
+        country={country}
+        items={entry.itemsState.items}
+        products={products}
+        total={entry.itemsState.total}
+        actionDate={entry.actionDate}
+        actionOra={entry.actionOra}
+        actionPershkrimi={entry.actionPershkrimi}
+        loading={entry.mutation.isPending}
+        onCancel={() => entry.setConfirmOpen(false)}
+        onConfirm={() => entry.mutation.mutate()}
+      />
     </>
   )
 }

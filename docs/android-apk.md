@@ -258,11 +258,18 @@ Without Android client configuration, **Hyr** with Emri/password still works; Go
 | --- | --- |
 | **Application ID** | `com.inventari.app` (example) — permanent after Play upload |
 | **App name** | “Inventari Im” (matches `index.html` title) |
-| **Launcher icon** | 512×512 source → Android Studio Image Asset Studio |
-| **Splash** | Navy/brand color + logo; configure in Capacitor / `android/app/src/main/res` |
+| **Launcher icon** | Same as web favicon — run `npm run android:icons` from repo root |
+| **Splash** | Generated with the same logo + navy background (`#071528`) |
 | **Permissions** | Default Capacitor app needs **INTERNET** only for API calls |
 
-Add a proper icon under `frontend/public/` (today favicon references a shelf PNG that may not be in repo — add before store release).
+**Regenerate icons** after changing the web favicon (`frontend/public/shelf-png-blue-color-shelf-graphic-design-vector.png`):
+
+```bash
+npm run android:icons
+npm run android:sync   # optional; icons are native assets, not web bundle
+```
+
+Then rebuild in Android Studio. Source: `android-shell/assets/logo.png` (auto-copied from the favicon).
 
 ---
 

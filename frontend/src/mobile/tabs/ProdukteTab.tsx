@@ -12,7 +12,7 @@ import { useAuth } from '../../lib/auth/AuthProvider'
 import { NumericInput } from '../../components/NumericInput'
 import { BottomSheet } from '../components/BottomSheet'
 import { SheetActionFooter, SheetEditButton, SheetFooterRow, SheetConfirmButton } from '../components/SheetActions'
-import { SkeletonRow } from '../components/SkeletonRow'
+import { MobileProductListPending } from '../components/MobileProductListPending'
 import { MobileStockLevels } from '../components/MobileStockLevels'
 
 function ProductFormFields(props: {
@@ -163,7 +163,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
         </div>
 
         {productsQuery.isLoading ? (
-          <SkeletonRow count={5} />
+          <MobileProductListPending count={5} variant="legacy" />
         ) : products.length === 0 ? (
           <div className="mobile-empty">
             <div className="mobile-empty-title">Nuk ka produkte</div>
@@ -172,7 +172,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
             </button>
           </div>
         ) : (
-          <div className="mobile-list-stack">
+          <div className="mobile-list-stack mobile-panel-enter">
             {products.map((p) => (
               <button
                 key={p.id}

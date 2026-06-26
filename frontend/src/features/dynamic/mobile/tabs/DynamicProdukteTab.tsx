@@ -19,7 +19,7 @@ import {
   SheetEditButton,
   SheetFooterRow,
 } from '../../../../mobile/components/SheetActions'
-import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
+import { MobileProductListPending } from '../../../../mobile/components/MobileProductListPending'
 import { DynamicProductCard } from '../components/DynamicProductCard'
 import { DynamicMobileStockLevels } from '../components/DynamicMobileStockLevels'
 import { LocationAddModal } from '../../../locations/LocationAddModal'
@@ -225,13 +225,13 @@ export function DynamicProdukteTab(props: {
         </div>
 
         {productsQuery.isLoading ? (
-          <SkeletonRow count={5} />
+          <MobileProductListPending count={5} variant="dynamic" />
         ) : products.length === 0 ? (
           <div className="mobile-empty">
             <div className="mobile-empty-title">Nuk ka produkte</div>
           </div>
         ) : (
-          <div className="dynamic-produkte-list">
+          <div className="dynamic-produkte-list mobile-panel-enter">
             {products.map((p) => (
               <DynamicProductCard
                 key={p.id}

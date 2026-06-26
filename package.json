@@ -14,7 +14,8 @@
     "test": "npm -w @inventari/shared run test && npm -w backend run test",
     "android:build": "CAPACITOR=1 npm run build -w frontend",
     "android:sync": "npm run android:build && npm -w @inventari/android-shell run cap:sync",
-    "android:open": "npm -w @inventari/android-shell run cap:open"
+    "android:open": "npm -w @inventari/android-shell run cap:open",
+    "android:icons": "npm -w @inventari/android-shell run cap:icons"
   },
   "devDependencies": {
     "concurrently": "^9.2.0"

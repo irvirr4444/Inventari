@@ -3,7 +3,7 @@ import { exportUrl } from '../../lib/api'
 import { fmt, fmtInt } from '../../lib/format'
 import { queryRefreshState } from '../../lib/queryRefreshState'
 import { MobileDateRangeInput } from '../components/MobileDateRangeInput'
-import { SkeletonRow } from '../components/SkeletonRow'
+import { MobileLegacySummaryPending } from '../components/MobileLegacySummaryPending'
 
 function SummarySection(props: {
   name: string
@@ -17,7 +17,7 @@ function SummarySection(props: {
     props.summary.out_qty === 0 &&
     props.summary.out_value === 0
 
-  if (props.loading) return <SkeletonRow count={2} />
+  if (props.loading) return <MobileLegacySummaryPending />
 
   return (
     <section className="mobile-summary-section">
@@ -90,7 +90,7 @@ export function PermbledhjeTab() {
           <div className="mobile-empty-title">Nuk ka të dhëna për këtë periudhë.</div>
         </div>
       ) : (
-        <div className={isRefreshing ? 'mobile-summary-refreshing' : undefined}>
+        <div className={isRefreshing ? 'mobile-summary-refreshing' : 'mobile-panel-enter'}>
           <SummarySection
             name="Kosovo"
             flagSrc="/Flag_of_Kosovo.webp"

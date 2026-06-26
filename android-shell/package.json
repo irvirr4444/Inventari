@@ -6,7 +6,8 @@
   "scripts": {
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
-    "cap:add:android": "npx cap add android"
+    "cap:add:android": "npx cap add android",
+    "cap:icons": "cp ../frontend/public/shelf-png-blue-color-shelf-graphic-design-vector.png assets/logo.png && npx @capacitor/assets generate --android --androidProject android --iconBackgroundColor '#071528' --splashBackgroundColor '#071528'"
   },
   "dependencies": {
     "@capacitor-community/safe-area": "^7.0.0",
@@ -14,6 +15,7 @@
     "@capacitor/core": "^7.4.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.4.2"
   }
 }

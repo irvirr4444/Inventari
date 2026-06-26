@@ -7,7 +7,7 @@ import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
-import { DynamicActionEditForm } from './DynamicActionEditForm'
+import { HistoryDetailPending } from '../history/HistoryDetailPending'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
 
 export function DynamicActionEditModal(props: {
@@ -52,7 +52,7 @@ export function DynamicActionEditModal(props: {
         </div>
 
         {detailQuery.isLoading ? (
-          <div className="history-skeleton-block" style={{ height: 120, margin: '16px 0' }} />
+          <HistoryDetailPending />
         ) : detailQuery.isError ? (
           <p className="muted" style={{ margin: '16px 0' }}>
             {detailQuery.error instanceof Error

@@ -2,6 +2,7 @@
 @import './mobile-tokens.css';
 @import './mobile-typography.css';
 @import './mobile-layout.css';
+@import './mobile-pending.css';
 @import './mobile-components.css';
 @import './mobile-sheet-theme.css';
 @import './mobile-snackbar.css';

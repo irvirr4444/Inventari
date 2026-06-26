@@ -6,7 +6,7 @@ import { useAuth } from '../../lib/auth/AuthProvider'
 import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
-import { ActionEditForm, type HistoryEditSaveResult } from './ActionEditForm'
+import { HistoryDetailPending } from './HistoryDetailPending'
 
 export function ActionEditModal(props: {
   actionId: string
@@ -49,7 +49,7 @@ export function ActionEditModal(props: {
         </div>
 
         {detailQuery.isLoading ? (
-          <div className="history-skeleton-block" style={{ height: 120, margin: '16px 0' }} />
+          <HistoryDetailPending />
         ) : detailQuery.isError ? (
           <p className="muted" style={{ margin: '16px 0' }}>
             {detailQuery.error instanceof Error

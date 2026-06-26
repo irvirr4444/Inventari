@@ -35,7 +35,7 @@ import {
 } from '../components/SheetActions'
 import { MobileDateInput } from '../components/MobileDateInput'
 import { MobileCountryField } from '../components/MobileCountryField'
-import { SkeletonRow } from '../components/SkeletonRow'
+import { MobileHistoriDetailPending } from '../components/MobileHistoriDetailPending'
 import { OraInput } from '../../components/OraInput'
 import type { MobileHeaderState } from '../types'
 import { ActionItemShenim } from '../../features/actions/ActionItemShenim'
@@ -442,11 +442,7 @@ export function HistoriBatchDetail(props: {
   })
 
   if (detailQuery.isLoading) {
-    return (
-      <div className="mobile-tab-panel">
-        <SkeletonRow count={4} />
-      </div>
-    )
+    return <MobileHistoriDetailPending />
   }
 
   if (!detail) {

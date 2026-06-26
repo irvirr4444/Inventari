@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getActionBatch } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
-import { ActionReadOnlyPanel } from './ActionReadOnlyPanel'
+import { HistoryDetailPending } from './HistoryDetailPending'
 
 export function ExpandedActionDetail(props: {
   actionId: string
@@ -19,7 +19,7 @@ export function ExpandedActionDetail(props: {
   if (detailQuery.isLoading && !detailQuery.data) {
     return (
       <div className="history-expanded-panel">
-        <div className="history-skeleton-block" />
+        <HistoryDetailPending />
       </div>
     )
   }

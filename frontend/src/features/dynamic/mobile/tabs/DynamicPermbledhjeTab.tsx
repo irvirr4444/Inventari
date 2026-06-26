@@ -6,7 +6,7 @@ import { fmt, fmtInt } from '../../../../lib/format'
 import { queryRefreshState } from '../../../../lib/queryRefreshState'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { MobileDateRangeInput } from '../../../../mobile/components/MobileDateRangeInput'
-import { SkeletonRow } from '../../../../mobile/components/SkeletonRow'
+import { MobileSummaryListPending } from '../../../../mobile/components/MobileSummaryListPending'
 
 function LocationSummaryCard(props: {
   emoji: string
@@ -88,12 +88,10 @@ export function DynamicPermbledhjeTab() {
           <div className="mobile-empty-title">Nuk ka lokacione te shfaqura ne permbledhje.</div>
         </div>
       ) : isInitialLoad ? (
-        <div className="dynamic-mobile-summary-list">
-          <SkeletonRow count={Math.min(summaryLocations.length, 6)} />
-        </div>
+        <MobileSummaryListPending count={Math.min(summaryLocations.length, 6)} />
       ) : (
         <div
-          className={`dynamic-mobile-summary-list${scrollableList ? ' dynamic-mobile-summary-list--scrollable' : ''}${isRefreshing ? ' is-refreshing' : ''}`}
+          className={`dynamic-mobile-summary-list mobile-panel-enter${scrollableList ? ' dynamic-mobile-summary-list--scrollable' : ''}${isRefreshing ? ' is-refreshing' : ''}`}
         >
           {summaryLocations.map((loc) => (
             <LocationSummaryCard

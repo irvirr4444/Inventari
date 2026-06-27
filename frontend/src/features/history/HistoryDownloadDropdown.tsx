@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { BottomSheet } from '../../mobile/components/BottomSheet'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
+import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 import {
   downloadHistoryDocument,
   type HistoryDocumentFormat,
@@ -95,6 +96,8 @@ export function HistoryDownloadDropdown(props: {
     variant = 'inline',
   } = props
 
+  const { activeLokacionet } = useLokacioni()
+
   const [open, setOpen] = React.useState(false)
   const [loadingFormat, setLoadingFormat] = React.useState<HistoryDocumentFormat | null>(null)
   const [menuPos, setMenuPos] = React.useState<MenuPosition | null>(null)
@@ -164,6 +167,7 @@ export function HistoryDownloadDropdown(props: {
           server: serverFilters,
           client: clientFilters,
           trackPrice,
+          locations: activeLokacionet,
         })
       } catch (error) {
         onNotify?.(error instanceof Error ? error.message : 'Gabim gjate eksportit.', 'error')
@@ -171,7 +175,7 @@ export function HistoryDownloadDropdown(props: {
         setLoadingFormat(null)
       }
     },
-    [clientFilters, isDisabled, onNotify, serverFilters, trackPrice],
+    [activeLokacionet, clientFilters, isDisabled, onNotify, serverFilters, trackPrice],
   )
 
   const wrapClass =

@@ -26,11 +26,13 @@ import {
 
 export type HistoryExportQuery = {
   lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
+  llojet?: ('Hyrje' | 'Dalje' | 'Transfer')[]
   shteti?: 'XK' | 'AL'
   dateFrom?: string
   dateTo?: string
   shenim?: string
   locationId?: string
+  locationIds?: string[]
   oraFrom?: string
   oraDeri?: string
   pershkrimi?: string
@@ -97,6 +99,7 @@ export async function exportHistoryXlsx(
 
   const clientFilters: HistoryExportClientFilters = {
     locationId: query.locationId,
+    locationIds: query.locationIds,
     oraFrom: query.oraFrom,
     oraDeri: query.oraDeri,
     pershkrimi: query.pershkrimi,
@@ -125,15 +128,28 @@ export async function exportHistoryXlsx(
   if (!user.isLegacy) {
     const lokacionet = await listLokacionetByOwner(supabase, user.id)
     const locations = lokacionet.map((l) => ({ key: l.id, emri: l.emri }))
-    const locationKeys = query.locationId ? [query.locationId] : []
+    const locationKeys =
+      query.locationIds && query.locationIds.length > 0
+        ? query.locationIds
+        : query.locationId
+          ? [query.locationId]
+          : []
+    const exportLlojet =
+      query.llojet && query.llojet.length > 0 && query.llojet.length < 3
+        ? query.llojet
+        : query.lloji
+          ? [query.lloji]
+          : undefined
     const plans = resolveHistoryExportSheets({
       lloji: query.lloji,
+      llojet: exportLlojet,
       locationKeys,
       locations,
     })
-    const transferLocationEmri = query.locationId
-      ? lokacionet.find((l) => l.id === query.locationId)?.emri
-      : undefined
+    const transferLocationEmri =
+      locationKeys.length === 1
+        ? lokacionet.find((l) => l.id === locationKeys[0])?.emri
+        : undefined
 
     const [productRows, allActions] = await Promise.all([
       listProduktet(supabase, user.id, {}),
@@ -172,6 +188,7 @@ export async function exportHistoryXlsx(
       plans,
       dateQuery,
       transferLocationEmri,
+      locationKeys.length > 0,
     )
 
     return { buffer, filename: `Histori ${formatExportTimestamp()}.xlsx` }

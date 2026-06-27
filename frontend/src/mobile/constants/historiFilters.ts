@@ -1,4 +1,5 @@
-export const ALL_VEPRIMET_LABEL = 'Te gjitha veprimet'
-export const ALL_SHTETET_LABEL = 'Te gjitha shtetet'
-export const ALL_LOKACIONET_LABEL = 'Te gjitha lokacionet'
+export const ALL_VEPRIMET_LABEL = 'Të gjitha veprimet'
+export const ALL_SHTETET_LABEL = 'Të gjitha shtetet'
+export const ALL_LOKACIONET_LABEL = 'Të gjitha lokacionet'
 export const ALL_FILTER_VALUE_LABEL = 'Të gjitha'
+export const SOME_FILTER_VALUE_LABEL = 'Të ndryshme'

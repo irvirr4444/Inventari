@@ -52,6 +52,7 @@ export function parseHistoryFilterSearchParams(search: URLSearchParams): {
     client: {
       ...EMPTY_CLIENT_FILTERS,
       locationIds: search.get('locationId') ? [search.get('locationId')!] : [],
+      llojet: [],
       oraFrom: search.get('oraFrom') ?? '',
       oraDeri: search.get('oraDeri') ?? '',
       pershkriminQuery: search.get('pershkrimi') ?? '',
@@ -72,7 +73,14 @@ export function formatHistoryPrintFilterSummary(
   const trackPrice = options?.trackPrice ?? true
   const lines: string[] = []
 
-  if (server.lloji) lines.push(`Veprime: ${server.lloji}`)
+  const llojet =
+    client.llojet.length > 0
+      ? client.llojet
+      : server.lloji
+        ? [server.lloji]
+        : []
+  if (llojet.length === 1) lines.push(`Veprime: ${llojet[0]}`)
+  else if (llojet.length > 1) lines.push(`Veprime: ${llojet.join(', ')}`)
   if (options?.locationLabel) lines.push(`Lokacioni: ${options.locationLabel}`)
   if (server.shteti) lines.push(`Shteti: ${server.shteti === 'XK' ? 'Kosova' : 'Shqiperi'}`)
   if (server.dateFrom || server.dateTo) {

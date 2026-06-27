@@ -44,7 +44,7 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
               })
             }
           >
-            <option value="">Te gjitha llojet</option>
+            <option value="">Të gjitha llojet</option>
             <option value="Hyrje">Hyrje</option>
             <option value="Dalje">Dalje</option>
             <option value="Transfer">Transfer</option>
@@ -61,7 +61,7 @@ export function HistoryFilterBar(props: HistoryFilterBarProps) {
               })
             }
           >
-            <option value="">Te gjitha shtetet</option>
+            <option value="">Të gjitha shtetet</option>
             <option value="XK">Kosove</option>
             <option value="AL">Shqiperi</option>
           </select>

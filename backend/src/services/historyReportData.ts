@@ -246,6 +246,7 @@ export async function buildHistoryReportDocument(
 
     const clientFilters: HistoryExportClientFilters = {
       locationId: query.locationId,
+      locationIds: query.locationIds,
       oraFrom: query.oraFrom,
       oraDeri: query.oraDeri,
       pershkrimi: query.pershkrimi,
@@ -283,8 +284,14 @@ export async function buildHistoryReportDocument(
   }
 
   let locationLabel = query.locationLabel
-  if (!locationLabel && query.locationId && lokacioniById) {
-    locationLabel = lokacioniById.get(query.locationId)?.emri
+  const locationKeys =
+    query.locationIds && query.locationIds.length > 0
+      ? query.locationIds
+      : query.locationId
+        ? [query.locationId]
+        : []
+  if (!locationLabel && locationKeys.length === 1 && lokacioniById) {
+    locationLabel = lokacioniById.get(locationKeys[0])?.emri
   }
 
   const filterLines =

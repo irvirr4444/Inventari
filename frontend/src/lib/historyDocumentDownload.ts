@@ -41,6 +41,7 @@ export async function downloadHistoryDocument(
     trackPrice?: boolean
     batchIds?: string[]
     filterLines?: string[]
+    locations?: { id: string; emri: string }[]
   },
 ): Promise<void> {
   const issues = getHistoryFilterRangeIssues(opts.server, opts.client, {
@@ -74,6 +75,7 @@ export async function downloadHistoryDocument(
         trackPrice: opts.trackPrice,
         filtered,
         filterLines: opts.filterLines,
+        locations: opts.locations,
       }),
     ),
   })

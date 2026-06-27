@@ -68,6 +68,8 @@ export type HistoryExportBatch = {
 
 export type HistoryExportClientFilters = {
   locationId?: string
+  locationIds?: string[]
+  llojet?: ('Hyrje' | 'Dalje' | 'Transfer')[]
   oraFrom?: string
   oraDeri?: string
   pershkrimi?: string
@@ -87,6 +89,10 @@ function batchMatchesLocation(batch: HistoryExportBatch, locationId: string): bo
   return batch.lokacioni_id === locationId
 }
 
+function batchMatchesAnyLocation(batch: HistoryExportBatch, locationIds: string[]): boolean {
+  return locationIds.some((locationId) => batchMatchesLocation(batch, locationId))
+}
+
 export function applyHistoryExportClientFilters(
   batches: HistoryExportBatch[],
   filters: HistoryExportClientFilters,
@@ -95,7 +101,13 @@ export function applyHistoryExportClientFilters(
   const oraFrom = normalizeOraInput(filters.oraFrom)
   const oraDeri = normalizeOraInput(filters.oraDeri)
   const pershkrimi = filters.pershkrimi?.trim().toLowerCase() ?? ''
-  const locationId = filters.locationId?.trim() || undefined
+  const locationIds = (
+    filters.locationIds?.length
+      ? filters.locationIds
+      : filters.locationId?.trim()
+        ? [filters.locationId.trim()]
+        : []
+  ).filter(Boolean)
 
   const hasOra = oraFrom !== undefined || oraDeri !== undefined
   const hasPershkrimi = pershkrimi !== ''
@@ -103,12 +115,12 @@ export function applyHistoryExportClientFilters(
     trackPrice && (filters.totaliMin !== undefined || filters.totaliMax !== undefined)
   const hasProdukte = filters.produkteMin !== undefined || filters.produkteMax !== undefined
 
-  if (!locationId && !hasOra && !hasPershkrimi && !hasTotali && !hasProdukte) {
+  if (locationIds.length === 0 && !hasOra && !hasPershkrimi && !hasTotali && !hasProdukte) {
     return batches
   }
 
   return batches.filter((batch) => {
-    if (locationId && !batchMatchesLocation(batch, locationId)) return false
+    if (locationIds.length > 0 && !batchMatchesAnyLocation(batch, locationIds)) return false
 
     if (hasOra) {
       const batchOra = normalizeOraInput(batch.ora)

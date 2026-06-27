@@ -12,6 +12,7 @@ export type HistoryServerFilters = {
 
 export type HistoryClientFilters = {
   locationIds: string[]
+  llojet: ('Hyrje' | 'Dalje' | 'Transfer')[]
   oraFrom: string
   oraDeri: string
   pershkriminQuery: string
@@ -23,6 +24,7 @@ export type HistoryClientFilters = {
 
 export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
   locationIds: [],
+  llojet: [],
   oraFrom: '',
   oraDeri: '',
   pershkriminQuery: '',
@@ -201,6 +203,10 @@ export function applyHistoryClientFilters(
   }
 
   return batches.filter((batch) => {
+    if (filters.llojet.length > 0 && !filters.llojet.includes(batch.lloji)) {
+      return false
+    }
+
     if (locationFilter.length > 0) {
       const matchesLocation = locationFilter.some((locationId) => {
         if (batch.lloji === 'Transfer') {

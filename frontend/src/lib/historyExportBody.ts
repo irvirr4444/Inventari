@@ -1,6 +1,7 @@
 import type { ActionBatch } from './api'
 import type { HistoryClientFilters, HistoryServerFilters } from './historyClientFilters'
 import { formatHistoryPrintFilterSummary } from './historyFilterSearchParams'
+import { resolveHistoriLocationExportLabel } from './historiFilterSelection'
 
 export function resolveHistoryExportLocationLabel(
   filtered: ActionBatch[],
@@ -22,11 +23,19 @@ export function buildHistoryExportRequestBody(opts: {
   trackPrice?: boolean
   filtered: ActionBatch[]
   filterLines?: string[]
+  locations?: { id: string; emri: string }[]
 }) {
-  const locationLabel = resolveHistoryExportLocationLabel(
-    opts.filtered,
-    opts.client.locationIds,
-  )
+  const locationLabel =
+    opts.locations && opts.locations.length > 0
+      ? resolveHistoriLocationExportLabel(opts.client.locationIds, opts.locations)
+      : resolveHistoryExportLocationLabel(opts.filtered, opts.client.locationIds)
+
+  const llojet =
+    opts.client.llojet.length > 0
+      ? opts.client.llojet
+      : opts.server.lloji
+        ? [opts.server.lloji]
+        : []
 
   const filterLines =
     opts.filterLines ??
@@ -38,11 +47,15 @@ export function buildHistoryExportRequestBody(opts: {
   return {
     batchIds: opts.filtered.map((batch) => batch.id),
     lloji: opts.server.lloji,
+    llojet:
+      llojet.length > 0 && llojet.length < 3 ? llojet : undefined,
     shteti: opts.server.shteti,
     dateFrom: opts.server.dateFrom,
     dateTo: opts.server.dateTo,
     shenim: opts.server.shenim,
-    locationId: opts.client.locationIds[0],
+    locationIds:
+      opts.client.locationIds.length > 0 ? opts.client.locationIds : undefined,
+    locationId: opts.client.locationIds.length === 1 ? opts.client.locationIds[0] : undefined,
     oraFrom: opts.client.oraFrom.trim() || undefined,
     oraDeri: opts.client.oraDeri.trim() || undefined,
     pershkrimi: opts.client.pershkriminQuery.trim() || undefined,

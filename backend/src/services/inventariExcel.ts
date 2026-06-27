@@ -1383,41 +1383,31 @@ export type HistoryExportSheetPlan = {
 
 export function resolveHistoryExportSheets(input: {
   lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
+  llojet?: ('Hyrje' | 'Dalje' | 'Transfer')[]
   locationKeys: string[]
   locations: HistoryExportLocation[]
 }): HistoryExportSheetPlan[] {
-  const { lloji, locationKeys, locations } = input
+  const { lloji, llojet, locationKeys, locations } = input
   const selectedLocations =
     locationKeys.length > 0
       ? locations.filter((loc) => locationKeys.includes(loc.key))
       : locations
 
-  if (lloji === 'Transfer') {
-    return [{ kind: 'transfer', locationKey: null, title: 'Transferta' }]
-  }
-
-  if (lloji === 'Hyrje') {
-    return selectedLocations.map((loc) => ({
-      kind: 'hyrje' as const,
-      locationKey: loc.key,
-      title: `${loc.emri} Hyrje`,
-    }))
-  }
-
-  if (lloji === 'Dalje') {
-    return selectedLocations.map((loc) => ({
-      kind: 'dalje' as const,
-      locationKey: loc.key,
-      title: `${loc.emri} Dalje`,
-    }))
-  }
+  const activeLlojet: ('Hyrje' | 'Dalje' | 'Transfer')[] =
+    llojet && llojet.length > 0 ? llojet : lloji ? [lloji] : ['Hyrje', 'Dalje', 'Transfer']
 
   const plans: HistoryExportSheetPlan[] = []
   for (const loc of selectedLocations) {
-    plans.push({ kind: 'hyrje', locationKey: loc.key, title: `${loc.emri} Hyrje` })
-    plans.push({ kind: 'dalje', locationKey: loc.key, title: `${loc.emri} Dalje` })
+    if (activeLlojet.includes('Hyrje')) {
+      plans.push({ kind: 'hyrje', locationKey: loc.key, title: `${loc.emri} Hyrje` })
+    }
+    if (activeLlojet.includes('Dalje')) {
+      plans.push({ kind: 'dalje', locationKey: loc.key, title: `${loc.emri} Dalje` })
+    }
   }
-  plans.push({ kind: 'transfer', locationKey: null, title: 'Transferta' })
+  if (activeLlojet.includes('Transfer')) {
+    plans.push({ kind: 'transfer', locationKey: null, title: 'Transferta' })
+  }
   return plans
 }
 
@@ -1430,7 +1420,9 @@ function finalizeHistoryWorkbook(
     transferRows: NavSheetRow[]
   },
   transferLocationEmri?: string,
+  options?: { includeEmptySheets?: boolean },
 ) {
+  const includeEmptySheets = options?.includeEmptySheets ?? false
   const usedNames = new Set<string>()
   let sheetCount = 0
 
@@ -1443,7 +1435,7 @@ function finalizeHistoryWorkbook(
           (row) => row[0] === transferLocationEmri || row[1] === transferLocationEmri,
         )
       }
-      if (rows.length === 0) continue
+      if (rows.length === 0 && !includeEmptySheets) continue
       createListSheet(
         workbook,
         plan.title,
@@ -1461,7 +1453,7 @@ function finalizeHistoryWorkbook(
       plan.kind === 'hyrje'
         ? (navigation.hyrjeRows.get(plan.locationKey!) ?? [])
         : (navigation.daljeRows.get(plan.locationKey!) ?? [])
-    if (rows.length === 0) continue
+    if (rows.length === 0 && !includeEmptySheets) continue
 
     createListSheet(
       workbook,
@@ -1553,7 +1545,9 @@ export async function buildHistoryLegacyExcelBuffer(
   }
 
   const workbook = new ExcelJS.Workbook()
-  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri)
+  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri, {
+    includeEmptySheets,
+  })
   return workbook.xlsx.writeBuffer()
 }
 
@@ -1566,6 +1560,7 @@ export async function buildHistoryDynamicExcelBuffer(
   plans: HistoryExportSheetPlan[],
   query: { from?: string; to?: string },
   transferLocationEmri?: string,
+  includeEmptySheets?: boolean,
 ) {
   const locationIndex = new Map(locationIds.map((id, index) => [id, index]))
   const sortedActions = sortDynamicActionExportRows(actionRows)
@@ -1632,6 +1627,8 @@ export async function buildHistoryDynamicExcelBuffer(
   }
 
   const workbook = new ExcelJS.Workbook()
-  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri)
+  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri, {
+    includeEmptySheets,
+  })
   return workbook.xlsx.writeBuffer()
 }

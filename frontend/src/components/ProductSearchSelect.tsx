@@ -209,7 +209,7 @@ export function ProductSearchSelect(props: {
                   inputRef.current?.focus()
                 }}
               >
-                Shfaq te gjitha
+                Shfaq të gjitha
               </button>
             </>
           ) : (
@@ -289,7 +289,7 @@ export function ProductSearchSelect(props: {
       <button
         type="button"
         className="product-search-toggle"
-        aria-label={open ? 'Mbyll listen e produkteve' : 'Shfaq te gjitha produktet'}
+        aria-label={open ? 'Mbyll listen e produkteve' : 'Shfaq të gjitha produktet'}
         aria-expanded={open}
         disabled={props.disabled}
         onMouseDown={(e) => e.preventDefault()}

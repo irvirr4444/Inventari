@@ -48,8 +48,14 @@ describe('applyHistoryExportClientFilters', () => {
     ]
 
     expect(
-      applyHistoryExportClientFilters(rows, { locationId: 'loc-1' }).map((row) => row.id),
+      applyHistoryExportClientFilters(rows, { locationIds: ['loc-1'] }).map((row) => row.id),
     ).toEqual(['1', '2', '3'])
+
+    expect(
+      applyHistoryExportClientFilters(rows, { locationIds: ['loc-1', 'loc-2'] }).map(
+        (row) => row.id,
+      ),
+    ).toEqual(['1', '2', '3', '4'])
   })
 
   it('filters by ora, totali, produkte, and pershkrimi', () => {

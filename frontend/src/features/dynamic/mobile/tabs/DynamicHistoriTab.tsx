@@ -25,10 +25,7 @@ import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { FilterChips } from '../../../../mobile/components/FilterChips'
-import {
-  ALL_FILTER_VALUE_LABEL,
-  ALL_VEPRIMET_LABEL,
-} from '../../../../mobile/constants/historiFilters'
+import { ALL_VEPRIMET_LABEL } from '../../../../mobile/constants/historiFilters'
 import { HistoriAdvancedFiltersPanel } from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
 import { HistoryExportActions } from '../../../history/HistoryExportActions'
 import { MobileHistoriListPending } from '../../../../mobile/components/MobileHistoriListPending'
@@ -36,6 +33,13 @@ import { MobilePagination } from '../../../../mobile/components/MobilePagination
 import type { MobileHeaderState } from '../../../../mobile/types'
 import { DynamicLocationMultiPickerSheet } from '../components/DynamicLocationMultiPickerSheet'
 import { DynamicHistoriBatchDetail } from './DynamicHistoriBatchDetail'
+import {
+  resolveHistoriLocationFilterLabel,
+  resolveHistoriLlojiFilterLabel,
+  toggleHistoriLloji,
+  normalizeHistoriLlojet,
+  type HistoriLloji,
+} from '../../../../lib/historiFilterSelection'
 
 const LLOJI_FILTER_OPTIONS = [
   { id: 'Hyrje' as const, label: 'Hyrje', icon: HyrjeIcon, tone: 'hyrje' },
@@ -69,7 +73,14 @@ export function DynamicHistoriTab(props: {
   const [draftDateFrom, setDraftDateFrom] = React.useState('')
   const [draftDateTo, setDraftDateTo] = React.useState('')
   const [draftShenim, setDraftShenim] = React.useState('')
+  const [draftLlojet, setDraftLlojet] = React.useState<HistoriLloji[]>([])
   const [rangeIssues, setRangeIssues] = React.useState<HistoryFilterRangeIssue[]>([])
+
+  const effectiveLlojet = React.useMemo((): HistoriLloji[] => {
+    if (appliedClientFilters.llojet.length > 0) return appliedClientFilters.llojet
+    if (history.filters.lloji) return [history.filters.lloji]
+    return []
+  }, [appliedClientFilters.llojet, history.filters.lloji])
 
   const products = productsQuery.data ?? []
 
@@ -84,20 +95,25 @@ export function DynamicHistoriTab(props: {
     { trackPrice },
   )
   const hasAdvancedFilters = advancedFilterCount > 0
-  const locationFilterCount = appliedClientFilters.locationIds.length
-  const locationValue =
-    locationFilterCount === 0
-      ? ALL_FILTER_VALUE_LABEL
-      : locationFilterCount === 1
-        ? activeLokacionet.find((l) => l.id === appliedClientFilters.locationIds[0])?.emri ??
-          ALL_FILTER_VALUE_LABEL
-        : `${locationFilterCount} lokacione`
-  const veprimValue = history.filters.lloji ?? ALL_FILTER_VALUE_LABEL
+  const locationValue = resolveHistoriLocationFilterLabel(
+    appliedClientFilters.locationIds,
+    activeLokacionet,
+  )
+  const veprimValue = resolveHistoriLlojiFilterLabel(effectiveLlojet)
+  const llojiFilterActive =
+    effectiveLlojet.length > 0 && effectiveLlojet.length < LLOJI_FILTER_OPTIONS.length
+  const locationFilterActive =
+    appliedClientFilters.locationIds.length > 0 &&
+    appliedClientFilters.locationIds.length < activeLokacionet.length
   const advancedValue = advancedHistoriFilterValueLabel(advancedFilterCount)
   const { isInitialLoad, isRefreshing } = history.listRefresh
 
   const openAdvancedFilters = React.useCallback(() => {
-    setDraftClientFilters(appliedClientFilters)
+    setDraftClientFilters({
+      ...appliedClientFilters,
+      locationIds: [],
+      llojet: [],
+    })
     setDraftDateFrom(history.filters.dateFrom ?? '')
     setDraftDateTo(history.filters.dateTo ?? '')
     setDraftShenim(history.filters.shenim ?? '')
@@ -145,33 +161,50 @@ export function DynamicHistoriTab(props: {
     }
     setRangeIssues([])
     history.updateFilters(server)
-    setAppliedClientFilters(draftClientFilters)
+    setAppliedClientFilters({
+      ...draftClientFilters,
+      locationIds: appliedClientFilters.locationIds,
+      llojet: appliedClientFilters.llojet,
+    })
     setAdvancedFiltersOpen(false)
   }, [draftClientFilters, draftDateFrom, draftDateTo, draftShenim, history, props, trackPrice])
 
   const clearAdvancedFilters = React.useCallback(() => {
-    setDraftClientFilters(EMPTY_CLIENT_FILTERS)
-    setAppliedClientFilters(EMPTY_CLIENT_FILTERS)
+    const preserved = {
+      locationIds: appliedClientFilters.locationIds,
+      llojet: appliedClientFilters.llojet,
+    }
+    setDraftClientFilters({ ...EMPTY_CLIENT_FILTERS, ...preserved })
+    setAppliedClientFilters({ ...EMPTY_CLIENT_FILTERS, ...preserved })
     setDraftDateFrom('')
     setDraftDateTo('')
     setDraftShenim('')
     setRangeIssues([])
     history.updateFilters({ shenim: undefined, dateFrom: undefined, dateTo: undefined })
     setAdvancedFiltersOpen(false)
-  }, [history])
+  }, [appliedClientFilters, history])
 
-  const clearLocationFilter = React.useCallback(() => {
-    setAppliedClientFilters((prev) => ({ ...prev, locationIds: [] }))
+  const applyLocationFilter = React.useCallback((ids: string[]) => {
+    setAppliedClientFilters((prev) => ({ ...prev, locationIds: ids }))
   }, [])
 
-  const toggleLocationFilter = (id: string) => {
-    setAppliedClientFilters((prev) => {
-      const next = prev.locationIds.includes(id)
-        ? prev.locationIds.filter((x) => x !== id)
-        : [...prev.locationIds, id]
-      return { ...prev, locationIds: next }
+  const openLlojiSheet = React.useCallback(() => {
+    setDraftLlojet(effectiveLlojet)
+    setLlojiOpen(true)
+  }, [effectiveLlojet])
+
+  const applyLlojiFilter = React.useCallback(() => {
+    const normalized = normalizeHistoriLlojet(draftLlojet)
+    setAppliedClientFilters((prev) => ({ ...prev, llojet: normalized }))
+    history.updateFilters({
+      lloji: normalized.length === 1 ? normalized[0] : undefined,
     })
-  }
+    setLlojiOpen(false)
+  }, [draftLlojet, history])
+
+  const openLocationSheet = React.useCallback(() => {
+    setLocationOpen(true)
+  }, [])
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
   const handleSaveSuccess = React.useCallback(() => {
@@ -208,13 +241,13 @@ export function DynamicHistoriTab(props: {
                   id: 'lloji',
                   label: 'Veprime',
                   value: veprimValue,
-                  active: !!history.filters.lloji,
+                  active: llojiFilterActive,
                 },
                 {
                   id: 'lokacioni',
                   label: 'Lokacione',
                   value: locationValue,
-                  active: locationFilterCount > 0,
+                  active: locationFilterActive,
                 },
                 {
                   id: 'advanced',
@@ -229,8 +262,8 @@ export function DynamicHistoriTab(props: {
                   openAdvancedFilters()
                   return
                 }
-                if (id === 'lloji') setLlojiOpen(true)
-                if (id === 'lokacioni') setLocationOpen(true)
+                if (id === 'lloji') openLlojiSheet()
+                if (id === 'lokacioni') openLocationSheet()
               }}
             />
 
@@ -312,36 +345,46 @@ export function DynamicHistoriTab(props: {
             </div>
           </div>
 
-          <BottomSheet open={llojiOpen} title="Veprimi" onClose={() => setLlojiOpen(false)}>
+          <BottomSheet
+            open={llojiOpen}
+            title="Veprimi"
+            onClose={() => setLlojiOpen(false)}
+            footer={
+              <SheetActionFooter
+                confirmLabel="Apliko"
+                confirmIcon="check"
+                onCancel={() => setLlojiOpen(false)}
+                onConfirm={applyLlojiFilter}
+              />
+            }
+          >
             <div className="mobile-list-stack">
               <button
                 type="button"
-                className={`mobile-tap-field${!history.filters.lloji ? ' selected' : ''}`}
-                onClick={() => {
-                  history.updateFilters({ lloji: undefined })
-                  setLlojiOpen(false)
-                }}
+                className={`mobile-tap-field${draftLlojet.length === 0 ? ' selected' : ''}`}
+                onClick={() => setDraftLlojet([])}
               >
                 {ALL_VEPRIMET_LABEL}
               </button>
-              {LLOJI_FILTER_OPTIONS.map(({ id, label, icon: Icon, tone }) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`mobile-tap-field${history.filters.lloji === id ? ' selected' : ''}`}
-                  onClick={() => {
-                    history.updateFilters({ lloji: id })
-                    setLlojiOpen(false)
-                  }}
-                >
-                  <span className="row" style={{ gap: 12, alignItems: 'center' }}>
-                    <span className={`mobile-lloji-icon mobile-lloji-icon-${tone}`}>
-                      <Icon />
+              {LLOJI_FILTER_OPTIONS.map(({ id, label, icon: Icon, tone }) => {
+                const checked = draftLlojet.includes(id)
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`mobile-tap-field${checked ? ' selected' : ''}`}
+                    onClick={() => setDraftLlojet((prev) => toggleHistoriLloji(prev, id))}
+                  >
+                    <span className="row" style={{ gap: 12, alignItems: 'center' }}>
+                      <span className={`mobile-lloji-icon mobile-lloji-icon-${tone}`}>
+                        <Icon />
+                      </span>
+                      {label}
+                      {checked ? <span className="mobile-card-meta">✓</span> : null}
                     </span>
-                    {label}
-                  </span>
-                </button>
-              ))}
+                  </button>
+                )
+              })}
             </div>
           </BottomSheet>
 
@@ -349,8 +392,7 @@ export function DynamicHistoriTab(props: {
             open={locationOpen}
             title="Lokacioni"
             selectedIds={appliedClientFilters.locationIds}
-            onToggle={toggleLocationFilter}
-            onClearAll={clearLocationFilter}
+            onApply={applyLocationFilter}
             allowAdd
             onNotify={props.notify}
             onClose={() => setLocationOpen(false)}

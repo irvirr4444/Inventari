@@ -46,7 +46,7 @@ export function DynamicHistoryFilterBar(props: {
               })
             }
           >
-            <option value="">Te gjitha llojet</option>
+            <option value="">Të gjitha llojet</option>
             <option value="Hyrje">Hyrje</option>
             <option value="Dalje">Dalje</option>
             <option value="Transfer">Transfer</option>
@@ -63,7 +63,7 @@ export function DynamicHistoryFilterBar(props: {
               })
             }
           >
-            <option value="">Te gjitha lokacionet</option>
+            <option value="">Të gjitha lokacionet</option>
             {props.locations.map((loc) => (
               <option key={loc.id} value={loc.id}>
                 {loc.flag_emoji ? `${loc.flag_emoji} ` : ''}

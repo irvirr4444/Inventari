@@ -235,11 +235,13 @@ export const ProductsExportQuerySchema = z.object({
 
 export const HistoryExportQuerySchema = z.object({
   lloji: BatchLlojiSchema.optional(),
+  llojet: z.array(BatchLlojiSchema).optional(),
   shteti: CountrySchema.optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   shenim: z.string().optional(),
   locationId: z.string().optional(),
+  locationIds: z.array(z.string().min(1)).optional(),
   oraFrom: z.string().optional(),
   oraDeri: z.string().optional(),
   pershkrimi: z.string().optional(),
@@ -256,8 +258,10 @@ export const HistoryExportQuerySchema = z.object({
 export const HistoryExportBodySchema = z.object({
   batchIds: z.array(z.string().min(1)).min(1),
   lloji: BatchLlojiSchema.optional(),
+  llojet: z.array(BatchLlojiSchema).optional(),
   shteti: CountrySchema.optional(),
   locationId: z.string().optional(),
+  locationIds: z.array(z.string().min(1)).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   shenim: z.string().optional(),

@@ -8,6 +8,7 @@ import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
 import { HistoryDetailPending } from '../history/HistoryDetailPending'
+import { DynamicActionEditForm } from './DynamicActionEditForm'
 import type { HistoryEditSaveResult } from '../history/historyEditSave'
 
 export function DynamicActionEditModal(props: {

@@ -3,6 +3,7 @@ import { getActionBatch } from '../../lib/api'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { HistoryDetailPending } from './HistoryDetailPending'
+import { ActionReadOnlyPanel } from './ActionReadOnlyPanel'
 
 export function ExpandedActionDetail(props: {
   actionId: string

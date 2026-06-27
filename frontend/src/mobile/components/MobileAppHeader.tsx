@@ -7,12 +7,10 @@ export function MobileAppHeader(props: {
   tabTitle: string
   onLogout: () => void
 }) {
-  const isSub = props.header.kind === 'sub'
-
   return (
     <header className="mobile-header">
       <div className="mobile-header-side mobile-header-side--start">
-        {isSub ? (
+        {props.header.kind === 'sub' ? (
           <>
             <button
               type="button"

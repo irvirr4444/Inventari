@@ -8,8 +8,10 @@ const LOADING_MESSAGES = [
   { atMs: 10000, text: 'Pothuajse gati' },
 ] as const
 
+type AuthLoadingMessage = (typeof LOADING_MESSAGES)[number]['text']
+
 function useAuthLoadingMessage() {
-  const [message, setMessage] = React.useState(LOADING_MESSAGES[0].text)
+  const [message, setMessage] = React.useState<AuthLoadingMessage>(LOADING_MESSAGES[0].text)
 
   React.useEffect(() => {
     const timers = LOADING_MESSAGES.slice(1).map((step) =>

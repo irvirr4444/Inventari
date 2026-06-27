@@ -125,7 +125,7 @@ function DynamicHistoriDetailProductRow(props: {
         <div className="mobile-row-card-sub">
           {props.trackPrice ? (
             <>
-              {fmtEuro(props.row.draft.cmimi_njesi)} × {qty} cop
+              {fmtEuro(Number(props.row.draft.cmimi_njesi) || 0)} × {qty} cop
             </>
           ) : (
             <>{qty} cop</>

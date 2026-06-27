@@ -24,6 +24,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 
 let gsiScriptPromise: Promise<void> | null = null
 let gsiInitialized = false
+let nativeGoogleInitialized = false
 
 function loadGsiScript(): Promise<void> {
   if (window.google?.accounts?.id) return Promise.resolve()
@@ -41,8 +42,18 @@ function loadGsiScript(): Promise<void> {
   return gsiScriptPromise
 }
 
+async function ensureNativeGoogleInitialized(): Promise<void> {
+  if (nativeGoogleInitialized || !GOOGLE_CLIENT_ID) return
+  const { SocialLogin } = await import('@capgo/capacitor-social-login')
+  await SocialLogin.initialize({
+    google: {
+      webClientId: GOOGLE_CLIENT_ID,
+    },
+  })
+  nativeGoogleInitialized = true
+}
+
 export function isGoogleSignInConfigured(): boolean {
-  if (isCapacitorNativeApp()) return false
   return Boolean(GOOGLE_CLIENT_ID)
 }
 
@@ -78,20 +89,15 @@ function GoogleIcon() {
   )
 }
 
-export function GoogleSignInButton(props: {
+function useGoogleCredentialHandler(props: {
   onSuccess: () => void
   onError: (message: string) => void
   onClearError?: () => void
   onLoadingChange?: (loading: boolean) => void
-  disabled?: boolean
 }) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null)
-  const buttonRenderedRef = React.useRef(false)
-  const requestTimeoutRef = React.useRef<number | null>(null)
   const { refreshSession } = useAuth()
-  const { onSuccess, onError, onClearError, onLoadingChange, disabled } = props
-  const [googleLoading, setGoogleLoading] = React.useState(false)
-  const [scriptReady, setScriptReady] = React.useState(false)
+  const { onSuccess, onError, onClearError, onLoadingChange } = props
+  const requestTimeoutRef = React.useRef<number | null>(null)
 
   const onSuccessRef = React.useRef(onSuccess)
   const onErrorRef = React.useRef(onError)
@@ -105,7 +111,6 @@ export function GoogleSignInButton(props: {
 
   const setLoading = React.useCallback(
     (loading: boolean) => {
-      setGoogleLoading(loading)
       onLoadingChange?.(loading)
     },
     [onLoadingChange],
@@ -142,6 +147,105 @@ export function GoogleSignInButton(props: {
     },
     [clearRequestTimeout, refreshSession, setLoading],
   )
+
+  React.useEffect(() => () => clearRequestTimeout(), [clearRequestTimeout])
+
+  return handleCredential
+}
+
+function GoogleSignInButtonNative(props: {
+  onSuccess: () => void
+  onError: (message: string) => void
+  onClearError?: () => void
+  onLoadingChange?: (loading: boolean) => void
+  disabled?: boolean
+}) {
+  const { disabled, onError } = props
+  const [googleLoading, setGoogleLoading] = React.useState(false)
+  const [nativeReady, setNativeReady] = React.useState(false)
+
+  const handleCredential = useGoogleCredentialHandler({
+    ...props,
+    onLoadingChange: (loading) => {
+      setGoogleLoading(loading)
+      props.onLoadingChange?.(loading)
+    },
+  })
+
+  React.useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+
+    let cancelled = false
+    ensureNativeGoogleInitialized()
+      .then(() => {
+        if (!cancelled) setNativeReady(true)
+      })
+      .catch(() => {
+        if (!cancelled) setNativeReady(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleClick = React.useCallback(async () => {
+    if (disabled || !nativeReady || googleLoading) return
+
+    try {
+      const { SocialLogin } = await import('@capgo/capacitor-social-login')
+      const res = await SocialLogin.login({
+        provider: 'google',
+        options: {},
+      })
+      if (res.result.responseType !== 'online' || !res.result.idToken) {
+        onError('Hyrja me Google deshtoi.')
+        return
+      }
+      await handleCredential(res.result.idToken)
+    } catch (err) {
+      onError(mapGoogleError(err))
+    }
+  }, [disabled, googleLoading, handleCredential, nativeReady, onError])
+
+  if (!GOOGLE_CLIENT_ID) return null
+
+  const interactionDisabled = disabled || !nativeReady || googleLoading
+
+  return (
+    <button
+      type="button"
+      className="auth-google-btn"
+      onClick={() => void handleClick()}
+      disabled={interactionDisabled}
+      aria-label="Vazhdo me Google"
+    >
+      <GoogleIcon />
+      {googleLoading ? 'Duke hyre...' : 'Vazhdo me Google'}
+    </button>
+  )
+}
+
+function GoogleSignInButtonWeb(props: {
+  onSuccess: () => void
+  onError: (message: string) => void
+  onClearError?: () => void
+  onLoadingChange?: (loading: boolean) => void
+  disabled?: boolean
+}) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null)
+  const buttonRenderedRef = React.useRef(false)
+  const { disabled } = props
+  const [googleLoading, setGoogleLoading] = React.useState(false)
+  const [scriptReady, setScriptReady] = React.useState(false)
+
+  const handleCredential = useGoogleCredentialHandler({
+    ...props,
+    onLoadingChange: (loading) => {
+      setGoogleLoading(loading)
+      props.onLoadingChange?.(loading)
+    },
+  })
 
   const credentialHandlerRef = React.useRef(handleCredential)
   React.useEffect(() => {
@@ -184,15 +288,13 @@ export function GoogleSignInButton(props: {
         mountButton()
       })
       .catch(() => {
-        // GSI often fails in Capacitor WebView — hide button via scriptReady, no snackbar
         if (!cancelled) setScriptReady(false)
       })
 
     return () => {
       cancelled = true
-      clearRequestTimeout()
     }
-  }, [clearRequestTimeout])
+  }, [])
 
   if (!GOOGLE_CLIENT_ID) return null
 
@@ -211,4 +313,18 @@ export function GoogleSignInButton(props: {
       />
     </div>
   )
+}
+
+export function GoogleSignInButton(props: {
+  onSuccess: () => void
+  onError: (message: string) => void
+  onClearError?: () => void
+  onLoadingChange?: (loading: boolean) => void
+  disabled?: boolean
+}) {
+  if (isCapacitorNativeApp()) {
+    return <GoogleSignInButtonNative {...props} />
+  }
+
+  return <GoogleSignInButtonWeb {...props} />
 }

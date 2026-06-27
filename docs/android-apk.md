@@ -269,6 +269,8 @@ npm run android:icons
 npm run android:sync   # optional; icons are native assets, not web bundle
 ```
 
+`android:icons` pads the favicon into adaptive-icon safe zone (foreground + `#071528` background) — do not copy the raw favicon into mipmaps (it looks zoomed/cropped on the home screen).
+
 Then rebuild in Android Studio. Source: `android-shell/assets/logo.png` (auto-copied from the favicon).
 
 ---

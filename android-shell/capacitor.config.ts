@@ -17,6 +17,14 @@ const config: CapacitorConfig = {
       detectViewportFitCoverChanges: true,
       initialViewportFitCover: true,
     },
+    SocialLogin: {
+      providers: {
+        google: true,
+        facebook: false,
+        apple: false,
+        twitter: false,
+      },
+    },
   },
 }
 

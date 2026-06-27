@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     if (this.state.error) {
       return (
         <main className={this.props.fallbackClassName ?? 'container auth-container'}>
-          <section className="card auth-card">
+          <section className="auth-card">
             <h1>Gabim</h1>
             <p className="muted" style={{ margin: '8px 0 0' }}>
               {this.state.error.message || 'Diçka shkoi keq. Rifresko faqen.'}

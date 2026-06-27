@@ -114,7 +114,7 @@ export function LocationsEditor(props: LocationsEditorProps) {
   }
 
   return (
-    <section className="card auth-card locations-editor">
+    <section className="auth-card locations-editor">
       {props.mode === 'onboarding' ? (
         <>
           <div className="locations-onboarding-header">

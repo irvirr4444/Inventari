@@ -1,3 +1,101 @@
+/* Auth shell — dark glass card (matches onboarding / mobile sheets) */
+.auth-container {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: max(28px, env(safe-area-inset-top));
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+
+.auth-container .auth-card {
+  width: min(440px, 100%);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 28px 24px;
+  box-shadow: 0 18px 50px rgba(0, 10, 28, 0.28);
+  backdrop-filter: blur(14px);
+  color: #f7fbff;
+}
+
+.auth-container .auth-card h1 {
+  color: #f7fbff;
+}
+
+.auth-container .auth-card .muted {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.auth-container .auth-card .label {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.auth-container .auth-card .input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f7fbff;
+}
+
+.auth-container .auth-card .input:focus {
+  border-color: rgba(47, 125, 246, 0.65);
+  box-shadow: 0 0 0 3px rgba(47, 125, 246, 0.18);
+}
+
+.auth-container .auth-card .input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.auth-container .auth-card .input:disabled {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.auth-container .auth-card .toggle-group {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-container .auth-card .toggle-btn {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.auth-container .auth-card .toggle-btn:hover {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.auth-container .auth-card .toggle-btn.active {
+  background: rgba(47, 125, 246, 0.22);
+  color: #f7fbff;
+  box-shadow: none;
+}
+
+.auth-container .auth-card .btn.primary {
+  border-radius: 12px;
+  min-height: 48px;
+  font-weight: 600;
+}
+
+.auth-container .auth-divider {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.auth-container .auth-divider::before,
+.auth-container .auth-divider::after {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-container .auth-google-facade {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f7fbff;
+}
+
+.auth-container .auth-google-wrap:not(.is-disabled):hover .auth-google-facade {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
 .auth-mode-toggle {
   display: flex;
   justify-content: center;
@@ -119,6 +217,31 @@
 
 .auth-error-slot {
   margin-top: 4px;
+}
+
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.auth-brand-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
+  filter: drop-shadow(0 4px 14px rgba(47, 125, 246, 0.35));
+}
+
+.auth-brand-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #f7fbff;
 }
 
 /* Full-screen session / route loading */

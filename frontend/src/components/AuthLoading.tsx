@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { APP_LOGO_SRC } from '../lib/appBrand'
+import { AuthBrandMark } from './AuthBrandMark'
 
 const LOADING_MESSAGES = [
   { atMs: 0, text: 'Duke marrë të dhënat' },
@@ -29,14 +29,7 @@ export function AuthLoading() {
   return (
     <main className="auth-loading-screen">
       <div className="auth-loading-content">
-        <div className="auth-loading-brand">
-          <div className="auth-loading-orbit" aria-hidden="true">
-            <span className="auth-loading-orbit-ring" />
-            <span className="auth-loading-orbit-ring auth-loading-orbit-ring--delayed" />
-            <img className="auth-loading-logo" src={APP_LOGO_SRC} alt="" />
-          </div>
-          <h1 className="auth-loading-title">Inventari Im</h1>
-        </div>
+        <AuthBrandMark variant="loading" />
         <p key={status} className="auth-loading-status" aria-live="polite">{status}</p>
       </div>
     </main>

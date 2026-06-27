@@ -10,6 +10,7 @@ import {
   GoogleSignInButton,
   isGoogleSignInConfigured,
 } from '../features/auth/GoogleSignInButton'
+import { AuthBrandMark } from '../components/AuthBrandMark'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -117,10 +118,8 @@ export function LoginPage() {
 
   return (
     <>
-      <section className="card auth-card">
-        <div style={{ marginBottom: 20, textAlign: 'center' }}>
-          <h1>Inventari</h1>
-        </div>
+      <section className="auth-card">
+        <AuthBrandMark />
 
         <div className="auth-mode-toggle">
           <div className="toggle-group">

@@ -1545,9 +1545,7 @@ export async function buildHistoryLegacyExcelBuffer(
   }
 
   const workbook = new ExcelJS.Workbook()
-  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri, {
-    includeEmptySheets,
-  })
+  finalizeHistoryWorkbook(workbook, plans, navigation, transferLocationEmri)
   return workbook.xlsx.writeBuffer()
 }
 

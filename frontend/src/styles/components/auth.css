@@ -102,6 +102,49 @@
   margin-bottom: 20px;
 }
 
+.auth-legal-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 2px;
+  cursor: pointer;
+}
+
+.auth-legal-consent__input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.auth-legal-consent__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.auth-legal-consent__text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.auth-legal-consent__text a {
+  color: rgba(126, 180, 255, 0.95);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-legal-consent__text a:hover {
+  color: #f7fbff;
+}
+
+.auth-container .auth-card .btn.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

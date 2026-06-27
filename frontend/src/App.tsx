@@ -42,6 +42,12 @@ const DynamicMobileApp = React.lazy(() =>
 const HistoryPrintPage = React.lazy(() =>
   import('./features/history/HistoryPrintPage').then((m) => ({ default: m.HistoryPrintPage })),
 )
+const PrivacyPolicyPage = React.lazy(() =>
+  import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })),
+)
+const TermsPage = React.lazy(() =>
+  import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })),
+)
 
 function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
@@ -155,6 +161,10 @@ function LoginRoute() {
   )
 }
 
+function LegalRoute(props: { children: React.ReactNode }) {
+  return <RouteSuspense>{props.children}</RouteSuspense>
+}
+
 function MobileRedirect() {
   const location = useLocation()
   const target = location.pathname.replace(/^\/mobile\/?/, '/') || '/'
@@ -216,6 +226,22 @@ export default function App() {
                 <HistoryPrintPage />
               </RouteSuspense>
             </RequireAuth>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <LegalRoute>
+              <PrivacyPolicyPage />
+            </LegalRoute>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <LegalRoute>
+              <TermsPage />
+            </LegalRoute>
           }
         />
         <Route path="/" element={<ProtectedHome />} />

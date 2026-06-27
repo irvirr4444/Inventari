@@ -3,7 +3,19 @@ import crypto from 'node:crypto'
 import { z } from 'zod'
 
 export const SESSION_COOKIE = 'inventari_session'
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
+
+/** Default ~400 days — keeps mobile/web users signed in until explicit logout. Override via SESSION_MAX_AGE_SECONDS. */
+const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 400
+
+function parseSessionMaxAgeSeconds(): number {
+  const raw = process.env.SESSION_MAX_AGE_SECONDS
+  if (!raw) return DEFAULT_SESSION_MAX_AGE_SECONDS
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed < 60) return DEFAULT_SESSION_MAX_AGE_SECONDS
+  return parsed
+}
+
+export const SESSION_MAX_AGE_SECONDS = parseSessionMaxAgeSeconds()
 
 const SessionPayloadSchema = z.object({
   sub: z.string().uuid(),

@@ -298,7 +298,7 @@ Before distributing an APK:
 | Channel | Format | Notes |
 | --- | --- | --- |
 | Internal / sideload | `.apk` | Debug or signed release APK; enable “Install unknown apps” |
-| Google Play | `.aab` | Signed app bundle; privacy policy URL required |
+| Google Play | `.aab` | Signed app bundle; privacy policy URL required — see [google-play.md](google-play.md) |
 | MDM / enterprise | Signed APK or Play private track | Same backend as production |
 
 Versioning: bump `versionCode` / `versionName` in `android/app/build.gradle` each release.

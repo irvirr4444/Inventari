@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { decodeSessionToken, SESSION_COOKIE } from '../auth/session.js'
+import { decodeSessionToken, SESSION_COOKIE, setSessionCookie } from '../auth/session.js'
 import { resolveSessionUser } from '../services/authService.js'
 
 export type AuthPluginDeps = {
@@ -32,6 +32,7 @@ export function registerAuthPlugin(app: FastifyInstance, deps: AuthPluginDeps) {
       return reply.code(401).send({ error: 'Unauthorized' })
     }
 
+    setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
     req.user = user
   })
 }

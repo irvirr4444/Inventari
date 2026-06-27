@@ -11,6 +11,7 @@ import {
   isGoogleSignInConfigured,
 } from '../features/auth/GoogleSignInButton'
 import { AuthBrandMark } from '../components/AuthBrandMark'
+import { Link } from 'react-router-dom'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -42,9 +43,11 @@ export function LoginPage() {
   const [password, setPassword] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
+  const [acceptedLegal, setAcceptedLegal] = React.useState(false)
 
   const googleEnabled = isGoogleSignInConfigured()
   const formBusy = loading || googleLoading
+  const signupBlocked = mode === 'signup' && !acceptedLegal
 
   const showError = (message: string) => {
     notify(message, 'error')
@@ -52,6 +55,7 @@ export function LoginPage() {
 
   const switchMode = (next: AuthMode) => {
     setMode(next)
+    if (next === 'signin') setAcceptedLegal(false)
     clear()
   }
 
@@ -79,6 +83,9 @@ export function LoginPage() {
     }
     if (mode === 'signup' && trimmedPassword.length < 8) {
       return 'Fjalekalimi duhet te kete te pakten 8 karaktere.'
+    }
+    if (mode === 'signup' && !acceptedLegal) {
+      return 'Duhet te pranosh Politiken e privatësisë dhe Kushtet e përdorimit.'
     }
     return null
   }
@@ -167,7 +174,29 @@ export function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="btn primary" disabled={formBusy}>
+          {mode === 'signup' ? (
+            <label className="auth-legal-consent">
+              <input
+                type="checkbox"
+                className="auth-legal-consent__input"
+                checked={acceptedLegal}
+                onChange={(e) => setAcceptedLegal(e.target.checked)}
+                disabled={formBusy}
+              />
+              <span className="auth-legal-consent__text">
+                Kam lexuar dhe pranoj{' '}
+                <Link to="/privacy" target="_blank" rel="noopener noreferrer">
+                  Politikën e privatësisë
+                </Link>{' '}
+                dhe{' '}
+                <Link to="/terms" target="_blank" rel="noopener noreferrer">
+                  Kushtet e përdorimit
+                </Link>
+              </span>
+            </label>
+          ) : null}
+
+          <button type="submit" className="btn primary" disabled={formBusy || signupBlocked}>
             {loading
               ? mode === 'signin'
                 ? 'Duke hyre...'
@@ -186,10 +215,16 @@ export function LoginPage() {
               onError={showError}
               onClearError={clear}
               onLoadingChange={setGoogleLoading}
-              disabled={loading}
+              disabled={loading || (mode === 'signup' && !acceptedLegal)}
             />
           </div>
         ) : null}
+
+        <p className="auth-legal-footer">
+          <Link to="/privacy">Politika e privatësisë</Link>
+          {' · '}
+          <Link to="/terms">Kushtet</Link>
+        </p>
       </section>
       <Snackbar snackbar={snackbar} />
     </>

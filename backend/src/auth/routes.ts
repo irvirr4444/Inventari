@@ -100,13 +100,14 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
     return { ok: true }
   })
 
-  app.get('/api/session', async (req) => {
+  app.get('/api/session', async (req, reply) => {
     const payload = decodeSessionToken(deps.sessionSecret, req.cookies[SESSION_COOKIE])
     if (!payload) return { ok: false as const }
 
     const user = await resolveSessionUser(deps.supabase, payload.sub)
     if (!user) return { ok: false as const }
 
+    setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
     return getSessionPayload(deps.supabase, user)
   })
 }

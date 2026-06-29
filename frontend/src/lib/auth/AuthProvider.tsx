@@ -11,23 +11,38 @@ type AuthContextValue = {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null)
 
+/** Render free tier can take 30–60s to wake; don't block the login UI that long. */
+const SESSION_CHECK_TIMEOUT_MS = 12_000
+
+async function fetchSessionWithTimeout(): Promise<Awaited<ReturnType<typeof fetchSession>>> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS)
+  try {
+    return await fetchSession({ signal: controller.signal })
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
+}
+
 export function AuthProvider(props: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<SessionUser | null>(null)
   const [loading, setLoading] = React.useState(true)
 
   const refreshSession = React.useCallback(async () => {
-    const res = await fetchSession()
-    if (res.ok) {
-      setUser(res.user)
-    } else {
+    try {
+      const res = await fetchSessionWithTimeout()
+      if (res.ok) {
+        setUser(res.user)
+      } else {
+        setUser(null)
+      }
+    } catch {
       setUser(null)
     }
   }, [])
 
   React.useEffect(() => {
-    refreshSession()
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false))
+    refreshSession().finally(() => setLoading(false))
   }, [refreshSession])
 
   const logout = React.useCallback(async () => {

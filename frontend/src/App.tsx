@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthLoading } from './components/AuthLoading'
 import { useAuth } from './lib/auth/AuthProvider'
 import { useMobileClient } from './hooks/useMobileClient'
+import { isCapacitorNativeApp } from './lib/capacitorClient'
 import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
 
 const LoginPage = React.lazy(() =>
@@ -111,7 +112,14 @@ function DynamicDashboardShell(props: {
 
 function ProtectedHome() {
   const isMobile = useMobileClient()
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
+
+  if (loading && !user) {
+    if (isCapacitorNativeApp() || isMobile) {
+      return <Navigate to="/login" replace />
+    }
+    return <AuthLoading />
+  }
 
   if (!user) return <Navigate to="/login" replace />
   if (shouldShowOnboarding(user)) {
@@ -138,8 +146,7 @@ function ProtectedHome() {
 }
 
 function PublicOnly(props: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <AuthLoading />
+  const { user } = useAuth()
   if (user) return <Navigate to="/" replace />
   return <>{props.children}</>
 }
@@ -172,12 +179,6 @@ function MobileRedirect() {
 }
 
 export default function App() {
-  const { loading } = useAuth()
-
-  if (loading) {
-    return <AuthLoading />
-  }
-
   return (
     <BrowserRouter>
       <Routes>

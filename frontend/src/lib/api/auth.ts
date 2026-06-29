@@ -5,18 +5,26 @@ type SessionResponse =
   | { ok: false }
   | { ok: true; user: SessionUser }
 
-export async function login(input: { emri: string; password: string }): Promise<void> {
+export async function login(
+  input: { emri: string; password: string },
+  init?: RequestInit,
+): Promise<void> {
   await http<{ ok: true }>(`/login`, {
+    ...init,
     method: 'POST',
     body: JSON.stringify(input),
   })
 }
 
-export async function signup(input: {
-  emri: string
-  password: string
-}): Promise<void> {
+export async function signup(
+  input: {
+    emri: string
+    password: string
+  },
+  init?: RequestInit,
+): Promise<void> {
   await http<{ ok: true }>(`/auth/signup`, {
+    ...init,
     method: 'POST',
     body: JSON.stringify(input),
   })
@@ -35,6 +43,6 @@ export async function logout(): Promise<void> {
   })
 }
 
-export async function fetchSession(): Promise<SessionResponse> {
-  return http<SessionResponse>(`/session`)
+export async function fetchSession(init?: RequestInit): Promise<SessionResponse> {
+  return http<SessionResponse>(`/session`, init)
 }

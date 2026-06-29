@@ -15,6 +15,14 @@ import { Link } from 'react-router-dom'
 
 type AuthMode = 'signin' | 'signup'
 
+const AUTH_REQUEST_TIMEOUT_MS = 45_000
+
+function withAuthRequestTimeout<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+  return run(controller.signal).finally(() => window.clearTimeout(timeoutId))
+}
+
 function mapAuthError(err: unknown, mode: AuthMode): string {
   if (err instanceof ApiError) {
     if (err.status === 401 && err.message === 'Account created with Google') {
@@ -27,6 +35,9 @@ function mapAuthError(err: unknown, mode: AuthMode): string {
     if (err.status === 409) return 'Ky emer eshte i regjistruar.'
     if (err.status >= 500) return 'Gabim ne rrjet. Provo perseri.'
     return err.message || 'Gabim ne rrjet. Provo perseri.'
+  }
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return 'Serveri po ngarkohet. Provo perseri pas disa sekondash.'
   }
   return mode === 'signup' ? 'Regjistrimi deshtoi.' : 'Hyrja deshtoi.'
 }
@@ -106,13 +117,14 @@ export function LoginPage() {
       const trimmedPassword = password.trim()
 
       if (mode === 'signin') {
-        await login({ emri: trimmedEmri, password: trimmedPassword })
+        await withAuthRequestTimeout((signal) =>
+          login({ emri: trimmedEmri, password: trimmedPassword }, { signal }),
+        )
         await navigateAfterAuth()
       } else {
-        await signup({
-          emri: trimmedEmri,
-          password: trimmedPassword,
-        })
+        await withAuthRequestTimeout((signal) =>
+          signup({ emri: trimmedEmri, password: trimmedPassword }, { signal }),
+        )
         await refreshSession()
         navigate('/onboarding', { replace: true })
       }

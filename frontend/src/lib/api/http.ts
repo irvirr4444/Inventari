@@ -14,11 +14,19 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set('Content-Type', 'application/json')
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers,
-    credentials: 'include',
-  })
+  const url = `${API_BASE}${path}`
+  let res: Response
+  try {
+    res = await fetch(url, {
+      ...init,
+      headers,
+      credentials: 'include',
+    })
+  } catch (err) {
+    console.error('[inventari-api] fetch failed', url, err)
+    if (err instanceof DOMException && err.name === 'AbortError') throw err
+    throw new ApiError('Gabim ne lidhje me serverin. Kontrollo internetin.', 0)
+  }
 
   if (!res.ok) {
     const text = await res.text()

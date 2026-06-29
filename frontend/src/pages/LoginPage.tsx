@@ -25,6 +25,7 @@ function withAuthRequestTimeout<T>(run: (signal: AbortSignal) => Promise<T>): Pr
 
 function mapAuthError(err: unknown, mode: AuthMode): string {
   if (err instanceof ApiError) {
+    if (err.status === 0) return err.message
     if (err.status === 401 && err.message === 'Account created with Google') {
       return 'Kjo llogari eshte krijuar me Google. Hyr me Google.'
     }
@@ -55,31 +56,39 @@ export function LoginPage() {
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
   const [acceptedLegal, setAcceptedLegal] = React.useState(false)
+  const [authError, setAuthError] = React.useState<string | null>(null)
 
   const googleEnabled = isGoogleSignInConfigured()
   const formBusy = loading || googleLoading
   const signupBlocked = mode === 'signup' && !acceptedLegal
 
   const showError = (message: string) => {
+    setAuthError(message)
     notify(message, 'error')
   }
 
   const switchMode = (next: AuthMode) => {
     setMode(next)
     if (next === 'signin') setAcceptedLegal(false)
+    setAuthError(null)
     clear()
   }
 
   const navigateAfterAuth = async () => {
-    await refreshSession()
-    const session = await fetchSession()
-    if (session.ok) {
+    await withAuthRequestTimeout(async (signal) => {
+      const session = await fetchSession({ signal })
+      if (!session.ok) {
+        throw new Error('Session cookie missing after login')
+      }
+      await refreshSession()
       const path = getPostAuthPath(session.user)
       const qs = searchParams.toString()
       navigate(qs ? `${path}?${qs}` : path, { replace: true })
-    } else {
-      showError('Hyrja deshtoi. Provo perseri.')
-    }
+    }).catch(() => {
+      showError(
+        'Hyrja u krye por sesioni nuk u ruajt. Mbyll aplikacionin, hape perseri dhe provo.',
+      )
+    })
   }
 
   const validate = (): string | null => {
@@ -103,6 +112,7 @@ export function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setAuthError(null)
     clear()
 
     const validationError = validate()
@@ -112,6 +122,7 @@ export function LoginPage() {
     }
 
     setLoading(true)
+    console.info('[inventari-auth] submitting', mode)
     try {
       const trimmedEmri = emri.trim()
       const trimmedPassword = password.trim()
@@ -217,6 +228,12 @@ export function LoginPage() {
                 ? 'Hyr'
                 : 'Krijo Llogari'}
           </button>
+
+          {authError ? (
+            <p className="auth-error-slot auth-error-message" role="alert">
+              {authError}
+            </p>
+          ) : null}
         </form>
 
         {googleEnabled ? (

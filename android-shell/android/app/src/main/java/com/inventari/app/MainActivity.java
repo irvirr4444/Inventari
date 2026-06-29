@@ -3,7 +3,10 @@ package com.inventari.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.webkit.CookieManager;
+import android.webkit.WebView;
 import androidx.activity.EdgeToEdge;
+import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginHandle;
@@ -16,6 +19,29 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        enableWebViewCookies();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        enableWebViewCookies();
+    }
+
+    /** Required for session cookies: app origin is https://localhost, API is on Render. */
+    private void enableWebViewCookies() {
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        Bridge bridge = getBridge();
+        if (bridge == null) return;
+        WebView webView = bridge.getWebView();
+        if (webView == null) return;
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
     }
 
     @Override

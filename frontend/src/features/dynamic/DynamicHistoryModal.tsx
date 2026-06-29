@@ -320,7 +320,7 @@ export function DynamicHistoryModal(props: {
                             <button
                               type="button"
                               className="btn sm danger history-row-action-btn hover-tooltip"
-                              data-tooltip="Fshij"
+                              data-tooltip="Fshi"
                               aria-label="Fshi veprimin"
                               onClick={() => {
                                 setDeleteTarget(action)

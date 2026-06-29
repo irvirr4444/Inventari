@@ -263,13 +263,13 @@ export function ProductsPanel(props: {
                           <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
                       </button>
-                      <HoverTooltip label="Fshij">
+                      <HoverTooltip label="Fshi">
                         <button
                           type="button"
                           className="btn danger sm"
                           onClick={() => props.onDeleteProduct(p)}
                           disabled={props.deletePending}
-                          aria-label="Fshij produktin"
+                          aria-label="Fshi produktin"
                         >
                         <svg
                           aria-hidden="true"

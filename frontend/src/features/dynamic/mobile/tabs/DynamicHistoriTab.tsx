@@ -402,12 +402,12 @@ export function DynamicHistoriTab(props: {
 
       <BottomSheet
         open={!!deleteTarget}
-        title="Fshij veprimin?"
+        title="Fshi veprimin?"
         onClose={() => setDeleteTarget(null)}
         footer={
           <SheetActionFooter
             onCancel={() => setDeleteTarget(null)}
-            confirmLabel={history.deleteMut.isPending ? 'Duke fshire…' : 'Fshij'}
+            confirmLabel={history.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
             confirmLoading={history.deleteMut.isPending}
             confirmVariant="danger"
             confirmIcon="delete"

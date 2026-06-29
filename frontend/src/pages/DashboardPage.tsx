@@ -102,9 +102,9 @@ export function DashboardPage() {
 
       {d.deletingProduct && (
         <ConfirmModal
-          title="Fshij produktin?"
+          title="Fshi produktin?"
           message={`Produkti "${productLabel(d.deletingProduct.emri, d.deletingProduct.kodi)}" do te fshihet bashke me historikun e veprimeve te tij.`}
-          confirmLabel={d.deleteProductMut.isPending ? 'Duke fshire...' : 'Fshij'}
+          confirmLabel={d.deleteProductMut.isPending ? 'Duke fshire...' : 'Fshi'}
           tone="danger"
           loading={d.deleteProductMut.isPending}
           onCancel={() => d.setDeletingProduct(null)}

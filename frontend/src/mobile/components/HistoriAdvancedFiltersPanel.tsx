@@ -57,7 +57,7 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
       footer={
         <SheetFooterRow>
           <button type="button" className="mobile-sheet-btn mobile-sheet-btn-secondary" onClick={onClear}>
-            Pastro
+            Fshi te gjitha
           </button>
           <button type="button" className="mobile-sheet-btn mobile-sheet-btn-primary" onClick={onApply}>
             Apliko

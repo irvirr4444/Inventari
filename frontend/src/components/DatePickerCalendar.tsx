@@ -218,7 +218,7 @@ export function DatePickerCalendar(props: DatePickerCalendarProps) {
               else pickSingleDate('')
             }}
           >
-            Pastro
+            Fshi
           </button>
         ) : null}
         <button

@@ -336,12 +336,12 @@ export function DynamicProdukteTab(props: {
 
       <BottomSheet
         open={deleteOpen && !!detailProduct}
-        title="Fshij produktin?"
+        title="Fshi produktin?"
         onClose={() => setDeleteOpen(false)}
         footer={
           <SheetActionFooter
             onCancel={() => setDeleteOpen(false)}
-            confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshij'}
+            confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
             confirmLoading={crud.deleteMut.isPending}
             confirmVariant="danger"
             confirmIcon="delete"

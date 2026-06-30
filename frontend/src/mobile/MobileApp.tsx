@@ -34,9 +34,7 @@ export function MobileApp(props: { onLogout: () => void }) {
 
   useOverscrollLock(contentRef)
 
-  React.useEffect(() => {
-    setHeader({ kind: 'tab' })
-  }, [tab])
+  const historiActive = tab === 'histori'
 
   const contentClass = CTA_TABS.includes(tab)
     ? 'mobile-content mobile-content-with-cta'
@@ -57,7 +55,7 @@ export function MobileApp(props: { onLogout: () => void }) {
           <ProdukteTab notify={notify} />
         </MobileTabSlot>
         <MobileTabSlot tab="histori" activeTab={tab}>
-          <HistoriTab notify={notify} onHeaderChange={setHeader} />
+          <HistoriTab notify={notify} isActive={historiActive} onHeaderChange={setHeader} />
         </MobileTabSlot>
         <MobileTabSlot tab="permblehdje" activeTab={tab}>
           <PermbledhjeTab />

@@ -90,6 +90,7 @@ export async function buildApp() {
   await app.register(cors, {
     origin: parseCorsOrigin(env.CORS_ORIGIN),
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   })
 
   await app.register(cookie)

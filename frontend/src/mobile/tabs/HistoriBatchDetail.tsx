@@ -331,6 +331,7 @@ function HistoriBatchEditView(props: {
 export function HistoriBatchDetail(props: {
   batchId: string
   products: Produkti[]
+  isActive: boolean
   onNotify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onDeleteRequest: (batch: Pick<ActionBatchDetail, 'id' | 'lloji' | 'data'>) => void
   onHeaderChange: (header: MobileHeaderState) => void
@@ -399,6 +400,7 @@ export function HistoriBatchDetail(props: {
   const { onHeaderChange, onBackToList } = props
 
   React.useEffect(() => {
+    if (!props.isActive) return
     if (isEditing) {
       onHeaderChange({
         kind: 'sub',
@@ -413,7 +415,7 @@ export function HistoriBatchDetail(props: {
       })
     }
     return () => onHeaderChange({ kind: 'tab' })
-  }, [isEditing, requestCancel, onBackToList, onHeaderChange])
+  }, [props.isActive, isEditing, requestCancel, onBackToList, onHeaderChange])
 
   const saveMut = useMutation({
     mutationFn: async () => {

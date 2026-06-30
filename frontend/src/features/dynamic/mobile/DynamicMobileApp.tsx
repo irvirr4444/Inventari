@@ -58,9 +58,7 @@ export function DynamicMobileApp(props: {
     if (props.showTutorial) setTutorialOpen(true)
   }, [props.showTutorial])
 
-  React.useEffect(() => {
-    setHeader({ kind: 'tab' })
-  }, [tab])
+  const historiActive = tab === 'histori'
 
   const contentClass = CTA_TABS.includes(tab)
     ? 'mobile-content mobile-content-with-cta'
@@ -83,6 +81,7 @@ export function DynamicMobileApp(props: {
         <MobileTabSlot tab="histori" activeTab={tab}>
           <DynamicHistoriTab
             notify={notify}
+            isActive={historiActive}
             onHeaderChange={setHeader}
             onNavigateToHistori={() => setTab('histori')}
           />

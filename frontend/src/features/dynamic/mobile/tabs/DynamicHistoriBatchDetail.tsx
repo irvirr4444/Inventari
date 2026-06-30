@@ -173,6 +173,7 @@ function DynamicHistoriDetailProductRow(props: {
 export function DynamicHistoriBatchDetail(props: {
   batchId: string
   products: DynamicProdukti[]
+  isActive: boolean
   onNotify: (message: string, variant?: 'success' | 'default' | 'error') => void
   onDeleteRequest: (batch: Pick<ActionBatchDetail, 'id' | 'lloji' | 'data'>) => void
   onHeaderChange: (header: MobileHeaderState) => void
@@ -242,9 +243,10 @@ export function DynamicHistoriBatchDetail(props: {
   }, [isDirty, onBackToList])
 
   React.useEffect(() => {
+    if (!props.isActive) return
     onHeaderChange({ kind: 'sub', title: 'Detajet', onBack: requestBack })
     return () => onHeaderChange({ kind: 'tab' })
-  }, [requestBack, onHeaderChange])
+  }, [props.isActive, requestBack, onHeaderChange])
 
   const saveMut = useMutation({
     mutationFn: async () => {

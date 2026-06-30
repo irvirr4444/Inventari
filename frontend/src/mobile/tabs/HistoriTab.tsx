@@ -41,6 +41,7 @@ const LLOJI_FILTER_OPTIONS = [
 
 export function HistoriTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
+  isActive: boolean
   onHeaderChange: (header: MobileHeaderState) => void
 }) {
   const productsQuery = useProductsQuery()
@@ -142,11 +143,12 @@ export function HistoriTab(props: {
   const { onHeaderChange } = props
 
   React.useEffect(() => {
+    if (!props.isActive) return
     if (screen.mode === 'list') {
       onHeaderChange({ kind: 'tab' })
     }
     return () => onHeaderChange({ kind: 'tab' })
-  }, [screen.mode, onHeaderChange])
+  }, [props.isActive, screen.mode, onHeaderChange])
 
   const veprimValue = history.filters.lloji ?? ALL_FILTER_VALUE_LABEL
   const shtetiValue = history.filters.shteti
@@ -161,6 +163,7 @@ export function HistoriTab(props: {
         <HistoriBatchDetail
           batchId={screen.batchId}
           products={products}
+          isActive={props.isActive}
           onNotify={props.notify}
           onDeleteRequest={(batch) => setDeleteTarget(batch)}
           onHeaderChange={props.onHeaderChange}

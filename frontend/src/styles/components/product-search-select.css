@@ -14,7 +14,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 40px;
+  width: clamp(36px, 4.6dvw, 40px);
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -37,7 +37,7 @@
 .product-search-list {
   display: flex;
   flex-direction: column;
-  max-height: 320px;
+  max-height: var(--dropdown-max-height);
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
@@ -85,7 +85,7 @@
 
 .product-search-options {
   overflow-y: auto;
-  max-height: 280px;
+  max-height: var(--dropdown-options-max-height);
   padding: 6px;
 }
 

@@ -67,7 +67,7 @@ function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }
 
   return (
     <RouteSuspense>
-      <div>
+      <div className="desktop-shell">
         <div className="app-actions">
           <button type="button" className="btn" onClick={props.onLogout}>
             Dil
@@ -96,7 +96,7 @@ function DynamicDashboardShell(props: {
 
   return (
     <RouteSuspense>
-      <div>
+      <div className="desktop-shell">
         <div className="app-actions">
           <button type="button" className="btn" onClick={props.onLogout}>
             Dil

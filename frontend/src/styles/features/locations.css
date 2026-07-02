@@ -31,7 +31,7 @@
   z-index: 30;
   min-width: 100%;
   width: max-content;
-  max-width: min(280px, calc(100vw - 32px));
+  max-width: min(280px, calc(100dvw - 2 * var(--overlay-inset)));
   padding: 6px;
   border-radius: 12px;
   background: var(--card, #fff);

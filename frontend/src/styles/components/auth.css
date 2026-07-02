@@ -1,6 +1,8 @@
 /* Auth shell — dark glass card (matches onboarding / mobile sheets) */
 .auth-container {
+  height: auto;
   min-height: 100dvh;
+  overflow: visible;
   display: flex;
   align-items: center;
   justify-content: center;

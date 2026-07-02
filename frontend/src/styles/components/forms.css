@@ -11,7 +11,7 @@
 }
 
 .summary-card.compact {
-  padding: 10px 12px;
+  padding: clamp(6px, 1.1dvh, 10px) clamp(8px, 1.3dvh, 12px);
   border-radius: 11px;
   border-left-width: 3px;
 }
@@ -53,7 +53,7 @@
 }
 
 .summary-card.compact .summary-value {
-  font-size: 24px;
+  font-size: clamp(17px, 3.2dvh, 24px);
 }
 
 .summary-card .summary-sub {
@@ -64,25 +64,29 @@
 }
 
 .summary-card.compact .summary-sub {
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: clamp(11px, 1.6dvh, 13px);
+  margin-top: clamp(2px, 0.5dvh, 4px);
 }
 
 .summary-country {
   background: rgba(232, 241, 251, 0.62);
   border: 1px solid rgba(201, 216, 234, 0.75);
   border-radius: 14px;
-  padding: 10px 14px;
+  padding: clamp(6px, 1.2dvh, 10px) clamp(8px, 1.5dvh, 14px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .summary-country-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
-  font-size: 14px;
+  margin-bottom: clamp(4px, 1.1dvh, 10px);
+  font-size: clamp(12px, 1.7dvh, 14px);
   font-weight: 600;
   color: #143356;
+  flex-shrink: 0;
 }
 
 .summary-country-title .flagIcon {
@@ -92,15 +96,18 @@
 
 .summary-mini-grid {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: clamp(4px, 0.8dvh, 8px);
 }
 
 .summary-mini-grid > .summary-card {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -213,25 +220,26 @@
 }
 
 .action-meta-fields--modal-row {
-  grid-template-columns: 150px 158px minmax(100px, 500px);
-  margin-top: 16px;
-  margin-bottom: 12px;
+  grid-template-columns: var(--meta-date-width) var(--meta-ora-width) minmax(0, 1fr);
+  margin-top: clamp(12px, 1.8dvh, 16px);
+  margin-bottom: clamp(10px, 1.4dvh, 12px);
+  gap: var(--gap-inline-md);
 }
 
 .action-meta-fields--modal-row .action-meta-field-date,
 .action-meta-fields--modal-row .action-meta-date-input,
 .action-meta-fields--modal-row .date-input {
-  width: 150px;
-  min-width: 150px;
+  width: 100%;
+  min-width: 0;
 }
 
 .action-meta-fields--modal-row .action-meta-ora-input {
-  width: 158px;
+  width: 100%;
 }
 
 .action-meta-fields--modal-row .action-meta-field-pershkrimi {
   min-width: 0;
-  max-width: 500px;
+  max-width: var(--meta-pershkrimi-max-width);
 }
 
 .action-meta-fields--modal-row .action-meta-pershkrimi-input {
@@ -259,7 +267,7 @@
 
 .action-meta-field .input,
 .action-meta-field .time-input-trigger.input {
-  height: 45px;
+  height: var(--control-height-md);
 }
 
 .action-meta-field-grow {
@@ -267,7 +275,7 @@
 }
 
 .action-meta-ora-input {
-  width: 132px;
+  width: var(--meta-ora-input-width);
 }
 
 .history-meta-fields {
@@ -299,7 +307,7 @@
 }
 
 .action-meta-inline-desc {
-  max-width: 280px;
+  max-width: clamp(140px, 22dvw, 280px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

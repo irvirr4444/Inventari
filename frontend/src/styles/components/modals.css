@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: var(--overlay-inset);
   z-index: 50;
 }
 
@@ -21,17 +21,22 @@
 .modal-content {
   background: var(--card);
   border-radius: 16px;
-  padding: 24px;
+  padding: var(--modal-padding);
   box-shadow: var(--shadow-lg);
-  max-width: 480px;
+  max-width: var(--modal-width-sm);
   width: 100%;
-  max-height: calc(100dvh - 32px);
+  max-height: var(--modal-max-height);
   overflow-y: auto;
   animation: modalIn 0.2s ease;
 }
 
 .confirm-modal {
-  max-width: 560px;
+  max-width: var(--modal-width-md);
+}
+
+.modal-title-row {
+  margin-bottom: clamp(12px, 1.8dvh, 18px);
+  flex-shrink: 0;
 }
 
 .confirm-modal-header {
@@ -63,9 +68,9 @@
 .snackbar {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: clamp(16px, 2.5dvh, 24px);
   z-index: 200;
-  max-width: min(560px, calc(100vw - 32px));
+  max-width: var(--modal-width-md);
   transform: translateX(-50%);
   background: rgba(12, 31, 54, 0.96);
   color: #fff;
@@ -185,10 +190,10 @@
 
 .transfer-route {
   display: grid;
-  grid-template-columns: minmax(140px, 180px) auto minmax(140px, 180px) 1fr;
+  grid-template-columns: minmax(var(--transfer-col-min), 180px) auto minmax(var(--transfer-col-min), 180px) 1fr;
   align-items: end;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--gap-inline-md);
+  margin-bottom: clamp(14px, 2dvh, 20px);
 }
 
 .transfer-arrow {
@@ -204,7 +209,38 @@
 }
 
 .transfer-modal {
-  max-width: min(920px, calc(100vw - 32px));
+  max-width: var(--modal-width-lg);
+  width: min(95dvw, 920px);
+  max-height: var(--modal-max-height);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.transfer-modal > .modal-title-row {
+  flex-shrink: 0;
+}
+
+.transfer-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.transfer-modal .modal-transfer-route,
+.transfer-modal .transfer-meta-fields,
+.transfer-modal .action-footer {
+  flex-shrink: 0;
+}
+
+.transfer-modal .action-table-wrap,
+.transfer-modal .action-table-hscroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .transfer-modal-copy {
@@ -212,9 +248,10 @@
 }
 
 .modal-transfer-route {
-  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
+  grid-template-columns: minmax(var(--transfer-col-min), 1fr) auto minmax(var(--transfer-col-min), 1fr);
   align-items: end;
   margin-bottom: 0;
+  gap: var(--gap-inline-md);
 }
 
 .modal-transfer-route .transfer-hint {
@@ -226,11 +263,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .action-review-modal {
-  --review-row-height: 56px;
+  --review-row-height: var(--row-height-md);
   --review-visible-rows: 10;
-  max-width: min(960px, calc(100vw - 32px));
-  width: 92vw;
-  max-height: 88vh;
+  max-width: var(--modal-width-xl);
+  width: min(92dvw, 960px);
+  max-height: var(--modal-max-height);
+  min-height: 0;
+  padding: var(--modal-padding);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -242,7 +281,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: clamp(8px, 1.2dvh, 12px);
   flex-shrink: 0;
 }
 
@@ -255,7 +294,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: clamp(10px, 1.5dvh, 16px);
   font-size: 13px;
   flex-shrink: 0;
 }
@@ -318,9 +357,10 @@
 }
 
 .action-review-meta-extra {
-  margin-top: -8px;
-  margin-bottom: 16px;
+  margin-top: clamp(-6px, -0.8dvh, -8px);
+  margin-bottom: clamp(10px, 1.5dvh, 16px);
   padding-left: 2px;
+  flex-shrink: 0;
 }
 
 .action-review-meta-extra .action-meta-display-desc {
@@ -329,28 +369,33 @@
 }
 
 .action-review-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.action-review-table-head {
+  flex-shrink: 0;
 }
 
 .action-review-table-head th {
   padding-top: 0;
-  padding-bottom: 10px;
+  padding-bottom: clamp(6px, 1dvh, 10px);
 }
 
 .action-review-rows {
-  height: calc(var(--review-row-height) * var(--review-visible-rows));
-  min-height: calc(var(--review-row-height) * var(--review-visible-rows));
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: calc(var(--review-row-height) * var(--review-visible-rows));
-  overflow-y: hidden;
   overflow-x: hidden;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.action-review-rows.is-scrollable {
-  overflow-y: auto;
+.action-review-rows:not(.is-scrollable) {
+  overscroll-behavior: contain;
 }
 
 .action-review-table-body tbody tr {
@@ -367,6 +412,11 @@
   padding: 6px 8px;
   font-size: 14px;
   line-height: 1.2;
+}
+
+.action-review-body .action-rows-scroll-hint {
+  flex-shrink: 0;
+  margin: clamp(2px, 0.5dvh, 4px) 0 0;
 }
 
 .action-review-body .action-rows-scroll-hint.is-hidden {
@@ -399,8 +449,8 @@
 }
 
 .action-item-shenim-btn--review {
-  width: 42px;
-  height: 42px;
+  width: clamp(36px, 4.6dvh, 42px);
+  height: clamp(36px, 4.6dvh, 42px);
   padding: 0;
   border: 1.5px solid rgba(47, 125, 246, 0.35);
   border-radius: 10px;
@@ -446,8 +496,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 12px;
-  padding-top: 14px;
+  margin-top: clamp(8px, 1.2dvh, 12px);
+  padding-top: clamp(10px, 1.4dvh, 14px);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }

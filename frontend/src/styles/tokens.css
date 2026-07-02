@@ -47,15 +47,21 @@
   --transition-normal: 0.2s ease;
 }
 
-html,
-body,
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 #root {
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
-  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(circle at 12% 8%, rgba(47, 125, 246, 0.28), transparent 28%),

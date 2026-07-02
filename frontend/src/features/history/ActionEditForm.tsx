@@ -201,7 +201,7 @@ export function ActionEditForm(props: {
       : 0
 
   return (
-    <>
+    <div className="history-edit-modal-body">
       <div className="history-detail-meta">
         <div className="history-detail-meta-row">
           <div className="form-group">
@@ -394,7 +394,7 @@ export function ActionEditForm(props: {
           {saveAllMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
         </button>
       </div>
-    </>
+    </div>
   )
 }
 

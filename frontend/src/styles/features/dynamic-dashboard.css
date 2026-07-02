@@ -1,7 +1,7 @@
 .dynamic-stock-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 18dvw, 160px), 1fr));
+  gap: var(--gap-inline-md);
 }
 
 .dynamic-stock-table-wrap {
@@ -9,19 +9,23 @@
 }
 
 .dynamic-stock-table {
-  max-height: 220px;
+  max-height: var(--stock-table-max-height);
   overflow-y: auto;
 }
 
 .dynamic-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 22dvw, 200px), 1fr));
+  gap: clamp(8px, 1.2dvh, 16px);
 }
 
 .summary-panel-dynamic {
   overflow: hidden;
   min-height: 0;
+}
+
+.summary-panel-dynamic > :not(.summary-panel-scroll) {
+  flex-shrink: 0;
 }
 
 .summary-panel-dynamic .summary-panel-scroll {
@@ -30,6 +34,10 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   margin-top: 4px;
+}
+
+.summary-panel-dynamic .summary-panel-scroll .dynamic-summary-grid {
+  min-height: 0;
 }
 
 .summary-panel-dynamic .summary-countries {
@@ -58,8 +66,8 @@
 .dynamic-history-location-checks {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  max-width: 420px;
+  gap: var(--gap-inline-sm) var(--gap-inline-lg);
+  max-width: clamp(280px, 42dvw, 420px);
 }
 
 .dynamic-history-location-check {

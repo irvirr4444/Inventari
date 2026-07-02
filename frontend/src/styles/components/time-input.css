@@ -28,8 +28,8 @@
 }
 
 .ora-digit-box {
-  width: 30px;
-  height: 45px;
+  width: clamp(26px, 3.4dvh, 30px);
+  height: var(--control-height-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -118,9 +118,9 @@
 
 .time-picker-popover {
   width: fit-content;
-  min-width: 228px;
-  max-width: calc(100vw - 32px);
-  padding: 14px;
+  min-width: clamp(200px, 24dvw, 228px);
+  max-width: calc(100dvw - 2 * var(--overlay-inset));
+  padding: clamp(12px, 1.6dvw, 14px);
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--card);
@@ -129,7 +129,7 @@
 
 .time-picker {
   width: max-content;
-  min-width: 200px;
+  min-width: clamp(180px, 22dvw, 200px);
 }
 
 .time-picker-popover-portal {
@@ -399,9 +399,9 @@
 }
 
 .action-meta-ora-input {
-  width: 132px;
+  width: var(--meta-ora-input-width);
 }
 
 .action-meta-ora-input.time-input {
-  width: 132px;
+  width: var(--meta-ora-input-width);
 }

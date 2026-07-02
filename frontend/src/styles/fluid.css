@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════
+   FLUID DIMENSIONS — shared dvh/dvw + clamp tokens for desktop UI
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Overlay / shell */
+  --overlay-inset: clamp(10px, 2dvh, 16px);
+  --shell-max-height: 100dvh;
+
+  /* Inline spacing (horizontal axis) */
+  --gap-inline-sm: clamp(8px, 1.2dvw, 12px);
+  --gap-inline-md: clamp(12px, 1.6dvw, 16px);
+  --gap-inline-lg: clamp(14px, 2dvw, 20px);
+
+  /* Dashboard shell (pad-x before shell-max-width) */
+  --dashboard-pad-y: clamp(10px, 2.6dvh, 28px);
+  --dashboard-pad-x: clamp(14px, 2dvw, 24px);
+  --shell-max-width: min(1480px, calc(100dvw - 2 * var(--dashboard-pad-x)));
+
+  /* Modals */
+  --modal-max-height: calc(100dvh - clamp(20px, 4dvh, 32px));
+  --modal-padding: clamp(14px, 2.2dvh, 24px);
+  --modal-gap: clamp(10px, 1.5dvh, 16px);
+  --modal-width-sm: min(480px, calc(100dvw - 2 * var(--overlay-inset)));
+  --modal-width-md: min(560px, calc(100dvw - 2 * var(--overlay-inset)));
+  --modal-width-lg: min(920px, calc(100dvw - 2 * var(--overlay-inset)));
+  --modal-width-xl: min(960px, calc(100dvw - 2 * var(--overlay-inset)));
+  --modal-width-history: min(1496px, calc(100dvw - 2 * var(--overlay-inset)));
+  --modal-width-edit: min(860px, calc(100dvw - 2 * var(--overlay-inset)));
+
+  /* Dashboard shell */
+  --dashboard-stack-gap: clamp(10px, 1.5dvh, 16px);
+  --dashboard-grid-gap: clamp(12px, 1.85dvh, 20px);
+  --dashboard-sidebar-min: clamp(260px, 30dvw, 400px);
+  --dashboard-sidebar-fr: 0.36fr;
+
+  /* Table horizontal scroll thresholds */
+  --table-scroll-min-width: clamp(520px, 68dvw, 760px);
+  --subtable-scroll-min-width: clamp(440px, 58dvw, 520px);
+  --history-edit-table-min-width: clamp(560px, 72dvw, 760px);
+
+  /* Transfer / country picker columns */
+  --transfer-col-min: clamp(120px, 14dvw, 180px);
+
+  /* Table / list row heights */
+  --row-height-sm: clamp(36px, 4.6dvh, 42px);
+  --row-height-md: clamp(40px, 5.2dvh, 56px);
+  --row-height-lg: clamp(48px, 6.4dvh, 69px);
+
+  --action-row-height: var(--row-height-lg);
+  --action-visible-rows: 2;
+
+  --review-row-height: var(--row-height-md);
+  --review-visible-rows: 10;
+
+  --history-table-row-height: var(--row-height-md);
+  --history-table-head-height: clamp(34px, 4.4dvh, 42px);
+  --history-visible-rows: 8;
+
+  /* Form controls */
+  --control-height-sm: clamp(28px, 3.6dvh, 32px);
+  --control-height-md: clamp(40px, 5dvh, 45px);
+
+  /* Dashboard meta field widths */
+  --meta-date-width: clamp(120px, 11dvw, 150px);
+  --meta-ora-width: clamp(120px, 11.5dvw, 158px);
+  --meta-ora-input-width: clamp(100px, 10dvw, 132px);
+  --meta-pershkrimi-width: clamp(100px, 22dvw, 294px);
+  --meta-pershkrimi-max-width: clamp(180px, 38dvw, 500px);
+
+  /* History filter control widths */
+  --history-filter-date-width: clamp(120px, 11dvw, 140px);
+  --history-filter-ora-width: clamp(84px, 8dvw, 100px);
+  --history-filter-num-width: clamp(60px, 6dvw, 72px);
+  --history-filter-select-min-width: clamp(100px, 10dvw, 120px);
+
+  /* Popovers */
+  --popover-width-sm: min(360px, calc(100dvw - 2 * var(--overlay-inset)));
+  --popover-width-md: min(520px, calc(100dvw - 48px));
+
+  /* Dropdowns / popovers */
+  --dropdown-max-height: clamp(180px, 40dvh, 320px);
+  --dropdown-options-max-height: clamp(160px, 36dvh, 280px);
+
+  /* Misc UI */
+  --shenim-textarea-min-height: clamp(64px, 12dvh, 88px);
+  --modal-close-size: clamp(32px, 4dvh, 36px);
+  --history-pagination-min-height: clamp(44px, 6dvh, 52px);
+  --stock-table-max-height: clamp(120px, 22dvh, 220px);
+  --onboarding-scroll-max-height: clamp(200px, 55dvh, 520px);
+}
+
+/* Flex modal shell — header/body/footer; body scrolls internally */
+.modal-content.modal-fluid {
+  max-height: var(--modal-max-height);
+  min-height: 0;
+  padding: var(--modal-padding);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-content.modal-fluid > form,
+.modal-content.modal-fluid > .modal-fluid-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal-fluid-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

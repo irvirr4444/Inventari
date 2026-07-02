@@ -2,17 +2,33 @@
    LAYOUT
    ═══════════════════════════════════════════════════════════════ */
 
-:root {
-  --action-row-height: 69px;
-  --action-visible-rows: 2;
+/* Full-viewport desktop shell — no page scroll; panels scale and scroll internally */
+.desktop-shell {
+  height: var(--shell-max-height);
+  max-height: var(--shell-max-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .container {
-  height: 100dvh;
-  max-width: 1480px;
+  max-width: var(--shell-max-width);
+  width: 100%;
   margin: 0 auto;
   overflow: hidden;
-  padding: 28px var(--space-xl);
+}
+
+.desktop-shell > .container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: var(--dashboard-pad-y) var(--dashboard-pad-x);
+}
+
+.container.auth-container {
+  flex: none;
+  height: auto;
+  max-height: none;
 }
 
 .auth-error {
@@ -25,15 +41,15 @@
 
 .app-actions {
   position: fixed;
-  right: 24px;
-  top: 18px;
+  right: clamp(14px, 2dvw, 24px);
+  top: clamp(14px, 1.8dvh, 18px);
   z-index: 20;
 }
 
 .dashboard-stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--dashboard-stack-gap);
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -42,17 +58,17 @@
 .action-header,
 .section-header,
 .summary-header {
-  margin-bottom: 16px;
+  margin-bottom: clamp(10px, 1.5dvh, 16px);
 }
 
 .action-header {
-  margin-bottom: 20px;
+  margin-bottom: clamp(12px, 1.85dvh, 20px);
 }
 
 .action-header-top {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: clamp(8px, 1.2dvh, 12px) clamp(10px, 1.5dvw, 16px);
   min-width: 0;
 }
 
@@ -63,9 +79,9 @@
 
 .action-controls {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: var(--gap-inline-sm) var(--gap-inline-md);
   margin-left: auto;
   min-width: 0;
   justify-content: flex-end;
@@ -76,7 +92,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  --action-header-control-height: 32px;
+  --action-header-control-height: var(--control-height-sm);
 }
 
 .action-header-control-country .btn {
@@ -90,19 +106,22 @@
 }
 
 .action-header-control-date .action-header-date-input {
-  width: 150px;
-  flex-shrink: 0;
+  width: var(--meta-date-width);
+  min-width: clamp(100px, 10dvw, 150px);
+  flex: 0 1 var(--meta-date-width);
 }
 
 .action-header-control-ora .action-meta-ora-input {
-  width: 158px;
-  flex-shrink: 0;
+  width: var(--meta-ora-width);
+  min-width: clamp(100px, 10dvw, 158px);
+  flex: 0 1 var(--meta-ora-width);
 }
 
 .action-header-control-pershkrimi .clearable-field {
-  width: 294px;
-  max-width: 294px;
-  flex: 0 0 294px;
+  width: auto;
+  max-width: var(--meta-pershkrimi-width);
+  flex: 1 1 clamp(80px, 18dvw, 294px);
+  min-width: clamp(80px, 12dvw, 140px);
 }
 
 .action-header-control-pershkrimi .action-meta-pershkrimi-input {
@@ -153,14 +172,14 @@
 }
 
 .action-meta-ora-input {
-  width: 132px;
+  width: var(--meta-ora-input-width);
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(400px, 0.36fr);
-  gap: 20px;
-  flex: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(var(--dashboard-sidebar-min), var(--dashboard-sidebar-fr));
+  gap: var(--dashboard-grid-gap);
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -175,47 +194,63 @@
 
 .action-card {
   flex: 0 0 auto;
-  padding: 16px 20px;
+  flex-shrink: 0;
+  padding: clamp(12px, 1.85dvh, 16px) clamp(14px, 2.2dvh, 20px);
 }
 
 .action-card .action-header {
-  margin-bottom: 14px;
+  margin-bottom: clamp(10px, 1.4dvh, 14px);
 }
 
 .action-card .action-type-row {
-  margin-bottom: 14px;
+  margin-bottom: clamp(10px, 1.4dvh, 14px);
 }
 
 .action-card .action-footer {
-  margin-top: 12px;
+  margin-top: clamp(8px, 1.2dvh, 12px);
 }
 
 .action-card .action-table th,
 .action-card .action-table td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: clamp(6px, 1.1dvh, 10px);
+  padding-bottom: clamp(6px, 1.1dvh, 10px);
 }
 
 .products-card {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
+}
+
+.products-card > :not(.products-table-wrap) {
+  flex-shrink: 0;
+}
+
+.summary-panel > :not(.summary-countries):not(.summary-panel-scroll) {
+  flex-shrink: 0;
 }
 
 .summary-panel {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .summary-panel > .summary-countries {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(4px, 0.9dvh, 8px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .summary-panel > .summary-countries > .summary-country {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -233,7 +268,7 @@
 }
 
 .table-scroll .action-table {
-  min-width: 760px;
+  min-width: var(--table-scroll-min-width);
 }
 
 .action-table-wrap {
@@ -242,7 +277,7 @@
 }
 
 .action-table-inner {
-  min-width: 760px;
+  min-width: var(--table-scroll-min-width);
 }
 
 .action-table-hscroll {
@@ -379,7 +414,7 @@
 }
 
 .shenim-popup-modal {
-  width: min(360px, calc(100vw - 32px));
+  width: var(--popover-width-sm);
 }
 
 .shenim-popup-body {
@@ -390,7 +425,7 @@
 
 .shenim-popup-textarea {
   width: 100%;
-  min-height: 88px;
+  min-height: var(--shenim-textarea-min-height);
   resize: vertical;
 }
 
@@ -429,7 +464,8 @@
 }
 
 .summary-period {
-  margin-bottom: 10px;
+  margin-bottom: clamp(6px, 1.1dvh, 10px);
+  flex-shrink: 0;
 }
 
 .summary-date-grid {
@@ -447,6 +483,10 @@
   padding: 20px 24px;
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(14px);
+}
+
+.dashboard-stack .card {
+  padding: clamp(14px, 2.2dvh, 20px) clamp(16px, 2.4dvh, 24px);
 }
 
 .card-inner {
@@ -558,7 +598,7 @@
 .products-search-wrap {
   flex: 1;
   min-width: 0;
-  max-width: 280px;
+  max-width: clamp(160px, 22dvw, 280px);
 }
 
 .products-search-field {
@@ -773,7 +813,7 @@ textarea.input {
   top: calc(100% + 4px);
   z-index: 50;
   width: max-content;
-  max-width: min(520px, calc(100vw - 48px));
+  max-width: var(--popover-width-md);
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;

@@ -52,7 +52,7 @@
 }
 
 .date-picker-popover {
-  width: min(300px, calc(100vw - 32px));
+  width: min(300px, calc(100dvw - 2 * var(--overlay-inset)));
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border);

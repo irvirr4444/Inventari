@@ -18,9 +18,10 @@
 }
 
 .history-modal {
-  max-width: min(1496px, calc(100vw - 32px));
-  width: min(calc(96vw * 1.1), 1496px);
-  max-height: min(88vh, 920px);
+  max-width: var(--modal-width-history);
+  width: min(calc(96dvw * 1.1), 1496px);
+  max-height: var(--modal-max-height);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -28,7 +29,7 @@
 }
 
 .history-modal-header {
-  padding: 20px 24px 16px;
+  padding: clamp(14px, 2.2dvh, 20px) clamp(16px, 2.4dvh, 24px) clamp(10px, 1.5dvh, 16px);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -55,8 +56,7 @@
   gap: 10px;
   width: 100%;
   max-width: 100%;
-  --history-filter-height: 32px;
-  --history-filter-ora-width: 100px;
+  --history-filter-height: var(--control-height-sm);
 }
 
 .history-filters-primary {
@@ -166,7 +166,7 @@
 }
 
 .history-filter-pair-dates {
-  min-width: calc(140px * 2 + 6px);
+  min-width: calc(var(--history-filter-date-width) * 2 + 6px);
 }
 
 .history-filter-field {
@@ -261,14 +261,14 @@
 }
 
 .history-filter-pair-dates .date-range-input {
-  min-width: calc(140px * 2 + 6px);
+  min-width: calc(var(--history-filter-date-width) * 2 + 6px);
   width: 100%;
 }
 
 .history-filter-date {
-  width: 140px;
-  max-width: 140px;
-  flex: 0 0 140px;
+  width: var(--history-filter-date-width);
+  max-width: var(--history-filter-date-width);
+  flex: 0 0 var(--history-filter-date-width);
 }
 
 .history-filter-date.date-input-trigger,
@@ -292,7 +292,7 @@
 
 .history-filter-select {
   width: auto;
-  min-width: 120px;
+  min-width: var(--history-filter-select-min-width);
   height: var(--history-filter-height);
   padding-top: 0;
   padding-bottom: 0;
@@ -334,7 +334,7 @@
 }
 
 .history-filter-num {
-  width: 72px;
+  width: var(--history-filter-num-width);
   height: var(--history-filter-height);
   padding-top: 0;
   padding-bottom: 0;
@@ -401,38 +401,22 @@
   flex: 1 1 auto;
   overflow: auto;
   min-height: 0;
-  padding: 0 16px 8px;
+  padding: 0 clamp(12px, 1.8dvh, 16px) clamp(6px, 1dvh, 8px);
   position: relative;
-  --history-table-row-height: 56px;
-  --history-table-head-height: 42px;
-  --history-visible-rows: 8;
 }
 
 .history-table-wrap--fixed-body {
-  flex: 0 0 auto;
-  height: calc(
-    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
-  );
-  min-height: calc(
-    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
-  );
-  max-height: calc(
-    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
-  );
-  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .history-modal:has(.history-expanded-row) {
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .history-table-wrap--fixed-body:has(.history-expanded-row) {
-  height: auto;
-  min-height: calc(
-    var(--history-table-row-height) * var(--history-visible-rows) + var(--history-table-head-height)
-  );
-  max-height: none;
-  overflow: visible;
+  overflow: auto;
 }
 
 .history-table-refresh-bar {
@@ -629,7 +613,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: clamp(120px, 16dvw, 200px);
 }
 
 .history-meta-cell {
@@ -645,21 +629,21 @@
 
 .history-meta-cell .date-input-trigger {
   width: 100%;
-  height: 32px;
+  height: var(--control-height-sm);
   padding-top: 6px;
   padding-bottom: 6px;
   font-size: 13px;
 }
 
 .history-meta-cell .ora-digit-box {
-  height: 32px;
-  width: 24px;
+  height: var(--control-height-sm);
+  width: clamp(20px, 2.8dvh, 24px);
   font-size: 13px;
 }
 
 .history-meta-cell .input {
   width: 100%;
-  height: 32px;
+  height: var(--control-height-sm);
   padding-top: 6px;
   padding-bottom: 6px;
   font-size: 13px;
@@ -711,11 +695,14 @@
 }
 
 .history-edit-modal {
-  max-width: min(860px, calc(100vw - 32px));
-  width: 95vw;
-  max-height: 88vh;
-  overflow-x: auto;
-  overflow-y: auto;
+  max-width: var(--modal-width-edit);
+  width: min(95dvw, 860px);
+  max-height: var(--modal-max-height);
+  min-height: 0;
+  padding: var(--modal-padding);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .history-edit-modal-header {
@@ -723,21 +710,41 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: clamp(10px, 1.5dvh, 16px);
+  flex-shrink: 0;
 }
 
 .history-edit-modal-header h3 {
   margin: 0;
 }
 
+.history-edit-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.history-edit-modal .history-detail-meta {
+  flex-shrink: 0;
+}
+
+.history-edit-modal .history-subtable-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
 .history-edit-modal-footer {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: clamp(10px, 1.5dvh, 16px);
+  padding-top: clamp(10px, 1.4dvh, 12px);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .history-edit-save-btn {
@@ -746,8 +753,8 @@
 }
 
 .history-edit-pershkrimi {
-  flex: 1 1 240px;
-  min-width: 200px;
+  flex: 1 1 clamp(140px, 22dvw, 240px);
+  min-width: clamp(120px, 16dvw, 200px);
   max-width: none;
 }
 
@@ -756,8 +763,8 @@
 }
 
 .modal-close-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--modal-close-size);
+  height: var(--modal-close-size);
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -807,7 +814,7 @@
 }
 
 .history-detail-meta .history-meta-save .btn {
-  min-height: 42px;
+  min-height: var(--control-height-md);
   white-space: nowrap;
 }
 
@@ -828,7 +835,7 @@
 
 .history-detail-meta .date-input-trigger,
 .history-detail-meta .select {
-  min-width: 140px;
+  min-width: var(--history-filter-date-width);
 }
 
 .history-expand-btn {
@@ -980,7 +987,7 @@
 }
 
 .history-edit-modal .history-subtable-wrap .history-subtable {
-  min-width: 760px;
+  min-width: var(--history-edit-table-min-width);
 }
 
 .item-row-editing > td {
@@ -1037,7 +1044,7 @@
   margin-bottom: 12px;
   table-layout: fixed;
   width: 100%;
-  min-width: 520px;
+  min-width: var(--subtable-scroll-min-width);
 }
 
 .history-subtable-col-product {
@@ -1201,12 +1208,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px;
+  padding: clamp(10px, 1.5dvh, 14px) clamp(16px, 2.4dvh, 24px);
   border-top: 1px solid var(--border);
   font-size: 13px;
   color: var(--muted);
   flex-shrink: 0;
-  min-height: 52px;
+  min-height: var(--history-pagination-min-height);
   box-sizing: border-box;
 }
 
@@ -1431,11 +1438,16 @@
   .history-filters-primary {
     flex-wrap: wrap;
   }
+
+  :root {
+    --meta-pershkrimi-width: clamp(80px, 18dvw, 220px);
+    --dashboard-sidebar-min: clamp(240px, 28dvw, 360px);
+  }
 }
 
 @media (max-width: 600px) {
   .history-modal {
-    max-height: 95vh;
+    max-height: calc(100dvh - var(--overlay-inset) * 2);
   }
 
   .history-pagination {

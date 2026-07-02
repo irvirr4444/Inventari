@@ -39,7 +39,7 @@ export function Modal(props: ModalProps) {
         className={props.className ? `modal-content ${props.className}` : 'modal-content'}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="row" style={{ marginBottom: 18 }}>
+        <div className="row modal-title-row">
           <h3>{props.title}</h3>
           <div className="spacer" />
           <button

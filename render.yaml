@@ -1,6 +1,6 @@
 services:
   # Single production service: API + static SPA on one URL.
-  # Live: https://inventari-frontend.onrender.com
+  # Live: https://inventari-frontend.onrender.com and https://www.inventari.al
   - type: web
     name: inventari-frontend
     env: node
@@ -15,7 +15,7 @@ services:
       - key: SESSION_SECRET
         sync: false
       - key: CORS_ORIGIN
-        value: https://inventari-frontend.onrender.com,https://localhost
+        value: https://inventari-frontend.onrender.com,https://www.inventari.al,https://inventari.al,https://localhost
       - key: login_email
         sync: false
       - key: login_password
@@ -23,7 +23,7 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: VITE_API_BASE_URL
-        value: https://inventari-frontend.onrender.com/api
+        value: /api
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false
       - key: VITE_SUPPORT_EMAIL

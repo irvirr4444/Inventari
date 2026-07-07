@@ -1,8 +1,11 @@
 import * as React from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { createLokacioni } from '../../lib/api/lokacionet'
 import { completeOnboarding, postTenantConfig } from '../../lib/api/tenantConfig'
 import { useAuth } from '../../lib/auth/AuthProvider'
+import type { Lokacioni } from '../../lib/lokacioni/types'
+import { queryKeys } from '../../lib/queryKeys'
 import { Screen1Welcome } from './screens/Screen1Welcome'
 import { Screen2LocationCount } from './screens/Screen2LocationCount'
 import {
@@ -25,6 +28,7 @@ const PROGRESS: Record<ScreenId, number> = {
 
 export function OnboardingWizard() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, refreshSession, logout } = useAuth()
 
   const [screen, setScreen] = React.useState<ScreenId>(0)
@@ -95,16 +99,24 @@ export function OnboardingWizard() {
     setError(null)
     try {
       const validLocations = locations.filter((l) => l.emri.trim())
+      const createdLocations: Lokacioni[] = []
       for (let i = 0; i < validLocations.length; i++) {
         const loc = validLocations[i]
-        await createLokacioni({
+        const created = await createLokacioni({
           emri: loc.emri.trim(),
           flag_emoji: loc.flagEmoji,
           rradhitja: i,
         })
+        createdLocations.push(created)
       }
+      queryClient.setQueryData<Lokacioni[]>(queryKeys.lokacionet(user?.id), (prev) => {
+        const byId = new Map((prev ?? []).map((loc) => [loc.id, loc]))
+        for (const loc of createdLocations) byId.set(loc.id, loc)
+        return Array.from(byId.values()).sort((a, b) => a.rradhitja - b.rradhitja)
+      })
       await completeOnboarding()
       await refreshSession()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.lokacionet(user?.id) })
       navigate('/', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim')

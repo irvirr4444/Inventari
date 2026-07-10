@@ -100,8 +100,8 @@
 .history-export-menu {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px;
+  gap: 2px;
+  padding: 4px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -116,11 +116,11 @@
 .history-export-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 7px 8px;
   background: transparent;
   color: var(--text);
   font-size: 14px;
@@ -226,7 +226,8 @@
   flex-shrink: 1;
 }
 
-.history-filters-primary > .history-filter-group.history-filter-group-labeled:has(.history-filter-num) .history-filter-pair > .clearable-field {
+.history-filters-primary > .history-filter-group.history-filter-group-labeled:has(.history-filter-num) .history-filter-pair > .clearable-field,
+.history-filters-primary > .history-filter-group.history-filter-group-labeled:has(.history-filter-num) .history-filter-pair > .debounced-search-input {
   flex: 1 1 0;
   min-width: 0;
 }

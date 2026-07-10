@@ -2,7 +2,7 @@ import * as React from 'react'
 import { InputClearButton } from './InputClearButton'
 
 /** Wait for a pause in typing before applying text search filters. */
-export const SEARCH_FILTER_DEBOUNCE_MS = 2000
+export const SEARCH_FILTER_DEBOUNCE_MS = 1000
 
 export function DebouncedSearchInput(props: {
   value: string

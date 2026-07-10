@@ -56,21 +56,18 @@ export function LoginPage() {
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
   const [acceptedLegal, setAcceptedLegal] = React.useState(false)
-  const [authError, setAuthError] = React.useState<string | null>(null)
 
   const googleEnabled = isGoogleSignInConfigured()
   const formBusy = loading || googleLoading
   const signupBlocked = mode === 'signup' && !acceptedLegal
 
   const showError = (message: string) => {
-    setAuthError(message)
     notify(message, 'error')
   }
 
   const switchMode = (next: AuthMode) => {
     setMode(next)
     if (next === 'signin') setAcceptedLegal(false)
-    setAuthError(null)
     clear()
   }
 
@@ -112,7 +109,6 @@ export function LoginPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setAuthError(null)
     clear()
 
     const validationError = validate()
@@ -197,28 +193,6 @@ export function LoginPage() {
             />
           </div>
 
-          {mode === 'signup' ? (
-            <label className="auth-legal-consent">
-              <input
-                type="checkbox"
-                className="auth-legal-consent__input"
-                checked={acceptedLegal}
-                onChange={(e) => setAcceptedLegal(e.target.checked)}
-                disabled={formBusy}
-              />
-              <span className="auth-legal-consent__text">
-                Kam lexuar dhe pranoj{' '}
-                <Link to="/privacy" target="_blank" rel="noopener noreferrer">
-                  Politikën e privatësisë
-                </Link>{' '}
-                dhe{' '}
-                <Link to="/terms" target="_blank" rel="noopener noreferrer">
-                  Kushtet e përdorimit
-                </Link>
-              </span>
-            </label>
-          ) : null}
-
           <button type="submit" className="btn primary" disabled={formBusy || signupBlocked}>
             {loading
               ? mode === 'signin'
@@ -229,11 +203,6 @@ export function LoginPage() {
                 : 'Krijo Llogari'}
           </button>
 
-          {authError ? (
-            <p className="auth-error-slot auth-error-message" role="alert">
-              {authError}
-            </p>
-          ) : null}
         </form>
 
         {googleEnabled ? (
@@ -249,11 +218,35 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <p className="auth-legal-footer">
-          <Link to="/privacy">Politika e privatësisë</Link>
-          {' · '}
-          <Link to="/terms">Kushtet</Link>
-        </p>
+        {mode === 'signup' ? (
+          <label className="auth-legal-consent auth-legal-footer">
+            <input
+              type="checkbox"
+              className="auth-legal-consent__input"
+              checked={acceptedLegal}
+              onChange={(e) => setAcceptedLegal(e.target.checked)}
+              disabled={formBusy}
+            />
+            <span className="auth-legal-consent__text">
+              Kam lexuar dhe pranoj{' '}
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer">
+                Politikën e privatësisë
+              </Link>{' '}
+              dhe{' '}
+              <Link to="/terms" target="_blank" rel="noopener noreferrer">
+                Kushtet e përdorimit
+              </Link>
+            </span>
+          </label>
+        ) : (
+          <p className="auth-legal-footer">
+            <Link to="/privacy">Politika e privatësisë</Link>
+            <span className="auth-legal-footer-separator" aria-hidden="true">
+              ·
+            </span>
+            <Link to="/terms">Kushtet</Link>
+          </p>
+        )}
       </section>
       <Snackbar snackbar={snackbar} />
     </>

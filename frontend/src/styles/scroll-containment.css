@@ -5,6 +5,14 @@
    its edge. Pair with attachOverscrollLock() on mobile for iOS.
    ═══════════════════════════════════════════════════════════════ */
 
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 .modal-overlay,
 .modal-content,
 .table-scroll,

@@ -117,7 +117,7 @@ export function HistoryDownloadDropdown(props: {
     const rect = trigger.getBoundingClientRect()
     const gap = 6
     const edgePadding = 12
-    const menuWidth = Math.max(rect.width, 168)
+    const menuWidth = Math.max(rect.width, 112)
     let left = rect.right - menuWidth
     left = Math.max(edgePadding, Math.min(left, window.innerWidth - menuWidth - edgePadding))
     setMenuPos({

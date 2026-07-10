@@ -1,3 +1,4 @@
+import * as React from 'react'
 import type { HistoryClientFilters, HistoryServerFilters } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { DateRangeInput } from '../../components/DateRangeInput'
@@ -7,6 +8,41 @@ import { parseNumericFilterValue } from '../../lib/numericInput'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { HistoryFilterClearButton } from '../history/HistoryFilterClearButton'
 import { HistoryExportActions } from '../history/HistoryExportActions'
+
+const NUMERIC_FILTER_DEBOUNCE_MS = 1_000
+
+type NumericFilterDraftValue = number | string
+
+type NumericFilterDrafts = {
+  totaliMin: NumericFilterDraftValue
+  totaliMax: NumericFilterDraftValue
+  produkteMin: NumericFilterDraftValue
+  produkteMax: NumericFilterDraftValue
+}
+
+type NumericFilterDraftKey = keyof NumericFilterDrafts
+
+function numericDraftsFromClientFilters(filters: HistoryClientFilters): NumericFilterDrafts {
+  return {
+    totaliMin: filters.totaliMin,
+    totaliMax: filters.totaliMax,
+    produkteMin: filters.produkteMin,
+    produkteMax: filters.produkteMax,
+  }
+}
+
+function parseNumericDraft(value: NumericFilterDrafts[keyof NumericFilterDrafts]): number | '' {
+  return typeof value === 'number' ? value : parseNumericFilterValue(value)
+}
+
+function numericDraftsAreEqual(a: NumericFilterDrafts, b: NumericFilterDrafts): boolean {
+  return (
+    a.totaliMin === b.totaliMin &&
+    a.totaliMax === b.totaliMax &&
+    a.produkteMin === b.produkteMin &&
+    a.produkteMax === b.produkteMax
+  )
+}
 
 export function DynamicHistoryFilterBar(props: {
   serverFilters: HistoryServerFilters
@@ -30,6 +66,98 @@ export function DynamicHistoryFilterBar(props: {
   } = props
   const showTotali = props.showTotali ?? true
   const selectedLocationId = clientFilters.locationIds[0] ?? ''
+  const onClientFilterChangeRef = React.useRef(onClientFilterChange)
+  const lastAppliedNumericDraftsRef = React.useRef(numericDraftsFromClientFilters(clientFilters))
+  const [numericDrafts, setNumericDrafts] = React.useState<NumericFilterDrafts>(() =>
+    numericDraftsFromClientFilters(clientFilters),
+  )
+  const [showNumericProgress, setShowNumericProgress] = React.useState(false)
+
+  React.useEffect(() => {
+    onClientFilterChangeRef.current = onClientFilterChange
+  }, [onClientFilterChange])
+
+  React.useEffect(() => {
+    const next: NumericFilterDrafts = {
+      totaliMin: clientFilters.totaliMin,
+      totaliMax: clientFilters.totaliMax,
+      produkteMin: clientFilters.produkteMin,
+      produkteMax: clientFilters.produkteMax,
+    }
+    if (numericDraftsAreEqual(lastAppliedNumericDraftsRef.current, next)) return
+    lastAppliedNumericDraftsRef.current = next
+    setNumericDrafts(next)
+  }, [
+    clientFilters.totaliMin,
+    clientFilters.totaliMax,
+    clientFilters.produkteMin,
+    clientFilters.produkteMax,
+  ])
+
+  React.useEffect(() => {
+    if (numericDraftsAreEqual(lastAppliedNumericDraftsRef.current, numericDrafts)) return
+
+    setShowNumericProgress(false)
+
+    const progressTimer = window.setTimeout(() => {
+      setShowNumericProgress(true)
+    }, NUMERIC_FILTER_DEBOUNCE_MS / 2)
+
+    const timeoutId = window.setTimeout(() => {
+      onClientFilterChangeRef.current({
+        totaliMin: parseNumericDraft(numericDrafts.totaliMin),
+        totaliMax: parseNumericDraft(numericDrafts.totaliMax),
+        produkteMin: parseNumericDraft(numericDrafts.produkteMin),
+        produkteMax: parseNumericDraft(numericDrafts.produkteMax),
+      })
+      setShowNumericProgress(false)
+    }, NUMERIC_FILTER_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(progressTimer)
+      window.clearTimeout(timeoutId)
+    }
+  }, [numericDrafts])
+
+  const numericFieldIsPending = (key: NumericFilterDraftKey) =>
+    numericDrafts[key] !== lastAppliedNumericDraftsRef.current[key]
+
+  const renderNumericFilter = (
+    key: NumericFilterDraftKey,
+    placeholder: string,
+    step: string | number,
+  ) => {
+    const isPending = numericFieldIsPending(key)
+    return (
+      <span
+        className={[
+          'debounced-search-input',
+          showNumericProgress && isPending ? 'debounced-search-input--pending' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <NumericInput
+          className="input history-filter-num debounced-search-input__field"
+          clearable
+          hideZero={false}
+          value={numericDrafts[key]}
+          placeholder={placeholder}
+          min={0}
+          step={step}
+          aria-busy={isPending}
+          onChange={(v) => setNumericDrafts((prev) => ({ ...prev, [key]: v }))}
+        />
+        {showNumericProgress && isPending ? (
+          <span
+            className="debounced-search-input__progress"
+            style={{ animationDuration: `${NUMERIC_FILTER_DEBOUNCE_MS / 2}ms` }}
+            aria-hidden="true"
+          />
+        ) : null}
+      </span>
+    )
+  }
 
   return (
     <div className="history-filters-bar">
@@ -123,26 +251,8 @@ export function DynamicHistoryFilterBar(props: {
           <div className="history-filter-group history-filter-group-labeled history-filter-group-totali">
             <span className="history-filter-group-label">Totali (€)</span>
             <div className="history-filter-pair">
-              <NumericInput
-                className="input history-filter-num"
-                clearable
-                hideZero={false}
-                value={clientFilters.totaliMin}
-                placeholder="Min"
-                min={0}
-                step="0.01"
-                onChange={(v) => onClientFilterChange({ totaliMin: parseNumericFilterValue(v) })}
-              />
-              <NumericInput
-                className="input history-filter-num"
-                clearable
-                hideZero={false}
-                value={clientFilters.totaliMax}
-                placeholder="Max"
-                min={0}
-                step="0.01"
-                onChange={(v) => onClientFilterChange({ totaliMax: parseNumericFilterValue(v) })}
-              />
+              {renderNumericFilter('totaliMin', 'Min', '0.01')}
+              {renderNumericFilter('totaliMax', 'Max', '0.01')}
             </div>
           </div>
         </>
@@ -151,26 +261,8 @@ export function DynamicHistoryFilterBar(props: {
       <div className="history-filter-group history-filter-group-labeled history-filter-group-produkte">
         <span className="history-filter-group-label">Produkte</span>
         <div className="history-filter-pair">
-          <NumericInput
-            className="input history-filter-num"
-            clearable
-            hideZero={false}
-            value={clientFilters.produkteMin}
-            placeholder="Min"
-            min={0}
-            step={1}
-            onChange={(v) => onClientFilterChange({ produkteMin: parseNumericFilterValue(v) })}
-          />
-          <NumericInput
-            className="input history-filter-num"
-            clearable
-            hideZero={false}
-            value={clientFilters.produkteMax}
-            placeholder="Max"
-            min={0}
-            step={1}
-            onChange={(v) => onClientFilterChange({ produkteMax: parseNumericFilterValue(v) })}
-          />
+          {renderNumericFilter('produkteMin', 'Min', 1)}
+          {renderNumericFilter('produkteMax', 'Max', 1)}
         </div>
       </div>
       </div>

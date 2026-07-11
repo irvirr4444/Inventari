@@ -1,4 +1,4 @@
-import type { CountrySummary as CountrySummaryData } from '@inventari/shared'
+import type { GroupedSummaryRow } from '@inventari/shared'
 import { DateRangeInput } from '../../components/DateRangeInput'
 import { ErrorAlert } from '../../components/ErrorAlert'
 import { DownloadIcon } from '../../components/icons'
@@ -7,13 +7,8 @@ import { fmt, fmtInt } from '../../lib/format'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { locationBadge } from '../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
-
-const emptySummary: CountrySummaryData = {
-  in_qty: 0,
-  in_value: 0,
-  out_qty: 0,
-  out_value: 0,
-}
+import { SummaryGroupByControl } from '../summary/SummaryGroupByControl'
+import type { SummaryGroupBy } from '@inventari/shared'
 
 function SummaryMiniCard(props: {
   tone: 'success' | 'danger'
@@ -31,30 +26,30 @@ function SummaryMiniCard(props: {
   )
 }
 
-function LocationSummaryCard(props: {
-  location: Lokacioni
-  summary: CountrySummaryData
+function GroupSummaryCard(props: {
+  row: GroupedSummaryRow
   showPrice: boolean
+  leading?: React.ReactNode
 }) {
   return (
     <section className="summary-country">
       <div className="summary-country-title">
-        <span>{locationBadge(props.location)}</span>
-        <span>{props.location.emri}</span>
+        {props.leading}
+        <span>{props.row.label}</span>
       </div>
       <div className="summary-mini-grid">
         <SummaryMiniCard
           tone="success"
           label="Hyrje (sasi)"
-          quantity={props.summary.in_qty}
-          value={props.summary.in_value}
+          quantity={props.row.in_qty}
+          value={props.row.in_value}
           showPrice={props.showPrice}
         />
         <SummaryMiniCard
           tone="danger"
           label="Dalje (sasi)"
-          quantity={props.summary.out_qty}
-          value={props.summary.out_value}
+          quantity={props.row.out_qty}
+          value={props.row.out_value}
           showPrice={props.showPrice}
         />
       </div>
@@ -67,25 +62,26 @@ export function DynamicSummaryPanel(props: {
   to: string
   onFromChange: (date: string) => void
   onToChange: (date: string) => void
+  groupBy: SummaryGroupBy
+  onGroupByChange: (groupBy: SummaryGroupBy) => void
   locations: Lokacioni[]
-  summaryByLocation: Record<string, CountrySummaryData>
-  isFetching: boolean
+  rows: GroupedSummaryRow[]
+  loading?: boolean
   error: unknown
 }) {
   const { trackPrice } = useTenantConfig()
-  const useTable = props.locations.length > 3
+  const useTable = props.rows.length >= 3
+  const locationById = new Map(props.locations.map((loc) => [loc.id, loc]))
 
   return (
     <div className="card summary-panel summary-panel-dynamic" data-tutorial="summary-panel">
       <div className="row summary-header">
-        <h3>Permbledhje</h3>
+        <h3>Përmbledhje</h3>
         <div className="spacer" />
-        {props.isFetching && (
-          <span className="muted" style={{ fontSize: 12 }}>Duke rifreskuar...</span>
-        )}
+        <SummaryGroupByControl value={props.groupBy} onChange={props.onGroupByChange} />
         <a
           className="btn sm"
-          href={exportUrl('xlsx', { from: props.from, to: props.to })}
+          href={exportUrl('xlsx', { from: props.from, to: props.to, groupBy: props.groupBy })}
           title="Shkarko Excel"
         >
           <DownloadIcon />
@@ -115,36 +111,53 @@ export function DynamicSummaryPanel(props: {
       )}
 
       <div className="summary-panel-scroll">
-        {useTable ? (
+        {props.loading ? (
+          <div className="summary-panel-pending" aria-busy="true" aria-label="Duke ngarkuar permbledhjen">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="summary-panel-pending-row" />
+            ))}
+          </div>
+        ) : props.rows.length === 0 ? (
+          <div className="muted" style={{ padding: '12px 4px' }}>
+            Nuk ka te dhena per kete periudhe.
+          </div>
+        ) : useTable ? (
           <div className="dynamic-summary-table-wrap">
             <table className="table dynamic-summary-table">
               <thead>
                 <tr>
-                  <th>Lokacioni</th>
+                  <th>
+                    {props.groupBy === 'location'
+                      ? 'Vendndodhja'
+                      : props.groupBy === 'product'
+                        ? 'Produkti'
+                        : 'Përdoruesi'}
+                  </th>
                   <th>Hyrje (sasi)</th>
                   <th>Dalje (sasi)</th>
                 </tr>
               </thead>
               <tbody>
-                {props.locations.map((loc) => {
-                  const s = props.summaryByLocation[loc.id] ?? emptySummary
+                {props.rows.map((row) => {
+                  const loc = props.groupBy === 'location' ? locationById.get(row.id) : undefined
                   return (
-                    <tr key={loc.id}>
+                    <tr key={row.id}>
                       <td>
                         <span className="row" style={{ gap: 6 }}>
-                          {locationBadge(loc)} {loc.emri}
+                          {loc ? locationBadge(loc) : null}
+                          {row.label}
                         </span>
                       </td>
                       <td className="num">
-                        {fmtInt(s.in_qty)}
+                        {fmtInt(row.in_qty)}
                         {trackPrice ? (
-                          <span className="muted"> ({fmt(s.in_value)} €)</span>
+                          <span className="muted"> ({fmt(row.in_value)} €)</span>
                         ) : null}
                       </td>
                       <td className="num">
-                        {fmtInt(s.out_qty)}
+                        {fmtInt(row.out_qty)}
                         {trackPrice ? (
-                          <span className="muted"> ({fmt(s.out_value)} €)</span>
+                          <span className="muted"> ({fmt(row.out_value)} €)</span>
                         ) : null}
                       </td>
                     </tr>
@@ -155,14 +168,17 @@ export function DynamicSummaryPanel(props: {
           </div>
         ) : (
           <div className="summary-countries dynamic-summary-grid">
-            {props.locations.map((loc) => (
-              <LocationSummaryCard
-                key={loc.id}
-                location={loc}
-                summary={props.summaryByLocation[loc.id] ?? emptySummary}
-                showPrice={trackPrice}
-              />
-            ))}
+            {props.rows.map((row) => {
+              const loc = props.groupBy === 'location' ? locationById.get(row.id) : undefined
+              return (
+                <GroupSummaryCard
+                  key={row.id}
+                  row={row}
+                  showPrice={trackPrice}
+                  leading={loc ? locationBadge(loc) : undefined}
+                />
+              )
+            })}
           </div>
         )}
       </div>

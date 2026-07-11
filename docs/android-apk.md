@@ -10,7 +10,7 @@ For how the mobile shell works in the browser, see [frontend/README-MOBILE.md](.
 
 | In browser (today) | In APK (goal) |
 | --- | --- |
-| Bottom tabs: Veprime, Transfer, Produkte, Histori, Permbledhje | Same |
+| Bottom tabs: Veprime, Transfer, Produkte, Histori, Përmbledhje | Same |
 | Bottom sheets, card lists, touch targets | Same (WebView) |
 | Cookie session login (`credentials: 'include'`) | Same API, with config below |
 | Auto mobile UI on Android (`isMobileClient()`) | Yes — Android WebView UA triggers mobile shell |
@@ -285,7 +285,7 @@ Before distributing an APK:
 - [ ] **Veprime** — add product row, finalize (bottom sheet confirm).
 - [ ] **Transfer** — Nga/Te, date, finalize.
 - [ ] **Histori** — filters, advanced sheet, **Shkarko** export download (may open system download UI).
-- [ ] **Permbledhje** — date range, Excel export.
+- [ ] **Përmbledhje** — date range, Excel export.
 - [ ] Dynamic account — location picker sheets, N-column stock on Produkte cards.
 - [ ] Onboarding wizard (`/onboarding`) on new dynamic signup.
 - [ ] Back button — does not exit app unexpectedly on root tab (may need `@capacitor/app` back-button listener later).

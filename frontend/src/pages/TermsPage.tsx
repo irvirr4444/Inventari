@@ -20,6 +20,11 @@ export function TermsPage() {
       <ul>
         <li>Jeni përgjegjës për fshehtësinë e fjalëkalimit dhe aktivitetin në llogarinë tuaj.</li>
         <li>Emri i përdoruesit duhet të jetë i vlefshëm dhe i juaji (ose i organizatës suaj).</li>
+        <li>
+          Nëse jeni administrator i një organizate, jeni përgjegjës për përdoruesit që krijoni,
+          rolet, akseset sipas vendndodhjes dhe ndryshimet e kredencialeve që bëni për ta.
+        </li>
+        <li>Sesioni juaj i hyrjes skadon automatikisht pas 24 orësh; pas kësaj duhet të hyni përsëri.</li>
         <li>Mund të pezullojmë llogarinë në rast abuzimi ose shkeljeje të këtyre kushteve.</li>
       </ul>
 

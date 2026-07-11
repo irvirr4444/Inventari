@@ -37,12 +37,16 @@ export function PrivacyPolicyPage() {
           <strong>Preferenca llogarisë</strong> — p.sh. onboarding i përfunduar, tutorial i parë,
           ndjekja e çmimeve (on/off).
         </li>
+        <li>
+          <strong>Roli dhe aksesi</strong> — nëse përdorni llogari organizate, ruajmë rolin
+          (Admin/Përdorues) dhe aksesin sipas vendndodhjes që cakton administratori.
+        </li>
       </ul>
 
       <h3>Të dhënat e biznesit që ju i futni</h3>
       <ul>
         <li>Produkte (kod, emër, sasi, çmim opsional)</li>
-        <li>Lokacione / depo</li>
+        <li>Vendndodhje / depo</li>
         <li>Veprime inventari (hyrje, dalje, transfer), data, shënime</li>
         <li>Historik dhe përmbledhje që gjenerohen nga këto të dhëna</li>
       </ul>
@@ -55,7 +59,7 @@ export function PrivacyPolicyPage() {
       <ul>
         <li>
           <strong>Cookie sesioni</strong> (<code>inventari_session</code>) — për të mbajtur hyrjen
-          tuaj (HTTP-only; zgjat derisa të dilni ose të skadojë pas disa muajsh pa përdorim).
+          tuaj (HTTP-only; skadon automatikisht pas 24 orësh ose kur dilni nga llogaria).
         </li>
         <li>
           <strong>Ruajtje lokale në shfletues</strong> — preferenca të vogla UI (p.sh. vendi i
@@ -105,14 +109,14 @@ export function PrivacyPolicyPage() {
       <h2>5. Ruajtja</h2>
       <p>
         Të dhënat e inventarit ruhen derisa t’i fshini ju ose derisa të mbyllni llogarinë. Cookie e
-        sesionit skadon automatikisht. Kopjet rezervë të bazës së të dhënave mund të ekzistojnë te
-        Supabase sipas konfigurimit të tyre.
+        sesionit skadon automatikisht pas 24 orësh. Kopjet rezervë të bazës së të dhënave mund të
+        ekzistojnë te Supabase sipas konfigurimit të tyre.
       </p>
 
       <h2>6. Siguria</h2>
       <p>
         Përdorim HTTPS në prodhim, fjalëkalime të hash-uara, cookie sesioni të nënshkruar, dhe
-        izolim të të dhënave sipas llogarisë (çdo përdorues sheh vetëm të dhënat e veta).
+        izolim të të dhënave sipas llogarisë, rolit dhe aksesit që ka përdoruesi.
       </p>
 
       <h2>7. Të drejtat tuaja</h2>

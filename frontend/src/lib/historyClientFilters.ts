@@ -8,6 +8,8 @@ export type HistoryServerFilters = {
   dateFrom?: string
   dateTo?: string
   shenim?: string
+  kodiProduktit?: string
+  createdByUserId?: string
 }
 
 export type HistoryClientFilters = {
@@ -36,12 +38,17 @@ export const EMPTY_CLIENT_FILTERS: HistoryClientFilters = {
 
 export function countAdvancedHistoriFilters(
   client: HistoryClientFilters,
-  server: Pick<HistoryServerFilters, 'shenim' | 'dateFrom' | 'dateTo'>,
+  server: Pick<
+    HistoryServerFilters,
+    'shenim' | 'dateFrom' | 'dateTo' | 'kodiProduktit' | 'createdByUserId'
+  >,
   options?: { trackPrice?: boolean },
 ): number {
   const trackPrice = options?.trackPrice ?? true
   let count = 0
   if ((server.shenim?.trim() ?? '') !== '') count++
+  if ((server.kodiProduktit?.trim() ?? '') !== '') count++
+  if ((server.createdByUserId?.trim() ?? '') !== '') count++
   if (server.dateFrom || server.dateTo) count++
   if (client.oraFrom.trim() !== '') count++
   if (client.oraDeri.trim() !== '') count++
@@ -81,7 +88,9 @@ export function hasActiveServerFilters(filters: HistoryServerFilters): boolean {
     filters.shteti !== undefined ||
     filters.dateFrom !== undefined ||
     filters.dateTo !== undefined ||
-    (filters.shenim?.trim() ?? '') !== ''
+    (filters.shenim?.trim() ?? '') !== '' ||
+    (filters.kodiProduktit?.trim() ?? '') !== '' ||
+    (filters.createdByUserId?.trim() ?? '') !== ''
   )
 }
 

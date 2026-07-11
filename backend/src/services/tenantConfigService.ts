@@ -10,6 +10,7 @@ import {
   markTutorialSeenRow,
   upsertTenantConfigRow,
 } from '../repositories/tenantConfigRepository.js'
+import { requireAdmin, tenantIdFor } from './accessControlService.js'
 
 export const DEFAULT_TENANT_CONFIG: TenantConfig = {
   track_price: true,
@@ -46,7 +47,7 @@ export async function getTenantConfigForUser(
     }
   }
 
-  const row = await getTenantConfigRow(supabase, user.id)
+  const row = await getTenantConfigRow(supabase, tenantIdFor(user))
   if (!row) {
     return { config: DEFAULT_TENANT_CONFIG, has_tenant_config: false }
   }
@@ -63,8 +64,9 @@ export async function postTenantConfigForUser(
   body: unknown,
 ): Promise<TenantConfig> {
   assertDynamicUser(user)
+  requireAdmin(user)
   const input = TenantConfigPostSchema.parse(body)
-  const row = await upsertTenantConfigRow(supabase, user.id, { track_price: input.track_price })
+  const row = await upsertTenantConfigRow(supabase, tenantIdFor(user), { track_price: input.track_price })
   return toTenantConfigDto(row)
 }
 
@@ -74,8 +76,9 @@ export async function patchTenantConfigForUser(
   body: unknown,
 ): Promise<TenantConfig> {
   assertDynamicUser(user)
+  requireAdmin(user)
   const patch = TenantConfigPatchSchema.parse(body)
-  const row = await upsertTenantConfigRow(supabase, user.id, patch)
+  const row = await upsertTenantConfigRow(supabase, tenantIdFor(user), patch)
   return toTenantConfigDto(row)
 }
 
@@ -84,13 +87,14 @@ export async function completeOnboardingForUser(
   user: SessionUser,
 ): Promise<TenantConfig> {
   assertDynamicUser(user)
+  requireAdmin(user)
 
-  const locationCount = await countActiveLokacionet(supabase, user.id)
+  const locationCount = await countActiveLokacionet(supabase, tenantIdFor(user))
   if (locationCount < 1) {
     throw new AppError(400, 'At least one active location is required')
   }
 
-  const row = await markOnboardingCompleteRow(supabase, user.id)
+  const row = await markOnboardingCompleteRow(supabase, tenantIdFor(user))
   return toTenantConfigDto(row)
 }
 
@@ -99,7 +103,7 @@ export async function markTutorialSeenForUser(
   user: SessionUser,
 ): Promise<TenantConfig> {
   assertDynamicUser(user)
-  const row = await markTutorialSeenRow(supabase, user.id)
+  const row = await markTutorialSeenRow(supabase, tenantIdFor(user))
   return toTenantConfigDto(row)
 }
 
@@ -109,7 +113,7 @@ export async function getTenantConfigForSession(
 ): Promise<TenantConfig | null> {
   if (user.isLegacy) return null
 
-  const row = await getTenantConfigRow(supabase, user.id)
+  const row = await getTenantConfigRow(supabase, tenantIdFor(user))
   if (!row) {
     return DEFAULT_TENANT_CONFIG
   }

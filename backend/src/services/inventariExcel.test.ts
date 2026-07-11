@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import ExcelJS from 'exceljs'
 import {
-  accumulatePermbledhjeTotals,
+  accumulatePërmbledhjeTotals,
   buildInventariExcelBuffer,
-  buildPermbledhjeTotalRow,
+  buildHistoryLegacyExcelBuffer,
+  buildPërmbledhjeTotalRow,
   resolveHistoryExportSheets,
   buildVeprimListTotalRow,
   configureInventariLocationHeaders,
@@ -20,6 +21,7 @@ import {
   sortDynamicActionExportRows,
   sortActionExportRows,
   transferKey,
+  permbledhjeExportFilename,
   writeInventariDataRow,
 } from '../services/inventariExcel.js'
 
@@ -190,8 +192,8 @@ describe('inventariExcel helpers', () => {
     expect(sorted.map((row) => row.id)).toEqual(['1', '2'])
   })
 
-  it('buildPermbledhjeTotalRow writes TOTAL label and per-location sums', () => {
-    const row = buildPermbledhjeTotalRow(
+  it('buildPërmbledhjeTotalRow writes TOTAL label and per-location sums', () => {
+    const row = buildPërmbledhjeTotalRow(
       [
         { sasi: -1, vlefta: 0 },
         { sasi: 2, vlefta: 150.5 },
@@ -246,7 +248,7 @@ describe('inventariExcel helpers', () => {
     expect(total?.[7]).toBe(4)
   })
 
-  it('accumulatePermbledhjeTotals adds block sasi and vlefta', () => {
+  it('accumulatePërmbledhjeTotals adds block sasi and vlefta', () => {
     const totals = [
       { sasi: 0, vlefta: 0 },
       { sasi: 0, vlefta: 0 },
@@ -256,7 +258,7 @@ describe('inventariExcel helpers', () => {
     row[7] = -12
     row[15] = 5
     row[16] = 40
-    accumulatePermbledhjeTotals(totals, row, 2)
+    accumulatePërmbledhjeTotals(totals, row, 2)
     expect(totals).toEqual([
       { sasi: -3, vlefta: -12 },
       { sasi: 5, vlefta: 40 },
@@ -272,6 +274,14 @@ describe('inventariExcel helpers', () => {
     }
     expect(fillArgb(sheet.getCell(3, 3).fill)).toBe('FFC9DAF8')
     expect(fillArgb(sheet.getCell(3, 12).fill)).toBe('FFFCE5CD')
+  })
+
+  it('permbledhjeExportFilename uses grouping suffix and safe timestamp', () => {
+    expect(permbledhjeExportFilename('product')).toMatch(
+      /^Permbledhje_Produkti_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.xlsx$/,
+    )
+    expect(permbledhjeExportFilename('location')).toMatch(/^Permbledhje_Vendodhje_/)
+    expect(permbledhjeExportFilename('user')).toMatch(/^Permbledhje_Perdoruesi_/)
   })
 
   it('buildInventariExcelBuffer keeps location block colors after total row', async () => {
@@ -301,7 +311,7 @@ describe('inventariExcel helpers', () => {
 
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Permbledhje')
+    const sheet = workbook.getWorksheet('Përmbledhje')
     expect(sheet).toBeTruthy()
     expect(fillArgb(sheet!.getCell(3, 3).fill)).toBe('FFC9DAF8')
     expect(fillArgb(sheet!.getCell(3, 12).fill)).toBe('FFFCE5CD')
@@ -314,5 +324,48 @@ describe('inventariExcel helpers', () => {
     expect(hyrjeSheet!.getCell(3, 2).value).toBe('TOTAL:')
     expect(hyrjeSheet!.getCell(3, 7).value).toBe(5)
     expect(hyrjeSheet!.getCell(3, 8).value).toBe(10)
+  })
+
+  it('buildHistoryLegacyExcelBuffer adds combined Histori sheet before detail tabs', async () => {
+    const locations = [
+      { key: 'XK', emri: 'Kosova' },
+      { key: 'AL', emri: 'Shqiperi' },
+    ]
+    const plans = resolveHistoryExportSheets({ locations, locationKeys: ['XK'] })
+    const buffer = await buildHistoryLegacyExcelBuffer(
+      [
+        {
+          kodi: 'P1',
+          emri: 'Prod',
+          gjendje_kosove: 10,
+          gjendje_shqiperi: 0,
+        },
+      ],
+      [
+        {
+          id: '1',
+          lloji: 'Hyrje',
+          data: '2026-06-10',
+          shteti: 'XK',
+          kodi_produktit: 'P1',
+          cmimi_njesi: 2,
+          sasia: 5,
+          created_at: '2026-06-10T10:00:00Z',
+        },
+      ],
+      new Set(['1']),
+      plans,
+      locations,
+      { from: '2026-06-01', to: '2026-06-30' },
+    )
+
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Histori', 'Kosova Hyrje'])
+
+    const combined = workbook.getWorksheet('Histori')
+    expect(combined?.getCell(1, 1).value).toBe('Kosova Hyrje')
+    expect(combined?.getCell(2, 1).value).toBe('Kodi')
+    expect(combined?.getCell(3, 1).value).toBe('P1')
   })
 })

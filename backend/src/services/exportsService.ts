@@ -1,8 +1,22 @@
 import ExcelJS from 'exceljs'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { BatchLlojiSchema, CountrySchema, VeprimLlojiSchema } from '@inventari/shared'
+import {
+  BatchLlojiSchema,
+  CountrySchema,
+  SummaryGroupBySchema,
+  VeprimLlojiSchema,
+  buildGroupedSummaryRows,
+  resolveActionCreatorUserId,
+} from '@inventari/shared'
 import { z } from 'zod'
 import type { SessionUser } from '../domain/user.js'
+import { AppError } from '../errors.js'
+import {
+  highestAccessInAnyLocation,
+  isAdmin,
+  listAllowedLocationIds,
+  tenantIdFor,
+} from './accessControlService.js'
 import { autoSizeColumns, applyBordersToDataRows, styleHeaderRow } from '../excel.js'
 import {
   type ActionExportRow,
@@ -11,9 +25,17 @@ import {
   buildDynamicInventariExcelBuffer,
   buildInventariExcelBuffer,
   formatExportTimestamp,
+  isWithinExportRange,
+  permbledhjeExportFilename,
 } from './inventariExcel.js'
+import { resolveInventariExcelExportConfigForTenant } from './inventariExportConfigService.js'
+import {
+  buildProductGroupedInventariExcelBuffer,
+  buildUserGroupedInventariExcelBuffer,
+} from './groupedInventariExcel.js'
 import { exportHistoryXlsx, type HistoryExportQuery } from './historyExportService.js'
 import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
+import { listPerdoruesByAccount } from '../repositories/perdoruesRepository.js'
 import { listProduktet, listGjendjeForProducts } from '../repositories/produktiRepository.js'
 import {
   fetchExportDynamicActions,
@@ -21,6 +43,108 @@ import {
   fetchExportLegacyProducts,
   fetchExportVeprimet,
 } from '../repositories/batchRepository.js'
+import { getTrackPriceForTenant } from './tenantConfigService.js'
+
+function filterExportDynamicActions(
+  user: SessionUser,
+  actions: DynamicActionExportRow[],
+  allowedLocationIds: Set<string>,
+) {
+  if (isAdmin(user)) return actions
+  return actions.filter(
+    (action) => action.lokacioni_id && allowedLocationIds.has(action.lokacioni_id),
+  )
+}
+
+function buildGroupedRowsForExport(
+  groupBy: 'product' | 'user',
+  actions: DynamicActionExportRow[],
+  query: { from?: string; to?: string },
+  tenantId: string,
+  products: Array<{ kodi: string; emri: string }>,
+  users: Array<{ id: string; emri: string | null; email: string | null }>,
+) {
+  const actionsInRange = actions.filter((action) => isWithinExportRange(action, query))
+  const productRows = actionsInRange.map((action) => ({
+    lloji: action.lloji,
+    kodi_produktit: action.kodi_produktit,
+    sasia: action.sasia,
+    totali: Number(action.cmimi_njesi ?? 0) * Number(action.sasia ?? 0),
+  }))
+  const userRows = actionsInRange.map((action) => ({
+    lloji: action.lloji,
+    created_by_user_id: resolveActionCreatorUserId(action, tenantId),
+    sasia: action.sasia,
+    totali: Number(action.cmimi_njesi ?? 0) * Number(action.sasia ?? 0),
+  }))
+
+  return buildGroupedSummaryRows(groupBy, {
+    locationRows: [],
+    productRows,
+    userRows,
+    locationIds: [],
+    locations: [],
+    products,
+    users,
+  })
+}
+
+async function loadDynamicExportContext(
+  supabase: SupabaseClient,
+  user: SessionUser,
+  tenantId: string,
+) {
+  const [lokacionet, productRows, users, allActions] = await Promise.all([
+    listLokacionetByOwner(supabase, tenantId),
+    listProduktet(supabase, tenantId, {}),
+    listPerdoruesByAccount(supabase, tenantId),
+    fetchExportDynamicActions(supabase, tenantId),
+  ])
+
+  const allowedLocationIds = isAdmin(user)
+    ? new Set(lokacionet.map((loc) => loc.id))
+    : new Set(listAllowedLocationIds(user, 'view'))
+
+  const filteredActions = filterExportDynamicActions(
+    user,
+    allActions as DynamicActionExportRow[],
+    allowedLocationIds,
+  )
+
+  const stockRows = await listGjendjeForProducts(
+    supabase,
+    tenantId,
+    productRows.map((p) => p.id),
+  )
+  const stockByProduct = new Map<string, Map<string, number>>()
+  for (const row of stockRows) {
+    const byLoc = stockByProduct.get(row.produkti_id) ?? new Map()
+    byLoc.set(row.lokacioni_id, Number(row.sasia))
+    stockByProduct.set(row.produkti_id, byLoc)
+  }
+
+  const products: DynamicProductExportRow[] = productRows.map((p) => ({
+    kodi: p.kodi,
+    emri: p.emri,
+    stockByLocation: stockByProduct.get(p.id) ?? new Map(),
+  }))
+
+  const locationNameById = new Map(lokacionet.map((loc) => [loc.id, loc.emri]))
+  const creatorLabelById = new Map(
+    users.map((u) => [u.id, u.emri?.trim() || u.email?.trim() || u.id]),
+  )
+
+  return {
+    lokacionet,
+    products,
+    users,
+    filteredActions,
+    locationNameById,
+    creatorLabelById,
+    productCatalog: productRows.map((p) => ({ kodi: p.kodi, emri: p.emri })),
+    userCatalog: users.map((u) => ({ id: u.id, emri: u.emri, email: u.email })),
+  }
+}
 
 function csvEscape(value: unknown) {
   const s = String(value ?? '')
@@ -38,7 +162,11 @@ export async function exportActionsCsv(
     lloji?: 'Hyrje' | 'Dalje'
   },
 ) {
-  const rows = await fetchExportVeprimet(supabase, user.id, query)
+  const tenantId = tenantIdFor(user)
+  if (!isAdmin(user) && !highestAccessInAnyLocation(user, 'view')) {
+    throw new AppError(403, 'No location access')
+  }
+  const rows = await fetchExportVeprimet(supabase, tenantId, query)
 
   const header = [
     'id',
@@ -82,7 +210,11 @@ export async function exportProductsXlsx(
     sortDirection: 'asc' | 'desc'
   },
 ) {
-  const productRows = await listProduktet(supabase, user.id, {})
+  const tenantId = tenantIdFor(user)
+  if (!isAdmin(user) && !highestAccessInAnyLocation(user, 'view')) {
+    throw new AppError(403, 'No location access')
+  }
+  const productRows = await listProduktet(supabase, tenantId, {})
 
   if (user.isLegacy) {
     const sorted = [...productRows].sort((a, b) => {
@@ -117,10 +249,10 @@ export async function exportProductsXlsx(
     }
   }
 
-  const lokacionet = await listLokacionetByOwner(supabase, user.id)
+  const lokacionet = await listLokacionetByOwner(supabase, tenantId)
   const stockRows = await listGjendjeForProducts(
     supabase,
-    user.id,
+    tenantId,
     productRows.map((p) => p.id),
   )
   const stockByProduct = new Map<string, Map<string, number>>()
@@ -155,58 +287,112 @@ export async function exportProductsXlsx(
 async function exportDynamicInventariXlsx(
   supabase: SupabaseClient,
   user: SessionUser,
-  query: { from?: string; to?: string },
+  query: { from?: string; to?: string; groupBy?: 'location' | 'product' | 'user' },
 ) {
-  const [lokacionet, productRows, allActions] = await Promise.all([
-    listLokacionetByOwner(supabase, user.id),
-    listProduktet(supabase, user.id, {}),
-    fetchExportDynamicActions(supabase, user.id),
-  ])
-
-  const stockRows = await listGjendjeForProducts(
-    supabase,
-    user.id,
-    productRows.map((p) => p.id),
-  )
-  const stockByProduct = new Map<string, Map<string, number>>()
-  for (const row of stockRows) {
-    const byLoc = stockByProduct.get(row.produkti_id) ?? new Map()
-    byLoc.set(row.lokacioni_id, Number(row.sasia))
-    stockByProduct.set(row.produkti_id, byLoc)
+  const tenantId = tenantIdFor(user)
+  if (!isAdmin(user) && !highestAccessInAnyLocation(user, 'view')) {
+    throw new AppError(403, 'No location access')
   }
 
-  const products: DynamicProductExportRow[] = productRows.map((p) => ({
-    kodi: p.kodi,
-    emri: p.emri,
-    stockByLocation: stockByProduct.get(p.id) ?? new Map(),
-  }))
+  const groupBy = query.groupBy ?? 'location'
+  const trackPrice = await getTrackPriceForTenant(supabase, tenantId)
+
+  if (groupBy === 'product' || groupBy === 'user') {
+    const ctx = await loadDynamicExportContext(supabase, user, tenantId)
+    const groupedRows = buildGroupedRowsForExport(
+      groupBy,
+      ctx.filteredActions,
+      query,
+      tenantId,
+      ctx.productCatalog,
+      ctx.userCatalog,
+    )
+    const resolveCreator = (action: DynamicActionExportRow) =>
+      resolveActionCreatorUserId(action, tenantId)
+    const excelExport = await resolveInventariExcelExportConfigForTenant(
+      supabase,
+      tenantId,
+      ctx.users,
+      ctx.creatorLabelById,
+    )
+
+    const buffer =
+      groupBy === 'product'
+        ? await buildProductGroupedInventariExcelBuffer({
+            productRows: ctx.products,
+            actionRows: ctx.filteredActions,
+            locations: ctx.lokacionet.map((l) => ({ emri: l.emri })),
+            locationIds: ctx.lokacionet.map((l) => l.id),
+            query,
+            groupedRows,
+            trackPrice,
+            accountOwnerId: tenantId,
+            locationNameById: ctx.locationNameById,
+            resolveCreator,
+            creatorLabelById: ctx.creatorLabelById,
+            excelExport,
+          })
+        : await buildUserGroupedInventariExcelBuffer({
+            productRows: ctx.products,
+            actionRows: ctx.filteredActions,
+            locations: ctx.lokacionet.map((l) => ({ emri: l.emri })),
+            locationIds: ctx.lokacionet.map((l) => l.id),
+            query,
+            groupedRows,
+            trackPrice,
+            accountOwnerId: tenantId,
+            locationNameById: ctx.locationNameById,
+            resolveCreator,
+            creatorLabelById: ctx.creatorLabelById,
+            excelExport,
+          })
+
+    return {
+      buffer,
+      filename: permbledhjeExportFilename(groupBy),
+    }
+  }
+
+  const ctx = await loadDynamicExportContext(supabase, user, tenantId)
+  const excelExport = await resolveInventariExcelExportConfigForTenant(
+    supabase,
+    tenantId,
+    ctx.users,
+    ctx.creatorLabelById,
+  )
 
   const buffer = await buildDynamicInventariExcelBuffer(
-    products,
-    allActions as DynamicActionExportRow[],
-    lokacionet.map((l) => ({ emri: l.emri })),
-    lokacionet.map((l) => l.id),
+    ctx.products,
+    ctx.filteredActions,
+    ctx.lokacionet.map((l) => ({ emri: l.emri })),
+    ctx.lokacionet.map((l) => l.id),
     query,
+    excelExport,
   )
 
   return {
     buffer,
-    filename: `Permbledhje ${formatExportTimestamp()}.xlsx`,
+    filename: permbledhjeExportFilename('location'),
   }
 }
 
 export async function exportInventariXlsx(
   supabase: SupabaseClient,
   user: SessionUser,
-  query: { from?: string; to?: string },
+  query: { from?: string; to?: string; groupBy?: 'location' | 'product' | 'user' },
 ) {
   if (!user.isLegacy) {
     return exportDynamicInventariXlsx(supabase, user, query)
   }
 
+  const tenantId = tenantIdFor(user)
+  if (!isAdmin(user) && !highestAccessInAnyLocation(user, 'view')) {
+    throw new AppError(403, 'No location access')
+  }
+
   const [products, allActions] = await Promise.all([
-    fetchExportLegacyProducts(supabase, user.id),
-    fetchExportLegacyActions(supabase, user.id),
+    fetchExportLegacyProducts(supabase, tenantId),
+    fetchExportLegacyActions(supabase, tenantId),
   ])
 
   const buffer = await buildInventariExcelBuffer(
@@ -217,7 +403,7 @@ export async function exportInventariXlsx(
 
   return {
     buffer,
-    filename: `Permbledhje ${formatExportTimestamp()}.xlsx`,
+    filename: permbledhjeExportFilename('location'),
   }
 }
 
@@ -226,6 +412,7 @@ export const ActionsExportQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   lloji: VeprimLlojiSchema.optional(),
+  groupBy: SummaryGroupBySchema.optional(),
 })
 
 export const ProductsExportQuerySchema = z.object({
@@ -249,6 +436,7 @@ export const HistoryExportQuerySchema = z.object({
   totaliMax: z.coerce.number().optional(),
   produkteMin: z.coerce.number().optional(),
   produkteMax: z.coerce.number().optional(),
+  kodiProduktit: z.string().optional(),
   trackPrice: z
     .enum(['true', 'false'])
     .optional()
@@ -272,6 +460,7 @@ export const HistoryExportBodySchema = z.object({
   totaliMax: z.coerce.number().optional(),
   produkteMin: z.coerce.number().optional(),
   produkteMax: z.coerce.number().optional(),
+  kodiProduktit: z.string().optional(),
   trackPrice: z.boolean().optional(),
   locationLabel: z.string().optional(),
   filterLines: z.array(z.string()).optional(),

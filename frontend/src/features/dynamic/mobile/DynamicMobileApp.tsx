@@ -8,7 +8,7 @@ import { BottomNav } from '../../../mobile/components/BottomNav'
 import { MobileTabSlot } from '../../../mobile/components/MobileTabSlot'
 import type { MobileHeaderState, TabId } from '../../../mobile/types'
 import { DynamicHistoriTab } from './tabs/DynamicHistoriTab'
-import { DynamicPermbledhjeTab } from './tabs/DynamicPermbledhjeTab'
+import { DynamicPërmbledhjeTab } from './tabs/DynamicPërmbledhjeTab'
 import { DynamicProdukteTab } from './tabs/DynamicProdukteTab'
 import { DynamicTransferTab } from './tabs/DynamicTransferTab'
 import { DynamicVeprimeTab } from './tabs/DynamicVeprimeTab'
@@ -87,7 +87,7 @@ export function DynamicMobileApp(props: {
           />
         </MobileTabSlot>
         <MobileTabSlot tab="permblehdje" activeTab={tab}>
-          <DynamicPermbledhjeTab />
+          <DynamicPërmbledhjeTab />
         </MobileTabSlot>
       </main>
 

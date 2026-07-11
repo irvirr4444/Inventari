@@ -13,6 +13,7 @@ export type VeprimBatchRow = {
   ora: string | null
   pershkrimi: string | null
   pronari_id: string
+  created_by_user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -29,6 +30,7 @@ export async function insertVeprimBatch(
     destination_lokacioni_id?: string | null
     ora?: string | null
     pershkrimi?: string | null
+    created_by_user_id?: string | null
   },
 ): Promise<string> {
   const { data, error } = await supabase
@@ -43,6 +45,7 @@ export async function insertVeprimBatch(
       destination_lokacioni_id: input.destination_lokacioni_id ?? null,
       ora: input.ora ?? null,
       pershkrimi: input.pershkrimi ?? null,
+      created_by_user_id: input.created_by_user_id ?? tenantId,
     })
     .select('id')
     .single()
@@ -86,6 +89,43 @@ export async function findVeprimBatchById(
 
   if (error) throw mapSupabaseError(error)
   return data as VeprimBatchRow | null
+}
+
+export async function listVeprimBatchCreatorUserIds(
+  supabase: SupabaseClient,
+  tenantId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('veprim_batch')
+    .select('created_by_user_id')
+    .eq('pronari_id', tenantId)
+    .not('created_by_user_id', 'is', null)
+
+  if (error) throw mapSupabaseError(error)
+
+  return [
+    ...new Set(
+      (data ?? [])
+        .map((row) => row.created_by_user_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  ]
+}
+
+export async function hasVeprimBatchByCreator(
+  supabase: SupabaseClient,
+  tenantId: string,
+  creatorUserId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('veprim_batch')
+    .select('id')
+    .eq('pronari_id', tenantId)
+    .eq('created_by_user_id', creatorUserId)
+    .limit(1)
+
+  if (error) throw mapSupabaseError(error)
+  return (data ?? []).length > 0
 }
 
 export async function updateVeprimBatch(

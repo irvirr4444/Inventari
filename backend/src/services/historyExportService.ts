@@ -8,6 +8,8 @@ import {
   fetchLegacyVeprimet,
 } from '../repositories/batchRepository.js'
 import { listProduktet, listGjendjeForProducts } from '../repositories/produktiRepository.js'
+import { listPerdoruesByAccount } from '../repositories/perdoruesRepository.js'
+import { resolveInventariExcelExportConfigForTenant } from './inventariExportConfigService.js'
 import { groupLegacyVeprimRows, isLegacyBatchId } from '../legacyBatches.js'
 import { fetchAllActionBatchesForExport } from './actionBatchListService.js'
 import {
@@ -40,6 +42,7 @@ export type HistoryExportQuery = {
   totaliMax?: number
   produkteMin?: number
   produkteMax?: number
+  kodiProduktit?: string
   trackPrice?: boolean
   batchIds?: string[]
   locationLabel?: string
@@ -50,10 +53,12 @@ async function resolveAllowedActionIds(
   supabase: SupabaseClient,
   tenantId: string,
   filteredBatches: { id: string }[],
-  allActions: Array<{ id: string; batch_id?: string | null }>,
-  query: Pick<HistoryExportQuery, 'dateFrom' | 'dateTo' | 'shteti'>,
+  allActions: Array<{ id: string; batch_id?: string | null; kodi_produktit?: string }>,
+  query: Pick<HistoryExportQuery, 'dateFrom' | 'dateTo' | 'shteti' | 'kodiProduktit'>,
 ): Promise<Set<string>> {
   const allowed = new Set<string>()
+  const productCode = query.kodiProduktit?.trim() || undefined
+  const matchesProduct = (kodi?: string) => !productCode || kodi === productCode
   const realBatchIds = new Set(
     filteredBatches.map((batch) => batch.id).filter((id) => !isLegacyBatchId(id)),
   )
@@ -69,13 +74,15 @@ async function resolveAllowedActionIds(
     })
     for (const group of groupLegacyVeprimRows(legacyRows)) {
       if (!legacyBatchIds.has(group.id)) continue
-      for (const row of group.rows) allowed.add(row.id)
+      for (const row of group.rows) {
+        if (matchesProduct(row.kodi_produktit)) allowed.add(row.id)
+      }
     }
   }
 
   for (const action of allActions) {
     if (action.batch_id && realBatchIds.has(action.batch_id)) {
-      allowed.add(action.id)
+      if (matchesProduct(action.kodi_produktit)) allowed.add(action.id)
     }
   }
 
@@ -124,6 +131,12 @@ export async function exportHistoryXlsx(
         })()
       : applyHistoryExportClientFilters(batches, clientFilters)
   const dateQuery = { from: query.dateFrom, to: query.dateTo }
+  const actionFilterQuery = {
+    dateFrom: query.dateFrom,
+    dateTo: query.dateTo,
+    shteti: query.shteti,
+    kodiProduktit: query.kodiProduktit,
+  }
 
   if (!user.isLegacy) {
     const lokacionet = await listLokacionetByOwner(supabase, user.id)
@@ -151,16 +164,17 @@ export async function exportHistoryXlsx(
         ? lokacionet.find((l) => l.id === locationKeys[0])?.emri
         : undefined
 
-    const [productRows, allActions] = await Promise.all([
+    const [productRows, allActions, users] = await Promise.all([
       listProduktet(supabase, user.id, {}),
       fetchExportDynamicActions(supabase, user.id),
+      listPerdoruesByAccount(supabase, user.id),
     ])
     const allowedActionIds = await resolveAllowedActionIds(
       supabase,
       user.id,
       filteredBatches,
       allActions,
-      serverQuery,
+      actionFilterQuery,
     )
 
     const stockRows = await listGjendjeForProducts(
@@ -174,6 +188,16 @@ export async function exportHistoryXlsx(
       byLoc.set(row.lokacioni_id, Number(row.sasia))
       stockByProduct.set(row.produkti_id, byLoc)
     }
+
+    const creatorLabelById = new Map(
+      users.map((u) => [u.id, u.emri?.trim() || u.email?.trim() || u.id]),
+    )
+    const excelExport = await resolveInventariExcelExportConfigForTenant(
+      supabase,
+      user.id,
+      users,
+      creatorLabelById,
+    )
 
     const buffer = await buildHistoryDynamicExcelBuffer(
       productRows.map((p) => ({
@@ -189,6 +213,7 @@ export async function exportHistoryXlsx(
       dateQuery,
       transferLocationEmri,
       locationKeys.length > 0,
+      excelExport,
     )
 
     return { buffer, filename: `Histori ${formatExportTimestamp()}.xlsx` }

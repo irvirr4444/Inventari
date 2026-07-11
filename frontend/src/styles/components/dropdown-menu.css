@@ -1,0 +1,19 @@
+.dropdown-menu-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.dropdown-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  min-width: 220px;
+  z-index: 100;
+}
+
+.dropdown-menu-panel-end {
+  right: 0;
+}
+
+.dropdown-menu-panel-start {
+  left: 0;
+}

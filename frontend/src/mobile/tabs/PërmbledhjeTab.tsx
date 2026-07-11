@@ -1,3 +1,4 @@
+import type { SummaryByCountry } from '@inventari/shared'
 import { useSummaryDateRange } from '../../hooks/useSummaryQuery'
 import { exportUrl } from '../../lib/api'
 import { fmt, fmtInt } from '../../lib/format'
@@ -51,18 +52,19 @@ function SummarySection(props: {
   )
 }
 
-export function PermbledhjeTab() {
+export function PërmbledhjeTab() {
   const { from, setFrom, to, setTo, query, emptySummary } = useSummaryDateRange()
   const { isInitialLoad, isRefreshing } = queryRefreshState(query)
 
+  const summary = (query.data ?? {}) as SummaryByCountry
   const allEmpty =
     !isInitialLoad &&
     !isRefreshing &&
     !query.error &&
-    (query.data?.XK ?? emptySummary).in_qty === 0 &&
-    (query.data?.XK ?? emptySummary).out_qty === 0 &&
-    (query.data?.AL ?? emptySummary).in_qty === 0 &&
-    (query.data?.AL ?? emptySummary).out_qty === 0
+    (summary.XK ?? emptySummary).in_qty === 0 &&
+    (summary.XK ?? emptySummary).out_qty === 0 &&
+    (summary.AL ?? emptySummary).in_qty === 0 &&
+    (summary.AL ?? emptySummary).out_qty === 0
 
   return (
     <div className="mobile-tab-panel mobile-tab-panel--action">
@@ -95,13 +97,13 @@ export function PermbledhjeTab() {
             name="Kosovo"
             flagSrc="/Flag_of_Kosovo.webp"
             loading={isInitialLoad}
-            summary={query.data?.XK ?? emptySummary}
+            summary={summary.XK ?? emptySummary}
           />
           <SummarySection
             name="Albania"
             flagSrc="/Flag_of_Albania.svg"
             loading={isInitialLoad}
-            summary={query.data?.AL ?? emptySummary}
+            summary={summary.AL ?? emptySummary}
           />
         </div>
       )}

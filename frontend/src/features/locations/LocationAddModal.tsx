@@ -39,7 +39,7 @@ export function LocationAddModal(props: {
     e.preventDefault()
     const name = emri.trim()
     if (!name) {
-      setError('Emri i lokacionit eshte i detyrueshem.')
+      setError('Emri i vendndodhjes eshte i detyrueshem.')
       return
     }
     setError(null)
@@ -67,7 +67,7 @@ export function LocationAddModal(props: {
   const emriInputId = isMobile ? 'location-add-emri-mobile' : 'location-add-emri'
 
   const emojiField = (
-    <div className={isMobile ? undefined : 'form-group'} style={isMobile ? undefined : { marginBottom: 14 }}>
+    <div className={isMobile ? undefined : 'form-group location-add-emoji-field'}>
       <span className={isMobile ? 'mobile-label' : 'label'}>Ikona</span>
       <LocationEmojiPicker
         value={flagEmoji}
@@ -79,7 +79,7 @@ export function LocationAddModal(props: {
   )
 
   const nameField = (
-    <div className={isMobile ? undefined : 'form-group'}>
+    <div className={isMobile ? undefined : 'form-group location-add-name-field'}>
       <label className={isMobile ? 'mobile-label' : 'label'} htmlFor={emriInputId}>
         Emri
       </label>
@@ -88,7 +88,7 @@ export function LocationAddModal(props: {
         className={isMobile ? 'mobile-input' : 'input'}
         value={emri}
         maxLength={40}
-        placeholder="Emri i lokacionit"
+        placeholder="Emri i vendndodhjes"
         disabled={saving}
         onChange={(e) => setEmri(e.target.value)}
       />
@@ -109,7 +109,7 @@ export function LocationAddModal(props: {
     return (
       <BottomSheet
         open={props.open}
-        title="Shto lokacion"
+        title="Shto vendndodhje"
         onClose={props.onClose}
         footer={
           <SheetActionFooter
@@ -140,15 +140,17 @@ export function LocationAddModal(props: {
   return (
     <Modal
       open={props.open}
-      title="Shto lokacion"
+      title="Shto vendndodhje"
       onClose={props.onClose}
       stacked
       onEnterConfirm={() => formRef.current?.requestSubmit()}
       enterConfirmDisabled={saving || !emri.trim()}
     >
       <form ref={formRef} onSubmit={submit}>
-        {emojiField}
-        {nameField}
+        <div className="location-add-inline-fields">
+          {emojiField}
+          {nameField}
+        </div>
         {errorBlock}
         <div className="confirm-modal-actions">
           <button type="button" className="btn" disabled={saving} onClick={props.onClose}>

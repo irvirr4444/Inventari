@@ -19,13 +19,13 @@ export function useDynamicProductCrud() {
   const updateMut = useMutation({
     mutationFn: (input: {
       id: string
-      kodi: string
-      emri: string
+      kodi?: string
+      emri?: string
       stock: Array<{ lokacioni_id: string; sasia: number }>
     }) =>
       updateDynamicProduct(input.id, {
-        kodi: input.kodi.trim(),
-        emri: input.emri.trim(),
+        ...(input.kodi !== undefined ? { kodi: input.kodi.trim() } : {}),
+        ...(input.emri !== undefined ? { emri: input.emri.trim() } : {}),
         stock: input.stock,
       }),
     onSuccess: () => setProductError(null),

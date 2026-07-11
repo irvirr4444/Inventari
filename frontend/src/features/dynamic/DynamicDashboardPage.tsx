@@ -1,4 +1,5 @@
 import * as React from 'react'
+import type { GroupedSummaryResult } from '@inventari/shared'
 import { Snackbar } from '../../components/Snackbar'
 import { useDynamicDashboardPage } from '../../pages/useDynamicDashboardPage'
 import { DynamicActionEntryPanel } from './DynamicActionEntryPanel'
@@ -6,11 +7,27 @@ import { DynamicDashboardModals } from './DynamicDashboardModals'
 import { DynamicProductsPanel } from './DynamicProductsPanel'
 import { DynamicSummaryPanel } from './DynamicSummaryPanel'
 import { TutorialOverlay } from '../onboarding/TutorialOverlay'
+import { useAuth } from '../../lib/auth/AuthProvider'
+import {
+  canAddInLocation,
+  canAddProducts,
+  canEditDeleteProducts,
+  isAdmin,
+} from '../../lib/permissions'
 
 export function DynamicDashboardPage(props: { showTutorial?: boolean }) {
   const d = useDynamicDashboardPage()
-  const summaryData = d.summaryQuery.data as Record<string, typeof d.emptySummary> | undefined
+  const { user } = useAuth()
+  const summaryData = d.summaryQuery.data as GroupedSummaryResult | undefined
+  const summaryRows = summaryData?.rows ?? []
+  const summaryLoading = d.summaryQuery.isFetching && summaryData == null
   const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
+
+  const canAddActions = canAddInLocation(user, d.lokacioniId)
+  const canTransfer = canAddInLocation(user, d.lokacioniId)
+  const canAddProduct = canAddProducts(user)
+  const canEditProduct = canEditDeleteProducts(user)
+  const canDeleteProduct = canEditDeleteProducts(user)
 
   React.useEffect(() => {
     if (props.showTutorial) setTutorialOpen(true)
@@ -40,6 +57,10 @@ export function DynamicDashboardPage(props: { showTutorial?: boolean }) {
         onOpenTransfer={d.openTransferDialog}
         onOpenHistory={() => d.setHistoryOpen(true)}
         onNotify={d.notify}
+        allowAddLocation={isAdmin(user)}
+        canAddItems={canAddActions}
+        canSubmitAction={canAddActions}
+        canOpenTransfer={canTransfer}
       />
 
       <div className="dashboard-grid">
@@ -62,6 +83,9 @@ export function DynamicDashboardPage(props: { showTutorial?: boolean }) {
             d.setProductError(null)
             d.setDeletingProduct(p)
           }}
+          canAddProduct={canAddProduct}
+          canEditProduct={canEditProduct}
+          canDeleteProduct={canDeleteProduct}
         />
 
         <DynamicSummaryPanel
@@ -69,9 +93,11 @@ export function DynamicDashboardPage(props: { showTutorial?: boolean }) {
           to={d.to}
           onFromChange={d.setFrom}
           onToChange={d.setTo}
+          groupBy={d.summaryGroupBy}
+          onGroupByChange={d.setSummaryGroupBy}
           locations={d.summaryLocations}
-          summaryByLocation={summaryData ?? {}}
-          isFetching={d.summaryQuery.isFetching}
+          rows={summaryRows}
+          loading={summaryLoading}
           error={d.summaryQuery.error}
         />
       </div>

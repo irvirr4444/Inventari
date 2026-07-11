@@ -10,6 +10,12 @@ import {
   scheduleProductDeleteInvalidation,
 } from '../../../../lib/invalidateAppData'
 import { useAuth } from '../../../../lib/auth/AuthProvider'
+import {
+  canAddProducts,
+  canEditDeleteInLocation,
+  canEditDeleteProducts,
+  isAdmin,
+} from '../../../../lib/permissions'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import type { Lokacioni } from '../../../../lib/lokacioni/types'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
@@ -30,34 +36,56 @@ function DynamicProductFormFields(props: {
   stock: Record<string, number>
   locations: Lokacioni[]
   error: string | null
+  canEditProductDetails?: boolean
+  editableLocationIds?: string[]
   onKodiChange: (v: string) => void
   onEmriChange: (v: string) => void
   onStockChange: (lokacioniId: string, value: number) => void
 }) {
+  const editableLocationIds = React.useMemo(
+    () => new Set(props.editableLocationIds ?? props.locations.map((loc) => loc.id)),
+    [props.editableLocationIds, props.locations],
+  )
+  const canEditProductDetails = props.canEditProductDetails ?? true
+
   return (
     <div className="mobile-list-stack">
       <div>
         <label className="mobile-label">Kodi</label>
-        <input className="mobile-input" value={props.kodi} onChange={(e) => props.onKodiChange(e.target.value)} />
+        <input
+          className="mobile-input"
+          value={props.kodi}
+          disabled={!canEditProductDetails}
+          onChange={(e) => props.onKodiChange(e.target.value)}
+        />
       </div>
       <div>
         <label className="mobile-label">Emri</label>
-        <input className="mobile-input" value={props.emri} onChange={(e) => props.onEmriChange(e.target.value)} />
+        <input
+          className="mobile-input"
+          value={props.emri}
+          disabled={!canEditProductDetails}
+          onChange={(e) => props.onEmriChange(e.target.value)}
+        />
       </div>
       <div className="dynamic-mobile-product-form-stocks">
-        {props.locations.map((loc) => (
-          <div key={loc.id}>
-            <label className="mobile-label">
-              {loc.flag_emoji ?? '📍'} {loc.emri}
-            </label>
-            <NumericInput
-              className="mobile-input"
-              min={0}
-              value={props.stock[loc.id] ?? 0}
-              onChange={(v) => props.onStockChange(loc.id, v === '' ? 0 : Number(v))}
-            />
-          </div>
-        ))}
+        {props.locations.map((loc) => {
+          const canEdit = editableLocationIds.has(loc.id)
+          return (
+            <div key={loc.id}>
+              <label className="mobile-label">
+                {loc.flag_emoji ?? '📍'} {loc.emri}
+              </label>
+              <NumericInput
+                className="mobile-input"
+                min={0}
+                value={props.stock[loc.id] ?? 0}
+                disabled={!canEdit}
+                onChange={(v) => props.onStockChange(loc.id, v === '' ? 0 : Number(v))}
+              />
+            </div>
+          )
+        })}
       </div>
       {props.error ? <div className="mobile-inline-error">{props.error}</div> : null}
     </div>
@@ -76,6 +104,17 @@ export function DynamicProdukteTab(props: {
     [activeLokacionet],
   )
   const crud = useDynamicProductCrud()
+  const canAddProduct = canAddProducts(user)
+  const canEditProduct = canEditDeleteProducts(user)
+  const canDeleteProduct = canEditDeleteProducts(user)
+  const canEditProductDetails = isAdmin(user)
+  const editableProductLocationIds = React.useMemo(
+    () =>
+      sortedLocations
+        .filter((loc) => canEditDeleteInLocation(user, loc.id))
+        .map((loc) => loc.id),
+    [sortedLocations, user],
+  )
   const [search, setSearch] = React.useState('')
   const [detailProduct, setDetailProduct] = React.useState<DynamicProdukti | null>(null)
   const [addOpen, setAddOpen] = React.useState(false)
@@ -139,8 +178,6 @@ export function DynamicProdukteTab(props: {
             crud.updateMut.mutate(
               {
                 id: created.id,
-                kodi: newKodi.trim(),
-                emri: newEmri.trim(),
                 stock: stockRows,
               },
               { onSuccess: finish },
@@ -161,15 +198,18 @@ export function DynamicProdukteTab(props: {
 
   const submitEdit = () => {
     if (!editDraft) return
-    const stock = sortedLocations.map((loc) => ({
-      lokacioni_id: loc.id,
-      sasia: editDraft.stock[loc.id] ?? 0,
-    }))
+    const editableLocationIds = new Set(editableProductLocationIds)
+    const stock = sortedLocations
+      .filter((loc) => editableLocationIds.has(loc.id))
+      .map((loc) => ({
+        lokacioni_id: loc.id,
+        sasia: editDraft.stock[loc.id] ?? 0,
+      }))
     crud.updateMut.mutate(
       {
         id: editDraft.product.id,
-        kodi: editDraft.product.kodi.trim(),
-        emri: editDraft.product.emri.trim(),
+        ...(canEditProductDetails ? { kodi: editDraft.product.kodi.trim() } : {}),
+        ...(canEditProductDetails ? { emri: editDraft.product.emri.trim() } : {}),
         stock,
       },
       {
@@ -210,16 +250,19 @@ export function DynamicProdukteTab(props: {
                 type="button"
                 className="mobile-btn-outline dynamic-produkte-add-btn"
                 onClick={openAdd}
+                disabled={!canAddProduct}
               >
                 + Shto produkt
               </button>
+              {isAdmin(user) ? (
               <button
                 type="button"
                 className="mobile-btn-outline dynamic-produkte-add-btn"
                 onClick={() => setAddLocationOpen(true)}
               >
-                + Shto lokacion
+                + Shto vendndodhje
               </button>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -251,12 +294,17 @@ export function DynamicProdukteTab(props: {
         footer={
           detailProduct ? (
             <SheetFooterRow>
-              <SheetEditButton label="Ndrysho" onClick={() => openEdit(detailProduct)} />
+              <SheetEditButton
+                label="Ndrysho"
+                onClick={() => openEdit(detailProduct)}
+                disabled={!canEditProduct}
+              />
               <SheetConfirmButton
                 label="Fshi"
                 variant="danger"
                 icon="delete"
                 onClick={() => setDeleteOpen(true)}
+                disabled={!canDeleteProduct}
               />
             </SheetFooterRow>
           ) : undefined
@@ -321,6 +369,8 @@ export function DynamicProdukteTab(props: {
             stock={editDraft.stock}
             locations={sortedLocations}
             error={crud.productError}
+            canEditProductDetails={canEditProductDetails}
+            editableLocationIds={editableProductLocationIds}
             onKodiChange={(v) =>
               setEditDraft((d) => d && { ...d, product: { ...d.product, kodi: v } })
             }
@@ -372,7 +422,7 @@ export function DynamicProdukteTab(props: {
         onClose={() => setAddLocationOpen(false)}
         onCreated={() => {
           setAddLocationOpen(false)
-          props.notify('Lokacioni u shtua me sukses.', 'success')
+          props.notify('Vendndodhja u shtua me sukses.', 'success')
         }}
       />
     </>

@@ -19,7 +19,7 @@ The screen has three areas:
 
 1. **Action card** — `Hyrje` / `Dalje` with **Shteti** selector (Kosovo / Albania), date, optional **Ora** and **Pershkrimi**, product rows, **Historiku** → `HistoryModal`.
 2. **Products card** — Kosovo + Albania stock columns, sort, search, Excel export.
-3. **Summary panel** — per-country Hyrje/Dalje totals for a date range + Permbledhje Excel.
+3. **Summary panel** — per-country Hyrje/Dalje totals for a date range + Përmbledhje Excel.
 
 #### Dynamic dashboard (`DynamicDashboardPage`)
 
@@ -27,16 +27,18 @@ Same three-area layout, keyed by **location** instead of country:
 
 | Area | Component | Notes |
 | --- | --- | --- |
-| Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` — single trigger opens a portal menu (all locations + **+ Shto**); inline add modal (emoji + name, success snackbar). No top-bar **Lokacionet** link. |
+| Action entry | `DynamicActionEntryPanel` | `DynamicLocationSelect` — single trigger opens a portal menu (all locations + **+ Shto**); inline add modal (emoji + name, success snackbar). No top-bar **Vendndodhjet** link. |
 | Transfer | `DynamicTransferModal` | `Nga` / `Te` location pickers with `excludeIds` (pill row or `<select>` when many locations) |
 | Products | `DynamicProductsPanel` | One stock column per active location; headers show emoji + location name + sort arrow. `DynamicProductFormModal` — card grid ≤3 locations, scroll table >3. Create then PATCH `stock[]` for initial gjendje. |
-| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid ≤3, scrollable table >3; hides **vlerë** when `track_price = false` |
-| Historiku | `DynamicHistoryModal` | **Lokacioni** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route; price fields hidden when `track_price = false` |
+| Summary | `DynamicSummaryPanel` | Locations with `show_in_summary`; card grid for 1–2 locations, row/table layout from 3+; hides **vlerë** when `track_price = false` |
+| Historiku | `DynamicHistoryModal` | **Vendndodhja** column + multi-checkbox location filter (client-side); `DynamicActionEditModal` edits `lokacioni_id` / route; price fields hidden when `track_price = false` |
 | Finalize review | `ActionReviewModal` | Parent passes `location: { emri, flagEmoji? }`; price/total columns hidden when `track_price = false` via `useTenantConfig()` |
 
-**Location UX** (`features/locations/`):
+**Settings + Location UX**:
 
-- **Onboarding / settings** (`LocationsEditor`): card UI with `LocationEmojiPicker` + name; server-derived `kodi` (not shown). Settings: reorder, **Shfaq ne Permbledhje**, deactivate.
+- **Top-right settings modal** (`features/settings/SettingsModal`): tabbed modal for **Përdoruesit** and **Vendndodhjet**. User rows use flat dividers, cached user list data across tab switches, role dropdowns, credential edit modal, and per-location access editor.
+- **Per-location access** (`AccessLevelControl`): four visible levels (`Pa akses`, `Vetëm shih`, `Shih dhe shto`, `Shto dhe ndrysho/fshij`). The saved/current level is highlighted on open; unsaved changes show the previous level subtly and the new level strongly until **Ruaj**.
+- **Onboarding / settings locations** (`LocationsEditor`): onboarding keeps card-like rows; settings uses a flat row list with `LocationEmojiPicker` + name, server-derived `kodi` (not shown), deactivate/reactivate, and soft delete. Soft delete hides/deactivates the location for future use but keeps historical data.
 - **Dashboard picker** (`LocationPicker` + `LocationAddModal`): dropdown menu portaled to `document.body` (z-index above cards); scroll only when the list would hit the viewport edge. **+ Shto** opens add modal (wide emoji grid 2×10 in modal).
 
 **Hooks** (dynamic only): `useDynamicActionEntry`, `useDynamicTransferEntry`, `useDynamicProductCrud`, `useDynamicProductsQuery`, `useTenantConfig` (from `hooks/useTenantConfig.tsx`).
@@ -47,7 +49,7 @@ Same three-area layout, keyed by **location** instead of country:
 
 | Config | UI effect |
 | --- | --- |
-| `track_price = false` | Hide **Cmimi/Njesi**, line totals, and summary **vlerë** rows/columns in actions, history, review modal, and mobile Permbledhje; action table columns 55% / 30% / 15% |
+| `track_price = false` | Hide **Cmimi/Njësi**, line totals, and summary **vlerë** rows/columns in actions, history, review modal, and mobile Përmbledhje; action table columns 55% / 30% / 15% |
 | `track_price = true` | Same as before (price + totals visible) |
 
 Wired in: `ActionItemsTable`, `DynamicActionEntryPanel`, `DynamicTransferForm`, `DynamicProductsPanel`, `DynamicSummaryPanel`, `ActionReviewModal`, `DynamicProductFormModal`, dynamic mobile tabs, history filters.
@@ -68,7 +70,7 @@ The dashboard is **viewport-locked** on desktop (~1080p): the action card keeps 
 - On success, validation opens **`ActionReviewModal`** — a large review sheet (`max-width: 960px`, ~10 visible row slots) instead of the small `ConfirmModal` text dialog.
 - Review modal header: title, `LlojiBadge` (Hyrje/Dalje), **country flag + label** (legacy) or **location name + emoji** (dynamic via `location` prop), formatted action date, product count; **Pershkrimi** shown below when set (`ActionMetaDisplay`).
 - Review body: fixed column headers; scrollable list with **horizontal dividers on every row slot**. When fewer than 10 products, **empty placeholder rows** fill the remaining slots so the table always looks full (Google-picker style). Scroll inside the list only when there are **more than 10** products.
-- Each line shows read-only **`Emri (Kodi)`** plus editable **`NumericInput`** for `Cmimi/Njesi` and `Sasia`; line total and footer total update live. Edits write back to the action card state immediately.
+- Each line shows read-only **`Emri (Kodi)`** plus editable **`NumericInput`** for `Cmimi/Njësi` and `Sasia`; line total and footer total update live. Edits write back to the action card state immediately.
 - Footer: **Totali i veprimit**, **Anulo**, **Finalizo**. Confirm re-validates; errors stay in the modal with a red snackbar. Success closes the modal, shows a green snackbar, and resets the action form.
 - **Transfer** finalize still uses the stacked `ConfirmModal` (review modal is Hyrje/Dalje only on desktop for now).
 
@@ -85,28 +87,28 @@ Desktop product lines use the same controls everywhere:
 
 **Legacy:** `HistoryModal` with **Shteti** server filter and `CountryCell` display.
 
-**Dynamic:** `DynamicHistoryModal` with **Lokacioni** column (`DynamicLocationCell`), `DynamicHistoryFilterBar` (multi-checkbox location filter on the client), and `DynamicActionEditModal` / `lib/dynamicHistoryBatchEdit.ts` for saves with `lokacioni_id`.
+**Dynamic:** `DynamicHistoryModal` with **Vendndodhja** column (`DynamicLocationCell`), `DynamicHistoryFilterBar` (multi-checkbox location filter on the client), and `DynamicActionEditModal` / `lib/dynamicHistoryBatchEdit.ts` for saves with `lokacioni_id`.
 
 - Button on the right of the Hyrje/Dalje toggle row opens the history modal (~**1200px** wide).
 - **Filter bar** — horizontal grouped row; wraps on narrow widths.
   - **Server-side** (API + page reset): **Veprime** (type), **Data** (`DateRangeInput` — **Nga** / **Deri** in one control).
   - **Legacy** (`HistoryFilterBar`): **Shteti** (XK/AL) server filter.
-  - **Dynamic** (`DynamicHistoryFilterBar`): **Lokacioni** multi-checkbox filter (client-side, `historyClientFilters.locationIds`).
+  - **Dynamic** (`DynamicHistoryFilterBar`): **Vendndodhja** multi-checkbox filter (client-side, `historyClientFilters.locationIds`).
   - **Client-side** (current page in table; **all matching batches** for exports/print): **Ora** range (`OraRangeInput`), **Pershkrimi** search, **Totali** / **Produkte** Min/Max.
   - **Range validation** — invalid pairs blocked before apply: date «Nga» after «Deri», ora start after end, min > max for Totali/Produkte. Desktop shows a **red snackbar** (mobile Ora picker behavior: [README-MOBILE.md](README-MOBILE.md)).
   - **× Pastro filtrat** when any filter is active. Logic in `lib/historyClientFilters.ts`.
 - **Export actions** (`HistoryExportActions` → `HistoryDownloadDropdown` on desktop filter bar): single **Shkarko** button opens a menu with **Excel** (`.xlsx`), **PDF** (`.pdf`), and **Word** (`.docx`) — official format icons in `public/icons/file-formats/`. All formats use the full filter set (fetch all batches → `applyHistoryClientFilters` → `buildHistoryExportRequestBody` → `POST /api/exports/history.{xlsx,pdf,docx}` via `lib/historyDocumentDownload.ts`). Mobile export footer: [README-MOBILE.md](README-MOBILE.md).
 - **Print preview** — route `/history/print` (`HistoryPrintPage`, lazy-loaded). Scrollable full-screen viewport with stacked **A4 pages** (measured pagination, card per action, page numbers). Toolbar: **Mbyll**, **Shkarko** (server PDF with exact `batchIds` + `filterLines`), **Printo** (`window.print()`). Filter state passed as URL search params (`lib/historyFilterSearchParams.ts`). Styles: `styles/features/history-print.css`. Not linked from the main Historiku export row (use **Shkarko** for downloads).
 - Paginated table (**8 per page**); pagination total reflects server filters only (client filters apply to the current page in the modal).
-- List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti** (legacy) or **Lokacioni** (dynamic), **Produkte**, **Totali**, **Veprime**.
+- List columns: **Data**, **Ora**, **Pershkrimi**, **Lloji**, **Shteti** (legacy) or **Vendndodhja** (dynamic), **Produkte**, **Totali**, **Veprime**.
 - Empty Ora/Pershkrimi show `—` in the list.
 - **Pershkrimi** gets the widest meta column (~**22%**); long text ellipsizes with the full value in a `title` tooltip.
 - **Produkte** shows the line-item **count only** (e.g. `3`), not `3 produkte`. Column is compact (~**8%**); **Totali** is wider (~**11%**) for euro amounts.
-- **Shteti** (legacy): transfers show `[flag] Kosove → Shqiperi [flag]`. **Lokacioni** (dynamic): `DynamicLocationCell` with emoji + custom names.
+- **Shteti** (legacy): transfers show `[flag] Kosove → Shqiperi [flag]`. **Vendndodhja** (dynamic): `DynamicLocationCell` with emoji + custom names.
 - Batch meta: `HistoryBatchMetaDisplay`; badges: `LlojiBadge`, `CountryCell` (legacy) or location labels (dynamic).
 - Expand a row to view product line items; multiple rows can stay expanded at once.
 - **Ndrysho** opens `ActionEditModal` (legacy) or `DynamicActionEditModal` (dynamic) to edit batch meta and product lines. Pre-batch `legacy:…` ids **auto-migrate** on save.
-- Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njesi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
+- Inline product edit keeps the **same table columns** as the read-only row (Produkti, Cmimi/Njësi, Sasia, Totali) — no duplicate labels inside the row. **Ruaj** / **Anulo** sit in the actions column.
 - Edit row uses `ProductSearchSelect` + `NumericInput`, matching the main action form.
 - **Fshi** deletes the whole action after confirmation.
 - Successful edit or delete closes the edit popup (when applicable), refreshes list/detail data, and shows a **green success snackbar**.
@@ -128,15 +130,15 @@ Transfer is separate from the main action form:
 - **Dynamic:** `DynamicProductsPanel` + `DynamicProductFormModal` — one column per location; stock grid (≤3 locations) or table (>3); `updateDynamicProduct` with `stock: [{ lokacioni_id, sasia }]`. Create seeds all locations via API; optional PATCH sets initial stock.
 - **Delete:** `ConfirmModal`. Success → green snackbar.
 
-#### Summary panel (Permbledhje)
+#### Summary panel (Përmbledhje)
 
 - **Legacy:** `SummaryPanel` — one API call returns **XK** + **AL** totals; transfers count as Dalje (source) / Hyrje (destination).
 - **Dynamic:** `DynamicSummaryPanel` — totals keyed by `lokacioni_id` for locations with `show_in_summary`; same date-range semantics.
 - Totals use **action date** (`Data e Veprimit`), not `created_at`.
 - **Date range:** `DateRangeInput` — paired **Nga** / **Deri** fields. Opening one field updates only that bound (`DatePickerCalendar` `selectingEndpoint`); if both bounds are set and the new date would invert the range, values swap via `normalizeIsoDateRange` in `lib/datePicker.ts`.
-- Excel: same `exportUrl('xlsx', { from, to })` — backend branches legacy template vs dynamic **Veprime** + **Permbledhje** pivot sheets.
+- Excel: same `exportUrl('xlsx', { from, to })` — backend branches legacy template vs dynamic **Veprime** + **Përmbledhje** pivot sheets.
 
-Mobile Permbledhje tab: [README-MOBILE.md](README-MOBILE.md).
+Mobile Përmbledhje tab: [README-MOBILE.md](README-MOBILE.md).
 
 #### Feedback (snackbars)
 
@@ -165,7 +167,7 @@ Mobile Permbledhje tab: [README-MOBILE.md](README-MOBILE.md).
 - `lib/dynamicHistoryBatchEdit.ts` — dynamic history edit save path.
 - `lib/queryKeys` + `lib/invalidateAppData` — React Query cache updates.
 
-Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth and data isolation, run `docs/sql/07_perdorues_lokacioni.sql`, then `docs/sql/APPLY_08_through_11.sql`, then `docs/sql/13_perdorues_emri_unique.sql`, then `docs/sql/14_tenant_config.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
+Run `docs/sql/05_veprim_batch.sql` in Supabase before using Historiku. Run `docs/sql/06_veprim_batch_ora_pershkrimi.sql` for optional **Ora** and **Pershkrimi**. For multi-tenant auth, tenant config, and role/access controls, run `docs/sql/07_perdorues_lokacioni.sql`, then `docs/sql/APPLY_08_through_11.sql`, then `docs/sql/13_perdorues_emri_unique.sql`, then `docs/sql/14_tenant_config.sql`, then `docs/sql/15_tenant_config_v2.sql`, then `docs/sql/18_user_roles_location_access.sql`, then `npm run seed:legacy-user -w backend` (one-time). New actions get a `batch_id`; history lists grouped batches only. Rows created before batch support appear with `legacy:…` ids until the first edit saves them into `veprim_batch`.
 
 ### API payload examples
 
@@ -218,7 +220,7 @@ Styles live under `src/styles/` and are imported via `src/index.css`:
 | `components/product-search-select.css` | Searchable product combobox + portal list |
 | `components/stock-badges.css` | Stock badges |
 | `features/dashboard.css` | Layout, cards, tables, toggles, action table scroll (2-row cap) |
-| `features/summary.css` | Permbledhje panel |
+| `features/summary.css` | Përmbledhje panel |
 | `features/history.css` | Historiku modal filters, Shkarko export dropdown, columns, edit subtable |
 | `features/history-print.css` | `/history/print` A4 preview (paginated sheets, toolbar, print media) |
 | `features/locations.css` | Location picker menu (portal), pills, onboarding/settings cards, emoji grids |
@@ -270,9 +272,9 @@ Transfer is represented using the same movement logic as the rest of the system:
 - `Dalje` from the source country.
 - `Hyrje` into the destination country.
 
-The existing Kosovo `Dalje` automation is still supported: a normal Kosovo `Dalje` can still be reflected as an Albania `Hyrje` in the **Permbledhje Excel** export on the same row. The explicit Transfer workflow is for cases where the user wants to choose the source and destination directly.
+The existing Kosovo `Dalje` automation is still supported: a normal Kosovo `Dalje` can still be reflected as an Albania `Hyrje` in the **Përmbledhje Excel** export on the same row. The explicit Transfer workflow is for cases where the user wants to choose the source and destination directly.
 
-**Permbledhje summary vs Excel:** both treat transfers as **Dalje** in the source country and **Hyrje** in the destination. Excel additionally mirrors Kosovo `Dalje` into the Albania columns on one row when that automation applies.
+**Përmbledhje summary vs Excel:** both treat transfers as **Dalje** in the source country and **Hyrje** in the destination. Excel additionally mirrors Kosovo `Dalje` into the Albania columns on one row when that automation applies.
 
 ## Why This Is Better Than Manual Excel Work
 
@@ -332,7 +334,7 @@ The platform starts at `/login` — a single card with **Hyr** (sign in) and **R
 
 Input fields:
 
-- **Sign in (Hyr):** `emri`, `password` (`Fjalekalimi`). Legacy admin: use `login_email` from `.env` or `Legacy User` in the Emri field.
+- **Sign in (Hyr):** `emri`, `password` (`Fjalëkalimi`). Legacy admin: use `login_email` from `.env` or `Legacy User` in the Emri field.
 - **Sign up (Regjistrohu):** `emri` (unique name), `password` (min 8 characters). Do not enter an email as Emri.
 
 Optional: **Vazhdo me Google** when `GOOGLE_CLIENT_ID` (backend) and `VITE_GOOGLE_CLIENT_ID` (frontend) match the same Google Cloud Web client ID.
@@ -446,7 +448,7 @@ Input fields:
 - `Data e Veprimit` - action date.
 - Action item rows (same structure as normal movements):
   - `Produkti` — `ProductSearchSelect` (`Emri (Kodi)`, sorted by code)
-  - `Cmimi/Njesi` — `NumericInput` (placeholder `0.00` when zero)
+  - `Cmimi/Njësi` — `NumericInput` (placeholder `0.00` when zero)
   - `Sasia` — `NumericInput` (placeholder `1` when zero)
 
 Rules:
@@ -501,7 +503,7 @@ Each action can contain one or more products. The same row structure is used on 
 Input fields per row:
 
 - `Produkti` — `ProductSearchSelect` (search by code or name; `Emri (Kodi)`, sorted by code).
-- `Cmimi/Njesi` — unit price (`NumericInput`, placeholder `0.00` when zero).
+- `Cmimi/Njësi` — unit price (`NumericInput`, placeholder `0.00` when zero).
 - `Sasia` — quantity (`NumericInput`, placeholder `1` when zero).
 
 Rules:
@@ -513,11 +515,11 @@ Rules:
 
 Finalize (Hyrje / Dalje on desktop):
 
-- **Finalizo Veprimin** opens `ActionReviewModal` for a last check; user can edit `Cmimi/Njesi` and `Sasia` there before **Finalizo** submits the batch.
+- **Finalizo Veprimin** opens `ActionReviewModal` for a last check; user can edit `Cmimi/Njësi` and `Sasia` there before **Finalizo** submits the batch.
 
 Calculated per row:
 
-- `Totali = Cmimi/Njesi * Sasia`
+- `Totali = Cmimi/Njësi * Sasia`
 
 Stored result:
 
@@ -616,7 +618,7 @@ Displayed value:
 
 Formula:
 
-- `Total = sum(Cmimi/Njesi * Sasia)`
+- `Total = sum(Cmimi/Njësi * Sasia)`
 
 Workflow:
 
@@ -713,7 +715,7 @@ Output file:
 
 Filename format:
 
-- `Permbledhje DD/MM/YYYY HH:mm.xlsx`
+- `Përmbledhje DD/MM/YYYY HH:mm.xlsx`
 
 Template columns (**13 columns**, no Përshkrimi):
 
@@ -721,9 +723,9 @@ Template columns (**13 columns**, no Përshkrimi):
 | --- | --- |
 | 1 | Kodi |
 | 2 | Produkti (product name) |
-| 3–7 | Kosova: Data, Cmimi/Njesi, Sasi, Vlefta, Gjendje |
+| 3–7 | Kosova: Data, Cmimi/Njësi, Sasi, Vlefta, Gjendje |
 | 8 | Spacer (empty) |
-| 9–13 | Shqiperi: Data, Cmimi/Njesi, Sasi, Vlefta, Gjendje |
+| 9–13 | Shqiperi: Data, Cmimi/Njësi, Sasi, Vlefta, Gjendje |
 
 Behavior:
 

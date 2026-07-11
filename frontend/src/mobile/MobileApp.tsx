@@ -7,7 +7,7 @@ import { useOverscrollLock } from '../hooks/useOverscrollLock'
 import { BottomNav } from './components/BottomNav'
 import { MobileTabSlot } from './components/MobileTabSlot'
 import { HistoriTab } from './tabs/HistoriTab'
-import { PermbledhjeTab } from './tabs/PermbledhjeTab'
+import { PërmbledhjeTab } from './tabs/PërmbledhjeTab'
 import { ProdukteTab } from './tabs/ProdukteTab'
 import { TransferTab } from './tabs/TransferTab'
 import { VeprimeTab } from './tabs/VeprimeTab'
@@ -58,7 +58,7 @@ export function MobileApp(props: { onLogout: () => void }) {
           <HistoriTab notify={notify} isActive={historiActive} onHeaderChange={setHeader} />
         </MobileTabSlot>
         <MobileTabSlot tab="permblehdje" activeTab={tab}>
-          <PermbledhjeTab />
+          <PërmbledhjeTab />
         </MobileTabSlot>
       </main>
 

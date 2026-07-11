@@ -66,7 +66,7 @@ export function DynamicLocationPickerSheet(props: {
             setAddOpen(false)
             props.onSelect(loc.id)
             props.onClose()
-            props.onNotify?.('Lokacioni u shtua me sukses.', 'success')
+            props.onNotify?.('Vendndodhja u shtua me sukses.', 'success')
           }}
         />
       ) : null}
@@ -95,7 +95,7 @@ export function DynamicLocationField(props: {
               <span className="mobile-location-option-name mobile-meta-truncate">{loc.emri}</span>
             </>
           ) : (
-            <span className="mobile-location-option-name mobile-meta-truncate">Zgjedh lokacionin…</span>
+            <span className="mobile-location-option-name mobile-meta-truncate">Zgjedh vendndodhjen…</span>
           )}
         </span>
         <span aria-hidden="true">▾</span>

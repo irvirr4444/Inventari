@@ -42,6 +42,7 @@ export async function fetchVeprimBatchesFiltered(
     shteti?: Country
     dateFrom?: string
     dateTo?: string
+    createdByUserId?: string
   },
 ) {
   let q = supabase
@@ -55,6 +56,7 @@ export async function fetchVeprimBatchesFiltered(
   if (query.shteti) q = q.eq('shteti', query.shteti)
   if (query.dateFrom) q = q.gte('data', query.dateFrom)
   if (query.dateTo) q = q.lte('data', query.dateTo)
+  if (query.createdByUserId) q = q.eq('created_by_user_id', query.createdByUserId)
 
   const { data, error } = await q
   if (error) throw mapSupabaseError(error)
@@ -310,7 +312,7 @@ export async function fetchExportDynamicActions(supabase: SupabaseClient, tenant
   const { data, error } = await supabase
     .from('veprimi')
     .select(
-      'id,lloji,data,lokacioni_id,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,batch_id,veprim_batch(ora,pershkrimi,lloji,lokacioni_id,destination_lokacioni_id)',
+      'id,lloji,data,lokacioni_id,kodi_produktit,cmimi_njesi,sasia,shenim,created_at,batch_id,veprim_batch(ora,pershkrimi,lloji,lokacioni_id,destination_lokacioni_id,created_by_user_id)',
     )
     .eq('pronari_id', tenantId)
     .order('data', { ascending: true })

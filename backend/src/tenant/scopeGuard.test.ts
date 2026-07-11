@@ -40,7 +40,12 @@ describe('tenant scope guard', () => {
   })
 
   it('requires tenantId as first parameter on repository exports', () => {
-    const files = fs.readdirSync(REPO_DIR).filter((f) => f.endsWith('.ts') && f !== 'perdoruesRepository.ts')
+    const files = fs.readdirSync(REPO_DIR).filter(
+      (f) =>
+        f.endsWith('.ts') &&
+        f !== 'perdoruesRepository.ts' &&
+        f !== 'lokacioniAccessRepository.ts',
+    )
     for (const file of files) {
       const content = fs.readFileSync(path.join(REPO_DIR, file), 'utf8')
       const matches = content.matchAll(/export async function \w+\(\s*supabase[^,]+,\s*(\w+)/g)

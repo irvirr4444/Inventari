@@ -38,6 +38,13 @@ import { listLokacionetByOwner } from './repositories/lokacioniRepository.js'
 import type { LokacioniRow } from './domain/lokacioni.js'
 import { lokacioniToCountry } from './domain/lokacioni.js'
 import {
+  canViewBatchInLocations,
+  highestAccessInAnyLocation,
+  isAdmin,
+  requireBatchEditAccess,
+  tenantIdFor,
+} from './services/accessControlService.js'
+import {
   deleteLegacyBatch,
   ensureRealBatchId,
   fetchLegacyActionBatches,
@@ -56,6 +63,7 @@ type VeprimBatchRow = {
   destination_lokacioni_id: string | null
   ora: string | null
   pershkrimi: string | null
+  created_by_user_id: string | null
   created_at: string
   updated_at: string
 }
@@ -106,6 +114,7 @@ function aggregateBatch(
     ora: batch.ora ? formatOraDisplay(batch.ora) : null,
     pershkrimi: batch.pershkrimi ?? null,
     totali,
+    created_by_user_id: batch.created_by_user_id ?? undefined,
     created_at: batch.created_at,
     item_count: displayRows.length,
   }
@@ -124,6 +133,12 @@ function aggregateBatch(
     flag_emoji: loc?.flag_emoji ?? undefined,
     destination_flag_emoji: dest?.flag_emoji ?? undefined,
   }
+}
+
+function actionCreatorUserId(action: unknown): string | undefined {
+  if (!action || typeof action !== 'object' || !('created_by_user_id' in action)) return undefined
+  const id = (action as { created_by_user_id?: unknown }).created_by_user_id
+  return typeof id === 'string' && id.length > 0 ? id : undefined
 }
 
 type BatchItemInput = {
@@ -181,10 +196,29 @@ async function touchBatchUpdatedAt(supabase: SupabaseClient, tenantId: string, b
   await touchVeprimBatchUpdatedAt(supabase, tenantId, batchId)
 }
 
+function ensureBatchViewAccess(user: import('./domain/user.js').SessionUser, batch: VeprimBatchRow) {
+  if (
+    !canViewBatchInLocations(
+      user,
+      batch.lokacioni_id,
+      batch.destination_lokacioni_id,
+    )
+  ) {
+    throw new AppError(403, 'Insufficient location access')
+  }
+}
+
+function ensureBatchEditAccess(user: import('./domain/user.js').SessionUser, batch: VeprimBatchRow) {
+  requireBatchEditAccess(user, batch.lokacioni_id, batch.destination_lokacioni_id)
+}
+
 export function registerActionBatchRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/action-batches', async (req) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const isLegacy = req.user.isLegacy
+    if (!isAdmin(req.user) && !highestAccessInAnyLocation(req.user, 'view')) {
+      return { actions: [], total: 0 }
+    }
     const query = z
       .object({
         page: z.coerce.number().int().positive().optional().default(1),
@@ -194,10 +228,13 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         dateFrom: z.string().optional(),
         dateTo: z.string().optional(),
         shenim: z.string().optional(),
+        kodiProduktit: z.string().optional(),
+        createdByUserId: z.string().uuid().optional(),
       })
       .parse((req.query ?? {}) as Record<string, unknown>)
 
     const shenimQuery = query.shenim?.trim() || undefined
+    const productCodeFilter = query.kodiProduktit?.trim() || undefined
 
     let lokacioniById: Map<string, LokacioniRow> | undefined
     if (!isLegacy) {
@@ -212,6 +249,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         shteti: query.shteti,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        createdByUserId: query.createdByUserId,
       })) as VeprimBatchRow[]
 
       const batchIds = batchList.map((b) => b.id)
@@ -231,11 +269,20 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         }
       }
 
+      const productFilteredBatchList = productCodeFilter
+        ? batchList.filter((batch) => {
+            const displayRows = (rowsByBatch.get(batch.id) ?? []).filter((r) =>
+              isDisplayRow(batch, r),
+            )
+            return displayRows.some((r) => r.kodi_produktit === productCodeFilter)
+          })
+        : batchList
+
       if (shenimQuery) {
         const matchingCodes = new Set<string>()
         const matchesByBatchId = new Map<string, VeprimRow[]>()
 
-        for (const batch of batchList) {
+        for (const batch of productFilteredBatchList) {
           const rows = rowsByBatch.get(batch.id) ?? []
           const displayRows = rows.filter((r) => isDisplayRow(batch, r))
           const matching = displayRows.filter((r) => shenimMatches(r.shenim, shenimQuery))
@@ -248,6 +295,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         const namesByCode = new Map(products.map((p) => [p.kodi, p.emri]))
 
         batchedActions = batchList
+          .filter((batch) => productFilteredBatchList.includes(batch))
           .filter((batch) => matchesByBatchId.has(batch.id))
           .map((batch) => {
             const base = aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById)
@@ -259,7 +307,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
             return { ...base, matched_items }
           })
       } else {
-        batchedActions = batchList.map((batch) =>
+        batchedActions = productFilteredBatchList.map((batch) =>
           aggregateBatch(batch, rowsByBatch.get(batch.id) ?? [], lokacioniById),
         )
       }
@@ -270,25 +318,44 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       }
     }
 
+    if (!isAdmin(req.user)) {
+      batchedActions = batchedActions.filter((batch) =>
+        canViewBatchInLocations(
+          req.user,
+          batch.lokacioni_id ?? null,
+          batch.destination_lokacioni_id ?? null,
+        ),
+      )
+    }
+
     const legacyActions = await fetchLegacyActionBatches(supabase, tenantId, {
       lloji: query.lloji,
       shteti: query.shteti,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
       shenim: shenimQuery,
+      kodiProduktit: productCodeFilter,
     })
 
+    const allActions = [...batchedActions, ...legacyActions]
+    const creator_user_ids = [
+      ...new Set(
+        allActions
+          .map(actionCreatorUserId)
+          .filter((id): id is string => id !== undefined),
+      ),
+    ]
     const { actions, total } = mergeAndPaginateActions(
-      [...batchedActions, ...legacyActions],
+      allActions,
       query.page,
       query.limit,
     )
 
-    return { actions, total }
+    return { actions, total, creator_user_ids }
   })
 
   app.get('/api/action-batches/:id', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
 
     if (isLegacyBatchId(params.id)) {
@@ -312,6 +379,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     const { batch, rows } = loaded
+    try {
+      ensureBatchViewAccess(req.user, batch)
+    } catch (err) {
+      if (err instanceof AppError) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
     const displayRows = rows.filter((r) => isDisplayRow(batch, r))
     const productCodes = [...new Set(displayRows.map((r) => r.kodi_produktit))]
 
@@ -343,7 +419,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.patch('/api/action-batches/:id', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     const body = ActionBatchPatchSchema.parse(req.body ?? {})
 
@@ -367,6 +443,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     const { batch, rows } = loaded
+    try {
+      ensureBatchEditAccess(req.user, batch)
+    } catch (err) {
+      if (err instanceof AppError) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
     const mirrored = isMirroredBatch(batch, rows)
 
     if (mirrored && (body.shteti || body.destination_shteti)) {
@@ -383,8 +468,6 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     if (dataChanged) batchPatch.data = body.data
     if (oraChanged) batchPatch.ora = body.ora
     if (pershkrimiChanged) batchPatch.pershkrimi = body.pershkrimi ?? null
-
-    let routeChanged = false
 
     if (
       !req.user.isLegacy &&
@@ -429,7 +512,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
         )
       }
 
-      routeChanged = lokacioniChanged || destLokacioniChanged
+      const routeChanged = lokacioniChanged || destLokacioniChanged
 
       if (Object.keys(batchPatch).length > 0) {
         batchPatch.updated_at = new Date().toISOString()
@@ -511,7 +594,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
       await patchVeprimBatch(supabase, tenantId, batchId, batchPatch)
     }
 
-    routeChanged = shtetiChanged || destinationChanged
+    const routeChanged = shtetiChanged || destinationChanged
 
     for (const row of rows) {
       const patch: Record<string, unknown> = {}
@@ -543,7 +626,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.patch('/api/action-batches/:id/items/:itemId', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z
       .object({ id: z.string().min(1), itemId: z.string().uuid() })
       .parse(req.params)
@@ -573,6 +656,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     const { batch, rows } = loaded
+    try {
+      ensureBatchEditAccess(req.user, batch)
+    } catch (err) {
+      if (err instanceof AppError) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
     const primary = rows.find((r) => r.id === params.itemId)
     if (!primary || !isDisplayRow(batch, primary)) {
       reply.code(404)
@@ -619,7 +711,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.post('/api/action-batches/:id/items', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     const body = batchItemBodySchema.parse(req.body ?? {})
 
@@ -637,6 +729,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     const { batch, rows } = loaded
+    try {
+      ensureBatchEditAccess(req.user, batch)
+    } catch (err) {
+      if (err instanceof AppError) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
     const displayRows = rows.filter((r) => isDisplayRow(batch, r))
 
     if (batch.lloji === 'Dalje' || batch.lloji === 'Transfer') {
@@ -692,7 +793,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.delete('/api/action-batches/:id/items/:itemId', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z
       .object({ id: z.string().min(1), itemId: z.string().uuid() })
       .parse(req.params)
@@ -711,6 +812,15 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     const { batch, rows } = loaded
+    try {
+      ensureBatchEditAccess(req.user, batch)
+    } catch (err) {
+      if (err instanceof AppError) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
     const displayRows = rows.filter((r) => isDisplayRow(batch, r))
     if (displayRows.length <= 1) {
       reply.code(400)
@@ -737,7 +847,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
   })
 
   app.delete('/api/action-batches/:id', async (req, reply) => {
-    const tenantId = req.user.id
+    const tenantId = tenantIdFor(req.user)
     const params = z.object({ id: z.string().min(1) }).parse(req.params)
     if (isLegacyBatchId(params.id)) {
       const result = await deleteLegacyBatch(supabase, tenantId, params.id)
@@ -749,8 +859,18 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
     }
 
     try {
+      const loaded = await loadBatchRows(supabase, tenantId, params.id)
+      if ('error' in loaded) {
+        reply.code(404)
+        return { error: loaded.error }
+      }
+      ensureBatchEditAccess(req.user, loaded.batch)
       await deleteVeprimBatchById(supabase, tenantId, params.id)
     } catch (error) {
+      if (error instanceof AppError) {
+        reply.code(error.statusCode)
+        return { error: error.message }
+      }
       reply.code(400)
       return { error: error instanceof Error ? error.message : 'Delete failed' }
     }

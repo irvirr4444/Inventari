@@ -53,6 +53,49 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
+.auth-password-field {
+  position: relative;
+}
+
+.auth-container .auth-card .auth-password-field .input {
+  padding-right: 48px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.auth-password-toggle:hover:not(:disabled),
+.auth-password-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7fbff;
+}
+
+.auth-password-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 125, 246, 0.18);
+}
+
+.auth-password-toggle:disabled {
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
+}
+
 .auth-container .auth-card .toggle-group {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);

@@ -125,6 +125,7 @@ function formatFilterLines(
   }
   if (query.pershkrimi?.trim()) lines.push(`Përshkrimi: "${query.pershkrimi.trim()}"`)
   if (query.shenim?.trim()) lines.push(`Shenim: "${query.shenim.trim()}"`)
+  if (query.kodiProduktit?.trim()) lines.push(`Produkti: ${query.kodiProduktit.trim()}`)
   if (trackPrice && (query.totaliMin !== undefined || query.totaliMax !== undefined)) {
     lines.push(
       `Totali: ${query.totaliMin ?? '…'} – ${query.totaliMax ?? '…'} €`,
@@ -185,6 +186,17 @@ async function loadBatchDetail(
   } catch {
     return null
   }
+}
+
+function filterBatchDetailByProduct(
+  detail: BatchDetail,
+  kodiProduktit?: string,
+): BatchDetail | null {
+  const productCode = kodiProduktit?.trim()
+  if (!productCode) return detail
+  const items = detail.items.filter((item) => item.kodi_produktit === productCode)
+  if (items.length === 0) return null
+  return { ...detail, items }
 }
 
 function toReportAction(detail: BatchDetail): HistoryReportAction {
@@ -297,11 +309,19 @@ export async function buildHistoryReportDocument(
   const filterLines =
     query.filterLines ?? formatFilterLines(query, locationLabel)
 
+  const productFilteredDetails = details
+    .map((detail) => filterBatchDetailByProduct(detail, query.kodiProduktit))
+    .filter((detail): detail is BatchDetail => detail !== null)
+
+  if (productFilteredDetails.length === 0) {
+    throw new Error('Nuk u gjet asnje veprim per eksport.')
+  }
+
   return {
     title: 'Histori e veprimeve',
     generatedAt: formatReportTimestamp(new Date()),
     filterLines,
-    actions: details.map(toReportAction),
+    actions: productFilteredDetails.map(toReportAction),
     trackPrice,
   }
 }

@@ -1,16 +1,19 @@
-import { LocationsEditor } from '../locations/LocationsEditor'
-import { TenantConfigDisplay } from './TenantConfigDisplay'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth/AuthProvider'
-import { Navigate } from 'react-router-dom'
+import { isAdmin } from '../../lib/permissions'
+import { LocationsSettingsPanel } from './LocationsSettingsPanel'
 
 export function LocationsSettingsPage() {
   const { user } = useAuth()
   if (user?.isLegacy) return <Navigate to="/" replace />
+  if (!isAdmin(user)) return <Navigate to="/" replace />
 
   return (
     <main className="container auth-container">
-      <LocationsEditor mode="settings" />
-      <TenantConfigDisplay />
+      <LocationsSettingsPanel />
+      <p className="muted" style={{ marginTop: 24 }}>
+        <Link to="/">← Kthehu ne panel</Link>
+      </p>
     </main>
   )
 }

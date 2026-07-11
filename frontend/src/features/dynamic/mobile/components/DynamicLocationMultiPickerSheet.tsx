@@ -87,7 +87,7 @@ export function DynamicLocationMultiPickerSheet(props: {
                 setAddOpen(true)
               }}
             >
-              + Shto lokacion
+              + Shto vendndodhje
             </button>
           ) : null}
         </div>
@@ -104,7 +104,7 @@ export function DynamicLocationMultiPickerSheet(props: {
               [...allLocationIds, loc.id],
             )
             props.onApply(next)
-            props.onNotify?.('Lokacioni u shtua me sukses.', 'success')
+            props.onNotify?.('Vendndodhja u shtua me sukses.', 'success')
           }}
         />
       ) : null}

@@ -50,6 +50,7 @@ type ListFilters = {
   dateFrom?: string
   dateTo?: string
   shenim?: string
+  kodiProduktit?: string
 }
 
 function rowSecond(row: VeprimRow) {
@@ -225,6 +226,13 @@ export async function fetchLegacyActionBatches(
   }
 
   const shenimQuery = filters.shenim?.trim() || undefined
+  const productCodeFilter = filters.kodiProduktit?.trim() || undefined
+
+  if (productCodeFilter) {
+    grouped = grouped.filter((batch) =>
+      legacyDisplayRows(batch).some((row) => row.kodi_produktit === productCodeFilter),
+    )
+  }
 
   if (shenimQuery) {
     const matchingCodes = new Set<string>()
@@ -679,6 +687,7 @@ export async function migrateLegacyBatchToRecord(
           : null,
       ora: meta?.ora ?? null,
       pershkrimi: meta?.pershkrimi ?? null,
+      created_by_user_id: tenantId,
     })
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Nuk u migrua veprimi.' }

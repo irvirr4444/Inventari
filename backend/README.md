@@ -91,7 +91,8 @@ backend/src/
     authService.ts      Login, signup, Google, legacy seed helper
     productsService.ts  Product CRUD + legacy/dynamic DTO mapping
     actionsService.ts   Normalize, validate, stock check, row building
-    lokacioniService.ts Location CRUD
+    lokacioniService.ts Location CRUD + soft-delete/deactivate behavior
+    userManagementService.ts Admin user management, roles, credentials, location access
     tenantConfigService.ts Tenant onboarding config (track_price, onboarding_complete, tutorial_seen)
     exportsService.ts   CSV + Excel (legacy vs dynamic templates; tenant-config column sets)
     historyExportService.ts  Historiku xlsx export (legacy/dynamic Excel templates)
@@ -100,7 +101,7 @@ backend/src/
     historyReportPdf.ts      A4 PDF buffer (card-per-action layout)
     historyReportDocx.ts     Word document buffer
     legacyDtoService.ts Legacy XK/AL response shape
-    inventariExcel.ts   Template load, stock replay, Permbledhje rows
+    inventariExcel.ts   Template load, stock replay, Përmbledhje rows
   auth/
     password.ts         bcrypt hash/verify
     session.ts          Sign/verify session cookie
@@ -111,8 +112,9 @@ backend/src/
     products.ts         /api/products CRUD
     actions.ts          POST/GET /api/actions
     analytics.ts        /api/analytics/stock, /summary
-    exports.ts          CSV + products.xlsx + Permbledhje template xlsx + Historiku xlsx/pdf/docx
+    exports.ts          CSV + products.xlsx + Përmbledhje template xlsx + Historiku xlsx/pdf/docx
     lokacionet.ts       /api/lokacionet CRUD
+    users.ts            /api/users admin management + per-location access
     tenantConfig.ts     /api/tenant-config GET/POST/PATCH + complete + tutorial-seen
   actionBatches.ts      /api/action-batches/* routes
   legacyBatches.ts      Pre-batch_id grouping and legacy IDs
@@ -136,10 +138,12 @@ backend/scripts/
 | POST | `/api/auth/google` | Google ID token login (requires `GOOGLE_CLIENT_ID`; body `{ id_token }`) |
 | POST | `/api/logout` | Clear session |
 | GET | `/api/session` | `{ ok, user }` with `uiLloji`, `isLegacy`, `has_locations`, `tenantConfig` (dynamic) |
+| GET/POST/PATCH/DELETE | `/api/users`, `/api/users/:id` | Admin-only user management. Create users, change role/status/name/password, soft-deactivate users. |
+| GET/PUT | `/api/users/:id/access` | Admin-only per-location access for Përdorues role users. |
 | GET/POST/PATCH | `/api/tenant-config` | Read or upsert tenant config (`track_price`, `onboarding_complete`, `tutorial_seen`) |
 | POST | `/api/tenant-config/complete` | Mark onboarding done (requires at least one active location) |
 | POST | `/api/tenant-config/tutorial-seen` | Mark tutorial dismissed |
-| GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic). Create: `emri`, optional `flag_emoji` (defaults 📍), optional `rradhitja`; `kodi` derived server-side. PATCH: no client `kodi` (regenerated when `emri` changes). |
+| GET/POST/PATCH/DELETE | `/api/lokacionet` | Location CRUD (dynamic). Create: `emri`, optional `flag_emoji` (defaults 📍), optional `rradhitja`; `kodi` derived server-side. PATCH: no client `kodi` (regenerated when `emri` changes). DELETE is soft-delete: `aktiv=false`, `show_in_summary=false`. |
 | GET/POST/PATCH/DELETE | `/api/products`, `/api/products/:id` | Product CRUD. Dynamic products include optional `njesi_matese` (when tenant tracks units). Legacy PATCH: `gjendje_kosove` / `gjendje_shqiperi`. Dynamic PATCH: `stock: [{ lokacioni_id, sasia }]` updates `gjendje` only (not a `produkti` column). List returns legacy columns or `stock[]`. |
 | POST/GET | `/api/actions` | Create batch or list raw `veprimi`. Legacy body: `shteti`. Dynamic body: `lokacioni_id` (+ `destination_lokacioni_id` for Transfer). |
 | GET/PATCH/DELETE | `/api/action-batches/*` | Historiku. Responses include `lokacioni_id`, optional `lokacioni_emri` / emoji (dynamic). PATCH accepts `lokacioni_id` for dynamic users. |
@@ -147,7 +151,7 @@ backend/scripts/
 | GET | `/api/analytics/summary` | Hyrje/Dalje totals — `SummaryByCountry` (legacy) or `SummaryByLocation` keyed by `lokacioni_id` (dynamic, `show_in_summary` locations) |
 | GET | `/api/analytics/stock` | Stock list filtered by country (legacy) |
 | GET | `/api/exports/products.xlsx` | Product export |
-| GET | `/api/exports/actions.xlsx` | Permbledhje export |
+| GET | `/api/exports/actions.xlsx` | Përmbledhje export |
 | GET | `/api/exports/actions.csv` | Raw actions CSV |
 | GET | `/api/exports/history.xlsx` | Historiku Excel (query params: type, dates, client filters) |
 | POST | `/api/exports/history.xlsx` | Historiku Excel — body `{ batchIds[], lloji?, shteti?, dateFrom?, dateTo?, oraFrom?, oraDeri?, pershkrimi?, totaliMin/Max?, produkteMin/Max?, locationId?, trackPrice?, locationLabel?, filterLines? }` (preferred; matches UI filter scope) |
@@ -174,6 +178,7 @@ Password login calls `ensureLegacyUserSeeded` once when the legacy user still ha
 - All product/action/batch queries filter by `pronari_id` (owner user id).
 - **Legacy user** (`ui_lloji = legacy_fixed`, fixed id `00000000-0000-4000-8000-000000000001`): existing data backfilled to this id; API returns Kosovo/Albania columns unchanged; Kosovo `Dalje` still mirrors to Albania.
 - **Dynamic users**: configurable `lokacioni` rows (`flag_emoji`, `show_in_summary`), `gjendje` stock table, location-based actions and exports. Internal `kodi` is auto-derived from `emri` on create/rename (collision suffixes `TIR`, `TIR2`, …).
+- **Roles and access:** account admins manage users via `/api/users`. `admin` users can manage tenant data; `perdorues` users rely on `lokacioni_perdorues_access` (`view`, `add`, `edit_delete`) enforced by centralized access-control helpers.
 
 Session payload includes `uiLloji`, `isLegacy`, `has_locations`, and nested `tenantConfig` (`track_price`, `onboarding_complete`, `tutorial_seen`) for dynamic users so the frontend can gate onboarding and tutorial.
 
@@ -191,6 +196,15 @@ Session payload includes `uiLloji`, `isLegacy`, `has_locations`, and nested `ten
 
 - `lokacioniService` + `domain/lokacioniKodi.ts` — derive base code (3 letters from name, fallback `LOC`), dedupe per owner, regenerate on rename.
 - Deactivating a location with stock returns an optional `stock_warning` in the PATCH response (UI may alert).
+- Deleting a location is intentionally soft-delete (`aktiv=false`, `show_in_summary=false`) so future action/product pickers hide it while historical batches still resolve by id.
+
+### User management (`/api/users`)
+
+- Admin-only endpoints are guarded in `userManagementService` and scoped to `tenantIdFor(actor)`.
+- `POST /api/users` creates a direct managed user with `emri`, password, role, and optional location access.
+- `PATCH /api/users/:id` can update `emri`, optional new password, role, and status; users cannot demote/deactivate themselves.
+- `DELETE /api/users/:id` deactivates a user and removes their per-location access.
+- `GET/PUT /api/users/:id/access` reads/replaces the location access rows for `perdorues` users.
 
 ## Key behavior
 
@@ -210,17 +224,17 @@ Session payload includes `uiLloji`, `isLegacy`, `has_locations`, and nested `ten
 - PATCH meta: `shteti` (legacy) or `lokacioni_id` / `destination_lokacioni_id` (dynamic); updates sibling `veprimi` rows for transfers.
 - Item POST/PATCH/DELETE for add/remove/edit product lines.
 
-### Permbledhje Excel
+### Përmbledhje Excel
 
 - **Legacy:** template `docs/excel/Inventari Excel Template.xlsx` — 13 columns (Kosova + Shqiperi blocks); stock replay from history.
 - **Dynamic:** generated workbook with:
   - **Veprime** — movement lines; price/total columns omitted when `track_price=false`
-  - **Permbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`); value columns omitted when not tracking price
+  - **Përmbledhje** — per-location Hyrje/Dalje totals for the date range (`buildSummaryByLocation`); value columns omitted when not tracking price
 - Products export: legacy two stock columns vs dynamic N location columns.
 
 ### Historiku exports (`historyExportService`, `historyReportData`)
 
-- **Excel** — legacy uses `buildHistoryLegacyExcelBuffer` (Permbledhje-style template rows); dynamic uses `buildHistoryDynamicExcelBuffer`. Filtered `batchIds` from POST body, or full query on GET.
+- **Excel** — legacy uses `buildHistoryLegacyExcelBuffer` (Përmbledhje-style template rows); dynamic uses `buildHistoryDynamicExcelBuffer`. Filtered `batchIds` from POST body, or full query on GET.
 - **PDF / DOCX** — `buildHistoryReportDocument()` loads batch details (including legacy `legacy:…` ids), applies the same client filters as Excel (`historyExportFilters.ts`), then renders card-per-action layout matching the frontend print preview. PDF uses PDFKit + DejaVu Sans; DOCX uses the `docx` package. Respects `track_price` for euro columns. Report header uses **24-hour** timestamps (`DD/MM/YYYY, HH:mm`) and omits the username; active filters are listed from client-supplied `filterLines` (or derived from query fields).
 - **Filter parity** — `HistoryExportBodySchema` accepts full client filter fields (`oraFrom`, `oraDeri`, `pershkrimi`, `totaliMin/Max`, `produkteMin/Max`, `dateFrom`, `dateTo`, `shenim`, `locationId`, `locationLabel`, `filterLines`). `assertHistoryExportFilterRanges` rejects invalid min/max pairs server-side; frontend validates the same rules before calling export endpoints.
 
@@ -245,8 +259,9 @@ SQL migrations live in `docs/sql/`. Run in order.
 | `13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
 | `14_tenant_config.sql` | Initial `tenant_config` table; backfill for existing dynamic users |
 | `15_tenant_config_v2.sql` | V2: `tutorial_seen`, rename `onboarding_complete`, drop unit columns, RLS |
+| `18_user_roles_location_access.sql` | Roles, account ownership, `lokacioni_perdorues_access`, access constraints |
 
-**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
+**Upgrading an existing database:** run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql`, then `18_user_roles_location_access.sql`, then `npm run seed:legacy-user -w backend`. The combined script does not delete `produkti`, `veprimi`, or `veprim_batch` rows.
 
 ## Tests
 

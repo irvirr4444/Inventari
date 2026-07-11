@@ -114,6 +114,11 @@
   font-weight: 600;
 }
 
+.product-search-option-clear {
+  margin: 6px 6px 0;
+  width: calc(100% - 12px);
+}
+
 .product-search-option.disabled {
   opacity: 0.45;
   cursor: not-allowed;

@@ -10,12 +10,13 @@ import {
   findPerdoruesByGoogleSub,
   findPerdoruesById,
   normalizeEmri,
-  toSessionUser,
+  buildSessionUser,
   updateLegacyUserCredentials,
   updatePerdorues,
 } from '../repositories/perdoruesRepository.js'
 import { countActiveLokacionet } from '../repositories/lokacioniRepository.js'
 import { getTenantConfigForSession } from '../services/tenantConfigService.js'
+import { tenantIdFor } from '../services/accessControlService.js'
 import type { TenantConfig } from '@inventari/shared'
 import type { SessionUser } from '../domain/user.js'
 import { LEGACY_USER_ID } from '../domain/user.js'
@@ -102,7 +103,7 @@ export async function loginWithPassword(
   const valid = await verifyPassword(password, user.password_hash)
   if (!valid) throw new AppError(401, 'Invalid credentials')
 
-  return toSessionUser(user)
+  return buildSessionUser(supabase, user)
 }
 
 export async function signupWithPassword(
@@ -125,9 +126,10 @@ export async function signupWithPassword(
     emri,
     uiLloji: 'dynamic',
     isLegacy: false,
+    role: 'admin',
   })
 
-  return toSessionUser(user)
+  return buildSessionUser(supabase, user)
 }
 
 export async function resolveSessionUser(
@@ -136,7 +138,7 @@ export async function resolveSessionUser(
 ): Promise<SessionUser | null> {
   const user = await findPerdoruesById(supabase, userId)
   if (!user || !user.aktiv) return null
-  return toSessionUser(user)
+  return buildSessionUser(supabase, user)
 }
 
 export async function getSessionPayload(
@@ -149,7 +151,7 @@ export async function getSessionPayload(
     tenantConfig: TenantConfig | null
   }
 }> {
-  const locationCount = await countActiveLokacionet(supabase, user.id)
+  const locationCount = await countActiveLokacionet(supabase, tenantIdFor(user))
   const tenantConfig = await getTenantConfigForSession(supabase, user)
   return {
     ok: true,
@@ -185,7 +187,7 @@ export async function loginWithGoogle(
   let user = await findPerdoruesByGoogleSub(supabase, googleSub)
   if (user) {
     if (!user.aktiv) throw new AppError(403, 'Account disabled')
-    return toSessionUser(user)
+    return buildSessionUser(supabase, user)
   }
 
   user = await findPerdoruesByEmail(supabase, email)
@@ -195,7 +197,7 @@ export async function loginWithGoogle(
       google_sub: googleSub,
       emri: user.emri ?? payload.name ?? null,
     })
-    return toSessionUser(updated)
+    return buildSessionUser(supabase, updated)
   }
 
   const emri = await resolveUniqueGoogleEmri(supabase, payload.name, email)
@@ -205,7 +207,8 @@ export async function loginWithGoogle(
     googleSub,
     uiLloji: 'dynamic',
     isLegacy: false,
+    role: 'admin',
   })
 
-  return toSessionUser(created)
+  return buildSessionUser(supabase, created)
 }

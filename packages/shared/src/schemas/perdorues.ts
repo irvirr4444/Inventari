@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { LocationAccessEntrySchema, PerdoruesRoleSchema } from './access.js'
 
 export const UiLlojiSchema = z.enum(['legacy_fixed', 'dynamic'])
 export type UiLloji = z.infer<typeof UiLlojiSchema>
@@ -20,6 +21,9 @@ export const SessionUserSchema = z.object({
   uiLloji: UiLlojiSchema,
   isLegacy: z.boolean(),
   has_locations: z.boolean(),
+  role: PerdoruesRoleSchema,
+  accountOwnerId: z.string().uuid(),
+  locationAccess: z.array(LocationAccessEntrySchema),
 })
 
 export const SessionResponseSchema = z.union([

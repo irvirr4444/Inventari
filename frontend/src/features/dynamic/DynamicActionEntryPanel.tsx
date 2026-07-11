@@ -32,6 +32,10 @@ export function DynamicActionEntryPanel(props: {
   onOpenHistory: () => void
   hideNavActions?: boolean
   hideInlineSubmit?: boolean
+  allowAddLocation?: boolean
+  canAddItems?: boolean
+  canSubmitAction?: boolean
+  canOpenTransfer?: boolean
 }) {
   const { trackPrice } = useTenantConfig()
 
@@ -42,11 +46,11 @@ export function DynamicActionEntryPanel(props: {
           <h2 className="action-header-title">Regjistro Veprim</h2>
           <div className="action-controls">
             <div className="action-header-control action-header-control-country">
-              <span className="muted action-header-control-label">Lokacioni</span>
+              <span className="muted action-header-control-label">Vendndodhja</span>
               <DynamicLocationSelect
                 value={props.lokacioniId}
                 onChange={props.onLokacioniChange}
-                allowAdd
+                allowAdd={props.allowAddLocation}
                 onNotify={props.onNotify}
                 dataTutorial="location-picker"
               />
@@ -92,7 +96,13 @@ export function DynamicActionEntryPanel(props: {
           <div className="spacer" />
           {!props.hideNavActions ? (
             <>
-              <button type="button" className="btn sm transfer-mode-btn" onClick={props.onOpenTransfer} data-tutorial="transfer-btn">
+              <button
+                type="button"
+                className="btn sm transfer-mode-btn"
+                onClick={props.onOpenTransfer}
+                disabled={props.canOpenTransfer === false}
+                data-tutorial="transfer-btn"
+              >
             <svg
               aria-hidden="true"
               width="14"
@@ -142,7 +152,12 @@ export function DynamicActionEntryPanel(props: {
         />
 
         <div className="row action-footer">
-          <button type="button" className="btn" onClick={props.onAddItem}>
+          <button
+            type="button"
+            className="btn"
+            onClick={props.onAddItem}
+            disabled={props.canAddItems === false}
+          >
             + Shto produkt
           </button>
           <div className="spacer" />
@@ -156,7 +171,7 @@ export function DynamicActionEntryPanel(props: {
             <button
               type="submit"
               className="btn primary action-submit"
-              disabled={props.saving}
+              disabled={props.saving || props.canSubmitAction === false}
               style={{ marginLeft: 16 }}
             >
               {props.saving ? 'Duke finalizuar…' : 'Finalizo Veprimin'}

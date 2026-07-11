@@ -53,6 +53,7 @@ export function buildHistoryExportRequestBody(opts: {
     dateFrom: opts.server.dateFrom,
     dateTo: opts.server.dateTo,
     shenim: opts.server.shenim,
+    kodiProduktit: opts.server.kodiProduktit?.trim() || undefined,
     locationIds:
       opts.client.locationIds.length > 0 ? opts.client.locationIds : undefined,
     locationId: opts.client.locationIds.length === 1 ? opts.client.locationIds[0] : undefined,

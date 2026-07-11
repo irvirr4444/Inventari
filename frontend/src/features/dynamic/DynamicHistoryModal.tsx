@@ -1,8 +1,10 @@
 import * as React from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { showPerdoruesiControls } from '@inventari/shared'
 import {
   deleteActionBatch,
   getActionBatch,
+  listActionBatchCreatorUserIds,
   type ActionBatch,
   type DynamicProdukti,
 } from '../../lib/api'
@@ -21,8 +23,10 @@ import {
 import { scheduleInvalidate, type InvalidateScope } from '../../lib/invalidateAppData'
 import { queryKeys } from '../../lib/queryKeys'
 import { useAuth } from '../../lib/auth/AuthProvider'
+import { canEditDeleteBatch } from '../../lib/permissions'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
+import { listUsers, type ManagedUser } from '../../lib/api/users'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
@@ -46,8 +50,13 @@ import {
   historyListRefreshState,
   useHistoryBatchListQuery,
 } from '../../hooks/useHistoryBatchListQuery'
+import type { HistoryUserFilterOption } from './DynamicHistoryFilterBar'
 
 const PAGE_SIZE = HISTORY_MODAL_PAGE_SIZE
+
+function managedUserLabel(user: ManagedUser): string {
+  return user.emri?.trim() || user.email?.trim() || 'Përdorues pa emër'
+}
 
 export function DynamicHistoryModal(props: {
   products: DynamicProdukti[]
@@ -61,6 +70,53 @@ export function DynamicHistoryModal(props: {
   const { trackPrice } = useTenantConfig()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja)
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users(user?.id),
+    queryFn: () => listUsers(),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  })
+  const creatorUserIdsQuery = useQuery({
+    queryKey: queryKeys.actionBatchCreatorUserIds(user?.id),
+    queryFn: () => listActionBatchCreatorUserIds(),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  })
+  const managedUsers = usersQuery.data ?? []
+  const creatorUserIds = React.useMemo(
+    () => new Set(creatorUserIdsQuery.data ?? []),
+    [creatorUserIdsQuery.data],
+  )
+  const shouldShowPerdoruesiControls = showPerdoruesiControls(
+    managedUsers.map((managedUser) => ({
+      id: managedUser.id,
+      role: managedUser.role,
+      aktiv: managedUser.aktiv,
+    })),
+    creatorUserIds,
+  )
+  const userFilterOptions = React.useMemo<HistoryUserFilterOption[]>(() => {
+    if (user?.role === 'admin') {
+      return managedUsers
+        .filter((managedUser) => managedUser.aktiv || creatorUserIds.has(managedUser.id))
+        .map((managedUser) => ({
+          id: managedUser.id,
+          label: managedUserLabel(managedUser),
+        }))
+    }
+    return user
+      ? [
+          {
+            id: user.id,
+            label: user.emri?.trim() || user.email?.trim() || 'Përdoruesi im',
+          },
+        ]
+      : []
+  }, [creatorUserIds, managedUsers, user])
+  const userLabelById = React.useMemo(
+    () => new Map(userFilterOptions.map((option) => [option.id, option.label])),
+    [userFilterOptions],
+  )
 
   const [filters, setFilters] = React.useState<HistoryServerFilters>({})
   const [clientFilters, setClientFilters] =
@@ -171,7 +227,7 @@ export function DynamicHistoryModal(props: {
     },
   })
 
-  const actions = listQuery.data?.actions ?? []
+  const actions = React.useMemo(() => listQuery.data?.actions ?? [], [listQuery.data?.actions])
   const filteredActions = React.useMemo(
     () => applyHistoryClientFilters(actions, clientFilters, { trackPrice }),
     [actions, clientFilters, trackPrice],
@@ -179,7 +235,8 @@ export function DynamicHistoryModal(props: {
   const showClearLink =
     hasActiveServerFilters(filters) ||
     hasActiveClientFilters(clientFilters, { trackPrice })
-  const tableColCount = trackPrice ? HISTORY_TABLE_COL_COUNT : HISTORY_TABLE_COL_COUNT - 1
+  const tableColCount =
+    HISTORY_TABLE_COL_COUNT + (shouldShowPerdoruesiControls ? 1 : 0) - (trackPrice ? 0 : 1)
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -209,6 +266,9 @@ export function DynamicHistoryModal(props: {
               serverFilters={filters}
               clientFilters={clientFilters}
               locations={sortedLocations}
+              products={products}
+              users={userFilterOptions}
+              showUserFilter={shouldShowPerdoruesiControls}
               onServerFilterChange={updateFilters}
               onClientFilterChange={updateClientFilters}
               onClearAll={clearAllFilters}
@@ -223,12 +283,20 @@ export function DynamicHistoryModal(props: {
             className={`history-table-wrap history-table-wrap--fixed-body${isRefreshing ? ' history-table-wrap--refreshing' : ''}`}
           >
             {isRefreshing ? <div className="history-table-refresh-bar" aria-hidden="true" /> : null}
-            <table className="table history-table">
+            <table
+              className={[
+                'table history-table',
+                shouldShowPerdoruesiControls && 'history-table--with-perdoruesi',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <colgroup>
                 <col className="history-col-expand" />
                 <col className="history-col-date" />
                 <col className="history-col-ora" />
                 <col className="history-col-pershkrimi" />
+                {shouldShowPerdoruesiControls ? <col className="history-col-perdoruesi" /> : null}
                 <col className="history-col-lloji" />
                 <col className="history-col-shteti" />
                 <col className="history-col-products" />
@@ -241,15 +309,21 @@ export function DynamicHistoryModal(props: {
                   <th className="history-col-date">Data</th>
                   <th className="history-col-ora">Ora</th>
                   <th className="history-col-pershkrimi">Përshkrimi</th>
+                  {shouldShowPerdoruesiControls ? (
+                    <th className="history-col-perdoruesi">Përdoruesi</th>
+                  ) : null}
                   <th className="history-col-lloji">Lloji</th>
-                  <th className="history-col-shteti">Lokacioni</th>
+                  <th className="history-col-shteti">Vendndodhja</th>
                   <th className="history-col-products">Produkte</th>
                   {trackPrice ? <th className="history-col-totali">Totali</th> : null}
                   <th className="history-col-actions">Veprime</th>
                 </tr>
               </thead>
               {showSkeleton ? (
-                <HistorySkeletonTable />
+                <HistorySkeletonTable
+                  showPerdoruesi={shouldShowPerdoruesiControls}
+                  showTotali={trackPrice}
+                />
               ) : listQuery.isError && !listQuery.data ? (
                 <HistoryTableEmptyBody
                   colSpan={tableColCount}
@@ -292,6 +366,20 @@ export function DynamicHistoryModal(props: {
                             </button>
                           </td>
                           <HistoryBatchMetaDisplay batch={action} matchedItems={action.matched_items} />
+                          {shouldShowPerdoruesiControls ? (
+                            <td className="history-col-perdoruesi">
+                              {action.created_by_user_id ? (
+                                <span
+                                  className="history-perdoruesi-text"
+                                  title={userLabelById.get(action.created_by_user_id) ?? action.created_by_user_id}
+                                >
+                                  {userLabelById.get(action.created_by_user_id) ?? 'Përdorues i panjohur'}
+                                </span>
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                          ) : null}
                           <td className="history-col-lloji">
                             <LlojiBadge lloji={action.lloji} />
                           </td>
@@ -307,9 +395,16 @@ export function DynamicHistoryModal(props: {
                           <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
-                              className="btn sm ghost history-row-action-btn hover-tooltip"
+                              className="btn sm history-row-action-btn hover-tooltip"
                               data-tooltip="Bej ndryshime"
                               aria-label="Ndrysho veprimin"
+                              disabled={
+                                !canEditDeleteBatch(
+                                  user,
+                                  action.lokacioni_id,
+                                  action.destination_lokacioni_id,
+                                )
+                              }
                               onClick={() => {
                                 setEditActionId(action.id)
                                 setError(null)
@@ -322,6 +417,13 @@ export function DynamicHistoryModal(props: {
                               className="btn sm danger history-row-action-btn hover-tooltip"
                               data-tooltip="Fshi"
                               aria-label="Fshi veprimin"
+                              disabled={
+                                !canEditDeleteBatch(
+                                  user,
+                                  action.lokacioni_id,
+                                  action.destination_lokacioni_id,
+                                )
+                              }
                               onClick={() => {
                                 setDeleteTarget(action)
                                 setError(null)

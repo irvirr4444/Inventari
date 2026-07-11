@@ -1,4 +1,5 @@
 import * as React from 'react'
+import type { SummaryGroupBy } from '@inventari/shared'
 import { useQueryClient } from '@tanstack/react-query'
 import { useDynamicActionEntry } from '../hooks/useDynamicActionEntry'
 import { useDynamicProductCrud } from '../hooks/useDynamicProductCrud'
@@ -14,6 +15,7 @@ import {
   scheduleProductDeleteInvalidation,
 } from '../lib/invalidateAppData'
 import { useAuth } from '../lib/auth/AuthProvider'
+import { canEditDeleteInLocation, isAdmin } from '../lib/permissions'
 import type { DynamicProductSortKey } from '../features/dynamic/DynamicProductsPanel'
 
 export function useDynamicDashboardPage() {
@@ -38,7 +40,8 @@ export function useDynamicDashboardPage() {
   const productsQuery = useDynamicProductsQuery()
   const products = productsQuery.data ?? []
 
-  const summary = useSummaryDateRange()
+  const [summaryGroupBy, setSummaryGroupBy] = React.useState<SummaryGroupBy>('location')
+  const summary = useSummaryDateRange(summaryGroupBy)
 
   const actionEntry = useDynamicActionEntry({
     lokacioniId,
@@ -130,8 +133,6 @@ export function useDynamicDashboardPage() {
             productCrud.updateMut.mutate(
               {
                 id: created.id,
-                kodi: newKodi.trim(),
-                emri: newEmri.trim(),
                 stock,
               },
               { onSuccess: finish },
@@ -203,6 +204,8 @@ export function useDynamicDashboardPage() {
     setFrom: summary.setFrom,
     to: summary.to,
     setTo: summary.setTo,
+    summaryGroupBy,
+    setSummaryGroupBy,
     showAddProduct,
     setShowAddProduct,
     newKodi,
@@ -244,15 +247,18 @@ export function useDynamicDashboardPage() {
       product: DynamicProdukti
       stock: Record<string, number>
     }) => {
-      const stock = sortedLocations.map((loc) => ({
-        lokacioni_id: loc.id,
-        sasia: input.stock[loc.id] ?? 0,
-      }))
+      const canEditProductDetails = isAdmin(user)
+      const stock = sortedLocations
+        .filter((loc) => canEditDeleteInLocation(user, loc.id))
+        .map((loc) => ({
+          lokacioni_id: loc.id,
+          sasia: input.stock[loc.id] ?? 0,
+        }))
       productCrud.updateMut.mutate(
         {
           id: input.product.id,
-          kodi: input.product.kodi.trim(),
-          emri: input.product.emri.trim(),
+          ...(canEditProductDetails ? { kodi: input.product.kodi.trim() } : {}),
+          ...(canEditProductDetails ? { emri: input.product.emri.trim() } : {}),
           stock,
         },
         {

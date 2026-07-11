@@ -2,7 +2,12 @@ import { HISTORY_MODAL_PAGE_SIZE } from './historyTableLayout'
 
 export const HISTORY_TABLE_COL_COUNT = 9
 
-export function HistorySkeletonTable() {
+export function HistorySkeletonTable(props: {
+  showPerdoruesi?: boolean
+  showTotali?: boolean
+}) {
+  const showTotali = props.showTotali ?? true
+
   return (
     <tbody className="history-table-pending">
       {Array.from({ length: HISTORY_MODAL_PAGE_SIZE }).map((_, i) => (
@@ -19,6 +24,11 @@ export function HistorySkeletonTable() {
           <td>
             <span className="history-pending-line history-pending-line--pershkrimi" />
           </td>
+          {props.showPerdoruesi ? (
+            <td>
+              <span className="history-pending-line history-pending-line--perdoruesi" />
+            </td>
+          ) : null}
           <td>
             <span className="history-pending-line history-pending-line--badge" />
           </td>
@@ -28,9 +38,11 @@ export function HistorySkeletonTable() {
           <td>
             <span className="history-pending-line history-pending-line--products" />
           </td>
-          <td>
-            <span className="history-pending-line history-pending-line--total" />
-          </td>
+          {showTotali ? (
+            <td>
+              <span className="history-pending-line history-pending-line--total" />
+            </td>
+          ) : null}
           <td>
             <span className="history-pending-line history-pending-line--actions" />
           </td>

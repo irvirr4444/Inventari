@@ -186,7 +186,7 @@
   gap: 12px;
 }
 
-/* ── Permbledhje tab: up to 6 location cards without scroll; 7+ scrolls in-list ── */
+/* ── Përmbledhje tab: up to 6 location cards without scroll; 7+ scrolls in-list ── */
 
 .dynamic-permbledhje-panel {
   --dynamic-summary-card-height: 80px;

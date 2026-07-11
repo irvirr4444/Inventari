@@ -1,6 +1,12 @@
+import type { LokacioniAkses, PerdoruesRole } from '@inventari/shared'
 import type { TenantConfig } from '@inventari/shared'
 
 export type UiLloji = 'legacy_fixed' | 'dynamic'
+
+export type LocationAccessEntry = {
+  lokacioni_id: string
+  akses: LokacioniAkses
+}
 
 export type SessionUser = {
   id: string
@@ -10,6 +16,9 @@ export type SessionUser = {
   isLegacy: boolean
   has_locations: boolean
   tenantConfig: TenantConfig | null
+  role: PerdoruesRole
+  accountOwnerId: string
+  locationAccess: LocationAccessEntry[]
 }
 
 export const DEFAULT_TENANT_CONFIG: TenantConfig = {

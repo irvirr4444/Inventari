@@ -9,7 +9,7 @@ React client for the Inventari inventory platform.
 | Doc | Audience | Contents |
 | --- | --- | --- |
 | **[README-DESKTOP.md](README-DESKTOP.md)** | Wide viewports (~768px+) | Legacy/dynamic dashboards, modals, Historiku modal, desktop styling, product & business reference |
-| **[README-MOBILE.md](README-MOBILE.md)** | Phones & touch / `?mobile=1` | Bottom tabs, bottom sheets, mobile Histori/Permbledhje, styling contracts |
+| **[README-MOBILE.md](README-MOBILE.md)** | Phones & touch / `?mobile=1` | Bottom tabs, bottom sheets, mobile Histori/Përmbledhje, styling contracts |
 | **[../docs/android-apk.md](../docs/android-apk.md)** | Android APK packaging | Capacitor setup, API/CORS, build & release checklist (not implemented in repo yet) |
 
 Both shells share the same backend API, auth, and business rules. `useMobileClient` picks the shell at `/`.
@@ -109,7 +109,7 @@ frontend/
       auth/                    GoogleSignInButton (GIS ID token)
       locations/               LocationPicker, LocationAddModal, LocationsEditor, emoji picker
       onboarding/              OnboardingWizard (5 screens), TutorialOverlay; CSS in styles/features/
-      settings/                LocationsSettingsPage, TenantConfigDisplay (read-only config summary)
+      settings/                SettingsModal, UsersSettingsPanel, LocationsSettingsPanel
       dynamic/                 DynamicDashboardPage, Dynamic* panels, history, hooks
       dynamic/mobile/          DynamicMobileApp (N-location mobile tabs)
       actions/                 Legacy ActionEntryPanel, TransferModal; shared ActionItemsTable, ActionReviewModal
@@ -134,7 +134,7 @@ packages/shared/               Zod schemas, productLabel, summary builders
 | `/signup` | Public | Redirects to `/login?mode=signup` |
 | `/onboarding` | Auth, dynamic | 5-screen onboarding wizard (until `tenantConfig.onboarding_complete`) |
 | `/onboarding/locations` | Auth | Redirects to `/onboarding` (legacy URL) |
-| `/settings/locations` | Auth, dynamic | Edit locations + read-only tenant config summary |
+| `/settings/locations` | Auth, dynamic | Legacy route for location settings; current desktop entry is the top-right settings modal |
 | `/history/print` | Auth | Historiku A4 print preview (filter state via query params; lazy-loaded) |
 | `/` | Auth | Legacy or dynamic dashboard (desktop/mobile by viewport); per-user tutorial overlay once after onboarding |
 | `/mobile/*` | — | Redirects to `/` |
@@ -152,7 +152,7 @@ packages/shared/               Zod schemas, productLabel, summary builders
 Single card on `/login`:
 
 1. **Hyr** / **Regjistrohu** toggle (same `toggle-group` pattern as action card).
-2. **Emri** + **Fjalekalimi** (both modes). Legacy admin can enter their email or `Legacy User` on **Hyr**.
+2. **Emri** + **Fjalëkalimi** (both modes). Legacy admin can enter their email or `Legacy User` on **Hyr**.
 3. Primary button: **Hyr** or **Krijo Llogari**.
 4. **ose** divider + **Vazhdo me Google** when `VITE_GOOGLE_CLIENT_ID` is set (custom label over Google Identity Services button).
 5. **Red error snackbar** at the bottom of the screen for validation and API errors (same `.snackbar.error` as the dashboard — no inline error box in the form).
@@ -196,7 +196,7 @@ Shown once per dynamic user when `tenantConfig.tutorial_seen === false`.
 
 Desktop: 7 steps (`data-tutorial` on products table, action card, location picker, etc.). Mobile: 5 steps on bottom-nav tabs (`tab-produkte`, `tab-veprime`, …).
 
-Post-onboarding location edits remain at `/settings/locations` (`LocationsSettingsPage` + `TenantConfigDisplay` read-only summary).
+Post-onboarding settings are opened from the top-right user menu. `SettingsModal` contains **Përdoruesit** and **Vendndodhjet** tabs. Admins can create/deactivate users, change roles, edit credentials, and assign per-location access. Locations are edited in a flat row list; delete is a soft delete that hides/deactivates the location while preserving historical rows.
 
 Not implemented in v1: forgot-password, social providers other than Google.
 
@@ -209,6 +209,7 @@ Main endpoints used by the UI:
 | Function / module | Purpose |
 | --- | --- |
 | `api/auth.ts` — `login`, `signup`, `loginWithGoogle`, `logout`, `fetchSession` | Authentication |
+| `api/users.ts` — `listUsers`, `createUser`, `updateUser`, `deleteUser`, access helpers | Admin user management, credentials, roles, and per-location access |
 | `api/lokacionet.ts` — CRUD | Dynamic locations (`emri`, `flag_emoji`; no client `kodi`) |
 | `listProducts` / `createProduct` / `updateProduct` / `deleteProduct` | Legacy product CRUD |
 | `listDynamicProducts` / `updateDynamicProduct` | Dynamic product list + PATCH with `stock[]` |
@@ -217,7 +218,7 @@ Main endpoints used by the UI:
 | `listActionBatches` / `getActionBatch` | History list/detail (`lokacioni_id`, labels for dynamic) |
 | `updateActionBatch` | Meta patch — `shteti` (legacy) or `lokacioni_id` (dynamic) |
 | `analyticsSummary` | `SummaryByCountry` (legacy) or `SummaryByLocation` (dynamic) |
-| `exportProductsUrl` / `exportDynamicProductsUrl` / `exportUrl` | Excel downloads (products + Permbledhje) |
+| `exportProductsUrl` / `exportDynamicProductsUrl` / `exportUrl` | Excel downloads (products + Përmbledhje) |
 | `downloadHistoryDocument` (`lib/historyDocumentDownload.ts`) | Filtered Historiku xlsx / pdf / docx |
 
 See [README-DESKTOP.md](README-DESKTOP.md) for payload examples.

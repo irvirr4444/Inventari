@@ -22,6 +22,13 @@ import {
   mapProductResponse,
   type DynamicStockEntry,
 } from './legacyDtoService.js'
+import {
+  hasMinimumAccess,
+  highestAccessInAnyLocation,
+  isAdmin,
+  requireLocationAccess,
+  tenantIdFor,
+} from './accessControlService.js'
 
 async function buildStockMap(
   supabase: SupabaseClient,
@@ -38,19 +45,61 @@ async function buildStockMap(
   return map
 }
 
+function assertCanListProducts(user: SessionUser): void {
+  if (isAdmin(user)) return
+  if (!highestAccessInAnyLocation(user, 'view')) {
+    throw new AppError(403, 'No location access')
+  }
+}
+
+function assertCanCreateProduct(user: SessionUser): void {
+  if (isAdmin(user)) return
+  if (!highestAccessInAnyLocation(user, 'add')) {
+    throw new AppError(403, 'Insufficient permission to add products')
+  }
+}
+
+async function assertCanDeleteProduct(
+  supabase: SupabaseClient,
+  user: SessionUser,
+  productId: string,
+): Promise<void> {
+  if (isAdmin(user)) return
+
+  const tenantId = tenantIdFor(user)
+  const stockMap = await buildStockMap(supabase, tenantId, [productId])
+  const stock = stockMap.get(productId) ?? []
+  const affectedLocationIds = stock
+    .filter((row) => row.sasia > 0)
+    .map((row) => row.lokacioni_id)
+
+  const requiredLocations =
+    affectedLocationIds.length > 0
+      ? affectedLocationIds
+      : (await listLokacionetByOwner(supabase, tenantId)).map((l) => l.id)
+
+  for (const lokacioniId of requiredLocations) {
+    if (!hasMinimumAccess(user, lokacioniId, 'edit_delete')) {
+      throw new AppError(403, 'Insufficient permission to delete this product')
+    }
+  }
+}
+
 export async function listProducts(
   supabase: SupabaseClient,
   user: SessionUser,
   query: { search?: string },
 ) {
-  const rows = await listProduktet(supabase, user.id, query)
+  assertCanListProducts(user)
+  const tenantId = tenantIdFor(user)
+  const rows = await listProduktet(supabase, tenantId, query)
   if (user.isLegacy) {
     return rows.map((row) => mapProductResponse(user, row, []))
   }
 
   const stockMap = await buildStockMap(
     supabase,
-    user.id,
+    tenantId,
     rows.map((r) => r.id),
   )
   return rows.map((row) => mapProductResponse(user, row, stockMap.get(row.id) ?? []))
@@ -61,13 +110,16 @@ export async function createProduct(
   user: SessionUser,
   body: unknown,
 ) {
+  assertCanCreateProduct(user)
   const parsed = ProductCreateSchema.parse(body)
-  const row = await insertProdukti(supabase, user.id, parsed)
+  const tenantId = tenantIdFor(user)
+  const row = await insertProdukti(supabase, tenantId, parsed)
 
   if (!user.isLegacy) {
-    const lokacionet = await listLokacionetByOwner(supabase, user.id)
+    const lokacionet = await listLokacionetByOwner(supabase, tenantId)
     const stockRows: DynamicStockEntry[] = []
     for (const loc of lokacionet) {
+      if (!isAdmin(user) && !hasMinimumAccess(user, loc.id, 'add')) continue
       let sasia = 0
       if (loc.kodi === 'XK') sasia = parsed.gjendje_kosove ?? 0
       if (loc.kodi === 'AL') sasia = parsed.gjendje_shqiperi ?? 0
@@ -76,14 +128,14 @@ export async function createProduct(
     if (stockRows.length > 0) {
       await upsertGjendjeRows(
         supabase,
-        user.id,
+        tenantId,
         stockRows.map((s) => ({ produkti_id: row.id, ...s })),
       )
     }
     return mapProductResponse(user, row, stockRows)
   }
 
-  await upsertGjendjeRows(supabase, user.id, [
+  await upsertGjendjeRows(supabase, tenantId, [
     {
       produkti_id: row.id,
       lokacioni_id: countryToLegacyLokacioniId('XK'),
@@ -107,7 +159,21 @@ export async function updateProduct(
 ) {
   ProductIdParamsSchema.parse({ id })
   const parsed = ProductUpdateSchema.parse(body)
+  const tenantId = tenantIdFor(user)
   const { stock, kodi, emri, gjendje_kosove, gjendje_shqiperi } = parsed
+
+  const metadataChanged =
+    kodi !== undefined || emri !== undefined || gjendje_kosove !== undefined || gjendje_shqiperi !== undefined
+
+  if (!isAdmin(user) && metadataChanged) {
+    throw new AppError(403, 'Only admins can edit product details')
+  }
+
+  if (!isAdmin(user) && stock?.length) {
+    for (const row of stock) {
+      requireLocationAccess(user, row.lokacioni_id, 'edit_delete')
+    }
+  }
 
   const produktiPatch: Partial<
     Pick<ProduktiRow, 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'>
@@ -119,9 +185,9 @@ export async function updateProduct(
 
   let row: ProduktiRow
   if (Object.keys(produktiPatch).length > 0) {
-    row = await updateProdukti(supabase, user.id, id, produktiPatch)
+    row = await updateProdukti(supabase, tenantId, id, produktiPatch)
   } else {
-    const existing = await findProduktiById(supabase, user.id, id)
+    const existing = await findProduktiById(supabase, tenantId, id)
     if (!existing) throw new AppError(404, 'Product not found')
     row = existing
   }
@@ -130,7 +196,7 @@ export async function updateProduct(
     parsed.gjendje_kosove !== undefined ||
     parsed.gjendje_shqiperi !== undefined
   ) {
-    await upsertGjendjeRows(supabase, user.id, [
+    await upsertGjendjeRows(supabase, tenantId, [
       {
         produkti_id: row.id,
         lokacioni_id: countryToLegacyLokacioniId('XK'),
@@ -145,22 +211,27 @@ export async function updateProduct(
   }
 
   if (!user.isLegacy && stock) {
-    await upsertGjendjeRows(
-      supabase,
-      user.id,
-      stock.map((s) => ({
-        produkti_id: row.id,
-        lokacioni_id: s.lokacioni_id,
-        sasia: s.sasia,
-      })),
-    )
+    const allowedStock = isAdmin(user)
+      ? stock
+      : stock.filter((s) => hasMinimumAccess(user, s.lokacioni_id, 'edit_delete'))
+    if (allowedStock.length > 0) {
+      await upsertGjendjeRows(
+        supabase,
+        tenantId,
+        allowedStock.map((s) => ({
+          produkti_id: row.id,
+          lokacioni_id: s.lokacioni_id,
+          sasia: s.sasia,
+        })),
+      )
+    }
   }
 
   if (user.isLegacy) {
     return mapProductResponse(user, row, [])
   }
 
-  const stockMap = await buildStockMap(supabase, user.id, [row.id])
+  const stockMap = await buildStockMap(supabase, tenantId, [row.id])
   return mapProductResponse(user, row, stockMap.get(row.id) ?? [])
 }
 
@@ -170,6 +241,7 @@ export async function deleteProduct(
   id: string,
 ) {
   ProductIdParamsSchema.parse({ id })
-  await deleteProdukti(supabase, user.id, id)
+  await assertCanDeleteProduct(supabase, user, id)
+  await deleteProdukti(supabase, tenantIdFor(user), id)
   return { ok: true as const }
 }

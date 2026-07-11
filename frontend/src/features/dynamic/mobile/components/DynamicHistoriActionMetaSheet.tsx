@@ -98,7 +98,7 @@ export function DynamicHistoriActionMetaSheet(props: {
                 </div>
               ) : (
                 <DynamicLocationField
-                  label="Lokacioni"
+                  label="Vendndodhja"
                   value={meta.lokacioni_id}
                   locations={props.locations}
                   onOpen={() => setLocOpen(true)}
@@ -157,7 +157,7 @@ export function DynamicHistoriActionMetaSheet(props: {
       />
       <DynamicLocationPickerSheet
         open={locOpen}
-        title="Lokacioni"
+        title="Vendndodhja"
         value={meta.lokacioni_id}
         allowAdd
         onNotify={props.onNotify}

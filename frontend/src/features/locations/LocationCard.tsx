@@ -8,6 +8,7 @@ type LocationCardProps = {
   onEmriBlur?: (value: string) => void
   onEmojiChange?: (value: string) => void
   readOnly?: boolean
+  className?: string
   actions?: React.ReactNode
   footer?: React.ReactNode
 }
@@ -15,9 +16,10 @@ type LocationCardProps = {
 export function LocationCard(props: LocationCardProps) {
   const readOnly = props.readOnly ?? false
   const showEmojiPicker = !readOnly && props.onEmojiChange
+  const className = ['location-card card-inner', props.className].filter(Boolean).join(' ')
 
   return (
-    <div className="location-card card-inner">
+    <div className={className}>
       {showEmojiPicker ? (
         <LocationEmojiPicker
           value={props.flagEmoji}
@@ -40,7 +42,7 @@ export function LocationCard(props: LocationCardProps) {
                 className="input"
                 defaultValue={props.emri}
                 maxLength={40}
-                placeholder="Emri i lokacionit"
+                placeholder="Emri i vendndodhjes"
                 onBlur={(e) => props.onEmriBlur?.(e.target.value)}
               />
             ) : (
@@ -48,7 +50,7 @@ export function LocationCard(props: LocationCardProps) {
                 className="input"
                 value={props.emri}
                 maxLength={40}
-                placeholder="Emri i lokacionit"
+                placeholder="Emri i vendndodhjes"
                 onChange={(e) => props.onEmriChange?.(e.target.value)}
                 onBlur={(e) => props.onEmriBlur?.(e.target.value)}
               />

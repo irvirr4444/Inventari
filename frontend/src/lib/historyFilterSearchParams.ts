@@ -81,7 +81,7 @@ export function formatHistoryPrintFilterSummary(
         : []
   if (llojet.length === 1) lines.push(`Veprime: ${llojet[0]}`)
   else if (llojet.length > 1) lines.push(`Veprime: ${llojet.join(', ')}`)
-  if (options?.locationLabel) lines.push(`Lokacioni: ${options.locationLabel}`)
+  if (options?.locationLabel) lines.push(`Vendndodhja: ${options.locationLabel}`)
   if (server.shteti) lines.push(`Shteti: ${server.shteti === 'XK' ? 'Kosova' : 'Shqiperi'}`)
   if (server.dateFrom || server.dateTo) {
     lines.push(`Data: ${server.dateFrom ?? '…'} – ${server.dateTo ?? '…'}`)
@@ -93,6 +93,9 @@ export function formatHistoryPrintFilterSummary(
     lines.push(`Përshkrimi: "${client.pershkriminQuery.trim()}"`)
   }
   if (server.shenim?.trim()) lines.push(`Shenim: "${server.shenim.trim()}"`)
+  if (server.kodiProduktit?.trim()) {
+    lines.push(`Produkti: ${server.kodiProduktit.trim()}`)
+  }
   if (trackPrice && (client.totaliMin !== '' || client.totaliMax !== '')) {
     lines.push(
       `Totali: ${client.totaliMin !== '' ? client.totaliMin : '…'} – ${client.totaliMax !== '' ? client.totaliMax : '…'} €`,

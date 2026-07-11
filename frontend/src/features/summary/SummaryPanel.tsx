@@ -24,7 +24,7 @@ export function SummaryPanel(props: {
   return (
     <div className="card summary-panel">
       <div className="row summary-header">
-        <h3>Permbledhje</h3>
+        <h3>Përmbledhje</h3>
         <div className="spacer" />
         {props.isFetching && (
           <span className="muted" style={{ fontSize: 12 }}>

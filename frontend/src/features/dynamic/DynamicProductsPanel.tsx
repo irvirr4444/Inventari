@@ -31,6 +31,9 @@ export function DynamicProductsPanel(props: {
   onEditProduct: (product: DynamicProdukti) => void
   onDeleteProduct: (product: DynamicProdukti) => void
   scrollableTable?: boolean
+  canAddProduct?: boolean
+  canEditProduct?: boolean
+  canDeleteProduct?: boolean
 }) {
   const multiplier = props.sort.direction === 'asc' ? 1 : -1
   const columnWidths = React.useMemo(
@@ -108,7 +111,13 @@ export function DynamicProductsPanel(props: {
           </div>
         </div>
         <div className="spacer" />
-        <button type="button" className="btn" onClick={props.onAddProduct} data-tutorial="add-product-btn">
+        <button
+          type="button"
+          className="btn"
+          onClick={props.onAddProduct}
+          disabled={props.canAddProduct === false}
+          data-tutorial="add-product-btn"
+        >
           + Shto produkt
         </button>
         <a
@@ -283,6 +292,7 @@ export function DynamicProductsPanel(props: {
                           className="btn sm hover-tooltip"
                           data-tooltip="Bej ndryshime"
                           onClick={() => props.onEditProduct(p)}
+                          disabled={props.canEditProduct === false}
                           aria-label="Ndrysho produktin"
                         >
                           <svg
@@ -305,7 +315,7 @@ export function DynamicProductsPanel(props: {
                             type="button"
                             className="btn danger sm"
                             onClick={() => props.onDeleteProduct(p)}
-                            disabled={props.deletePending}
+                            disabled={props.deletePending || props.canDeleteProduct === false}
                             aria-label="Fshi produktin"
                           >
                           <svg

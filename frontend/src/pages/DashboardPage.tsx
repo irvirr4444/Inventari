@@ -1,3 +1,4 @@
+import type { SummaryByCountry } from '@inventari/shared'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { Snackbar } from '../components/Snackbar'
 import { ActionEntryPanel } from '../features/actions/ActionEntryPanel'
@@ -13,6 +14,7 @@ import { useDashboardPage } from './useDashboardPage'
 
 export function DashboardPage() {
   const d = useDashboardPage()
+  const summary = (d.summaryQuery.data ?? {}) as SummaryByCountry
 
   return (
     <div className="dashboard-stack">
@@ -61,8 +63,8 @@ export function DashboardPage() {
           to={d.to}
           onFromChange={d.setFrom}
           onToChange={d.setTo}
-          summaryKosove={d.summaryQuery.data?.XK ?? d.emptySummary}
-          summaryShqiperi={d.summaryQuery.data?.AL ?? d.emptySummary}
+          summaryKosove={summary.XK ?? d.emptySummary}
+          summaryShqiperi={summary.AL ?? d.emptySummary}
           isFetching={d.summaryQuery.isFetching}
           error={d.summaryQuery.error}
         />

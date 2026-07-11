@@ -43,9 +43,9 @@ Inventari Im ndihmon bizneset e vogla të mbajnë under kontroll stokun dhe vepr
 
 Çfarë mund të bëni:
 • Regjistroni hyrje, dalje dhe transferime
-• Menaxhoni produkte dhe sasi sipas lokacionit
+• Menaxhoni produkte dhe sasi sipas vendndodhjes
 • Shikoni historinë me filtra dhe eksport (Excel, PDF, Word)
-• Përmbledhje sipas periudhës dhe lokacionit
+• Përmbledhje sipas periudhës dhe vendndodhjes
 • Hyrje me emër/fjalëkalim ose Google
 
 Aplikacioni Android përdor të njëjtën ndërfaqe mobile si versioni web, me lidhje të sigurt me serverin tuaj.

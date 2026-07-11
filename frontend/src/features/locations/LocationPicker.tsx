@@ -86,7 +86,7 @@ export function LocationPicker(props: {
     setMenuOpen(false)
     await refresh()
     props.onChange(loc.id)
-    props.onNotify?.('Lokacioni u shtua me sukses.', 'success')
+    props.onNotify?.('Vendndodhja u shtua me sukses.', 'success')
   }
 
   const menu =
@@ -97,10 +97,13 @@ export function LocationPicker(props: {
             className="location-picker-menu location-picker-menu-portal"
             role="menu"
             style={{
+              position: 'fixed',
               top: menuPos.top,
               left: menuPos.left,
               minWidth: menuPos.minWidth,
               maxHeight: menuPos.maxHeight,
+              zIndex: 1000,
+              pointerEvents: 'auto',
             }}
           >
             {options.map((l) => (
@@ -119,7 +122,7 @@ export function LocationPicker(props: {
               </button>
             ))}
             {options.length === 0 ? (
-              <div className="location-picker-menu-empty muted">Nuk ka lokacione te disponueshme.</div>
+              <div className="location-picker-menu-empty muted">Nuk ka vendndodhje te disponueshme.</div>
             ) : null}
             {props.allowAdd ? (
               <button
@@ -147,6 +150,7 @@ export function LocationPicker(props: {
           type="button"
           className="btn location-picker-trigger"
           data-tutorial={props.dataTutorial}
+          onPointerDown={() => window.dispatchEvent(new Event('inventari:close-overlays'))}
           onClick={() => setMenuOpen((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
@@ -156,7 +160,7 @@ export function LocationPicker(props: {
               {locationBadge(selected)} {selected.emri}
             </>
           ) : (
-            <span className="muted">Zgjidh lokacionin</span>
+            <span className="muted">Zgjidh vendndodhjen</span>
           )}
           <svg
             className="location-picker-chevron"

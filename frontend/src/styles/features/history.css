@@ -151,6 +151,18 @@
   align-self: flex-end;
 }
 
+.history-filter-product,
+.history-filter-user {
+  flex: 0 1 220px;
+  min-width: 180px;
+  align-self: flex-end;
+}
+
+.history-filter-product .product-search-select,
+.history-filter-user .product-search-select {
+  width: 100%;
+}
+
 .history-filter-group {
   display: flex;
   align-items: center;
@@ -334,6 +346,14 @@
   box-sizing: border-box;
 }
 
+.history-filter-product .product-search-input,
+.history-filter-user .product-search-input {
+  width: 100%;
+  height: var(--history-filter-height);
+  min-height: var(--history-filter-height);
+  box-sizing: border-box;
+}
+
 .history-filter-num {
   width: var(--history-filter-num-width);
   height: var(--history-filter-height);
@@ -512,7 +532,25 @@
   overflow: hidden;
 }
 
+.history-table--with-perdoruesi .history-col-pershkrimi {
+  width: 18%;
+}
+
+.history-col-perdoruesi {
+  width: 11%;
+  min-width: 120px;
+  overflow: hidden;
+}
+
 .history-pershkrimi-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.history-perdoruesi-text {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -569,6 +607,7 @@
 
 .history-table tbody td.history-col-shteti,
 .history-table tbody td.history-col-pershkrimi,
+.history-table tbody td.history-col-perdoruesi,
 .history-table tbody td.history-col-date,
 .history-table tbody td.history-col-ora,
 .history-table tbody td.history-col-totali {
@@ -580,7 +619,9 @@
 .history-table th.history-col-ora,
 .history-table td.history-col-ora,
 .history-table th.history-col-pershkrimi,
-.history-table td.history-col-pershkrimi {
+.history-table td.history-col-pershkrimi,
+.history-table th.history-col-perdoruesi,
+.history-table td.history-col-perdoruesi {
   text-align: left;
 }
 
@@ -1330,6 +1371,10 @@
 .history-pending-line--pershkrimi {
   width: 88%;
   max-width: 140px;
+}
+
+.history-pending-line--perdoruesi {
+  width: 76px;
 }
 
 .history-pending-line--badge {

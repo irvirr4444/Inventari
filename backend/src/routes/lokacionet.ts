@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { parseOrThrow, isAppError } from '../errors.js'
 import {
   createUserLokacioni,
+  deleteUserLokacioni,
   listUserLokacionet,
   patchUserLokacioni,
 } from '../services/lokacioniService.js'
@@ -38,6 +39,19 @@ export function registerLokacionetRoutes(app: FastifyInstance, supabase: Supabas
       const body = parseOrThrow(PatchLokacioniSchema, req.body)
       const result = await patchUserLokacioni(supabase, req.user, params.id, body)
       return result
+    } catch (err) {
+      if (isAppError(err)) {
+        reply.code(err.statusCode)
+        return { error: err.message }
+      }
+      throw err
+    }
+  })
+
+  app.delete('/api/lokacionet/:id', async (req, reply) => {
+    try {
+      const params = parseOrThrow(LokacioniIdParamsSchema, req.params)
+      return await deleteUserLokacioni(supabase, req.user, params.id)
     } catch (err) {
       if (isAppError(err)) {
         reply.code(err.statusCode)

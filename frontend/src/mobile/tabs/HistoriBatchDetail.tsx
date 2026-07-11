@@ -93,7 +93,7 @@ function HistoriEditProductRow(props: {
       </button>
       <div className="mobile-field-row">
         <div>
-          <label className="mobile-label">Cmimi/Njesi</label>
+          <label className="mobile-label">Cmimi/Njësi</label>
           <NumericInput
             className="mobile-input"
             step="0.01"

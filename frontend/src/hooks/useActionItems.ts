@@ -19,7 +19,7 @@ export function validateActionItems(items: ActionItemDraft[]): ActionItemsValida
       return { ok: false, error: 'Sasia duhet te jete > 0.' }
     }
     if (Number(it.cmimi_njesi) < 0) {
-      return { ok: false, error: 'Cmimi/Njesi duhet te jete >= 0.' }
+      return { ok: false, error: 'Cmimi/Njësi duhet te jete >= 0.' }
     }
   }
   return { ok: true, items: clean }

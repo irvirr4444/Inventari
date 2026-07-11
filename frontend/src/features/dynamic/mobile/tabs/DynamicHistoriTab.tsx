@@ -248,7 +248,7 @@ export function DynamicHistoriTab(props: {
                 },
                 {
                   id: 'lokacioni',
-                  label: 'Lokacione',
+                  label: 'Vendndodhje',
                   value: locationValue,
                   active: locationFilterActive,
                 },
@@ -393,7 +393,7 @@ export function DynamicHistoriTab(props: {
 
           <DynamicLocationMultiPickerSheet
             open={locationOpen}
-            title="Lokacioni"
+            title="Vendndodhja"
             selectedIds={appliedClientFilters.locationIds}
             onApply={applyLocationFilter}
             allowAdd

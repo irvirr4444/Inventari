@@ -295,7 +295,7 @@ export function ActionEditForm(props: {
               <thead>
                 <tr>
                   <th>Produkti</th>
-                  <th className="history-subtable-money">Cmimi/Njesi</th>
+                  <th className="history-subtable-money">Cmimi/Njësi</th>
                   <th className="history-subtable-qty">Sasia</th>
                   <th className="history-subtable-money">Totali</th>
                 </tr>

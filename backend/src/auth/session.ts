@@ -4,8 +4,8 @@ import { z } from 'zod'
 
 export const SESSION_COOKIE = 'inventari_session'
 
-/** Default ~400 days — keeps mobile/web users signed in until explicit logout. Override via SESSION_MAX_AGE_SECONDS. */
-const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 400
+/** Default 24 hours. Override via SESSION_MAX_AGE_SECONDS if a deployment needs a different policy. */
+const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24
 
 function parseSessionMaxAgeSeconds(): number {
   const raw = process.env.SESSION_MAX_AGE_SECONDS

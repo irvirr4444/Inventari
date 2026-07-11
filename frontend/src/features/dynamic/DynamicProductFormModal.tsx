@@ -11,6 +11,7 @@ type StockGridProps = {
   locations: Lokacioni[]
   stock: Record<string, number>
   onChange: (lokacioniId: string, value: number) => void
+  canEditLocation?: (lokacioniId: string) => boolean
   label: string
 }
 
@@ -24,30 +25,34 @@ function DynamicStockFields(props: StockGridProps) {
         <table className="table dynamic-stock-table">
           <thead>
             <tr>
-              <th>Lokacioni</th>
+              <th>Vendndodhja</th>
               <th>Sasia</th>
             </tr>
           </thead>
           <tbody>
-            {props.locations.map((loc) => (
-              <tr key={loc.id}>
-                <td>
-                  <span className="row" style={{ gap: 6 }}>
-                    {locationBadge(loc)} {loc.emri}
-                  </span>
-                </td>
-                <td>
-                  <NumericInput
-                    className="input stock-field-input"
-                    min={0}
-                    value={props.stock[loc.id] ?? 0}
-                    onChange={(v) =>
-                      props.onChange(loc.id, v === '' ? 0 : Number(v))
-                    }
-                  />
-                </td>
-              </tr>
-            ))}
+            {props.locations.map((loc) => {
+              const canEdit = props.canEditLocation?.(loc.id) ?? true
+              return (
+                <tr key={loc.id}>
+                  <td>
+                    <span className="row" style={{ gap: 6 }}>
+                      {locationBadge(loc)} {loc.emri}
+                    </span>
+                  </td>
+                  <td>
+                    <NumericInput
+                      className="input stock-field-input"
+                      min={0}
+                      value={props.stock[loc.id] ?? 0}
+                      disabled={!canEdit}
+                      onChange={(v) =>
+                        props.onChange(loc.id, v === '' ? 0 : Number(v))
+                      }
+                    />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -58,20 +63,24 @@ function DynamicStockFields(props: StockGridProps) {
     <div className="stock-fields">
       <label className="label">{props.label}</label>
       <div className="dynamic-stock-grid">
-        {props.locations.map((loc) => (
-          <div key={loc.id} className="stock-field">
-            <div className="stock-field-head">
-              <span>{locationBadge(loc)}</span>
-              <span>{loc.emri}</span>
+        {props.locations.map((loc) => {
+          const canEdit = props.canEditLocation?.(loc.id) ?? true
+          return (
+            <div key={loc.id} className="stock-field">
+              <div className="stock-field-head">
+                <span>{locationBadge(loc)}</span>
+                <span>{loc.emri}</span>
+              </div>
+              <NumericInput
+                className="input stock-field-input"
+                min={0}
+                value={props.stock[loc.id] ?? 0}
+                disabled={!canEdit}
+                onChange={(v) => props.onChange(loc.id, v === '' ? 0 : Number(v))}
+              />
             </div>
-            <NumericInput
-              className="input stock-field-input"
-              min={0}
-              value={props.stock[loc.id] ?? 0}
-              onChange={(v) => props.onChange(loc.id, v === '' ? 0 : Number(v))}
-            />
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -96,6 +105,8 @@ type DynamicProductFormModalProps =
       mode: 'edit'
       product: DynamicProdukti
       locations: Lokacioni[]
+      canEditProductDetails: boolean
+      editableLocationIds: string[]
       saving: boolean
       onSave: (input: {
         product: DynamicProdukti
@@ -110,6 +121,10 @@ function EditDynamicProductForm(
   const [kodi, setKodi] = React.useState(props.product.kodi)
   const [emri, setEmri] = React.useState(props.product.emri)
   const [stock, setStock] = React.useState(() => stockRecord(props.product))
+  const editableLocationIds = React.useMemo(
+    () => new Set(props.editableLocationIds),
+    [props.editableLocationIds],
+  )
 
   const updateStock = (lokacioniId: string, value: number) => {
     setStock((prev) => ({ ...prev, [lokacioniId]: value }))
@@ -128,16 +143,27 @@ function EditDynamicProductForm(
       >
         <div className="form-group">
           <label className="label">Kodi</label>
-          <input className="input" value={kodi} onChange={(e) => setKodi(e.target.value)} />
+          <input
+            className="input"
+            value={kodi}
+            disabled={!props.canEditProductDetails}
+            onChange={(e) => setKodi(e.target.value)}
+          />
         </div>
         <div className="form-group">
           <label className="label">Emri</label>
-          <input className="input" value={emri} onChange={(e) => setEmri(e.target.value)} />
+          <input
+            className="input"
+            value={emri}
+            disabled={!props.canEditProductDetails}
+            onChange={(e) => setEmri(e.target.value)}
+          />
         </div>
         <DynamicStockFields
           locations={props.locations}
           stock={stock}
           onChange={updateStock}
+          canEditLocation={(lokacioniId) => editableLocationIds.has(lokacioniId)}
           label="Gjendja"
         />
         <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end', gap: 8 }}>

@@ -300,7 +300,7 @@ export function HistoryModal(props: {
                           <td className="history-col-actions history-row-actions">
                             <button
                               type="button"
-                              className="btn sm ghost history-row-action-btn hover-tooltip"
+                              className="btn sm history-row-action-btn hover-tooltip"
                               data-tooltip="Bej ndryshime"
                               aria-label="Ndrysho veprimin"
                               onClick={() => {

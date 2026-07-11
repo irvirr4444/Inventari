@@ -7,6 +7,8 @@ import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
+import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { canAddInLocation, isAdmin } from '../../../../lib/permissions'
 import { createEmptyActionItem } from '../../../../types/actionItem'
 import { MobileActionReviewSheet } from '../../../../mobile/components/MobileActionReviewSheet'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
@@ -23,6 +25,7 @@ export function DynamicVeprimeTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
   const { trackPrice } = useTenantConfig()
+  const { user } = useAuth()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = React.useMemo(
     () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
@@ -50,6 +53,7 @@ export function DynamicVeprimeTab(props: {
     : null
   const selectedLocation = sortedLocations.find((l) => l.id === lokacioniId)
   const hasValidItems = filledItems.length > 0
+  const canAddActions = canAddInLocation(user, lokacioniId)
   const pickerProducts = products as unknown as Produkti[]
 
   const openAdd = () => {
@@ -100,7 +104,7 @@ export function DynamicVeprimeTab(props: {
 
         <div className="mobile-field-row">
           <DynamicLocationField
-            label="Lokacioni"
+            label="Vendndodhja"
             value={lokacioniId}
             locations={sortedLocations}
             onOpen={() => setLocationOpen(true)}
@@ -180,16 +184,16 @@ export function DynamicVeprimeTab(props: {
 
       <StickyCta
         label="FINALIZO VEPRIMIN"
-        disabled={!hasValidItems}
+        disabled={!hasValidItems || !canAddActions}
         loading={entry.mutation.isPending}
         onClick={entry.requestFinalize}
       />
 
       <DynamicLocationPickerSheet
         open={locationOpen}
-        title="Lokacioni"
+        title="Vendndodhja"
         value={lokacioniId}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.notify}
         onClose={() => setLocationOpen(false)}
         onSelect={setLokacioniId}
@@ -221,7 +225,7 @@ export function DynamicVeprimeTab(props: {
         open={entry.confirmOpen}
         lloji={entry.lloji}
         location={{
-          emri: selectedLocation?.emri ?? 'lokacion',
+          emri: selectedLocation?.emri ?? 'vendndodhje',
           flagEmoji: selectedLocation?.flag_emoji,
         }}
         items={entry.itemsState.items}

@@ -97,3 +97,33 @@ export async function listVeprimetForAnalytics(
     totali: number
   }>
 }
+
+export type GroupedSummaryVeprimRow = {
+  lloji: 'Hyrje' | 'Dalje'
+  lokacioni_id: string | null
+  kodi_produktit: string
+  sasia: number
+  totali: number
+  batch_id: string | null
+  veprim_batch: { created_by_user_id: string | null } | { created_by_user_id: string | null }[] | null
+}
+
+export async function listVeprimetForGroupedSummary(
+  supabase: SupabaseClient,
+  tenantId: string,
+  query: { from?: string; to?: string },
+): Promise<GroupedSummaryVeprimRow[]> {
+  let q = supabase
+    .from('veprimi')
+    .select(
+      'lloji,lokacioni_id,kodi_produktit,sasia,totali,batch_id,veprim_batch(created_by_user_id)',
+    )
+    .eq('pronari_id', tenantId)
+
+  if (query.from) q = q.gte('data', query.from)
+  if (query.to) q = q.lte('data', query.to)
+
+  const { data, error } = await q
+  if (error) throw mapSupabaseError(error)
+  return (data ?? []) as GroupedSummaryVeprimRow[]
+}

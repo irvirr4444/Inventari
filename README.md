@@ -33,8 +33,9 @@ Run migrations **in order** for a fresh project:
 | 13 | `docs/sql/13_perdorues_emri_unique.sql` | Emri-based auth: unique names, nullable email for password sign-ups |
 | 14 | `docs/sql/14_tenant_config.sql` | `tenant_config` table (initial); backfill for existing dynamic users |
 | 15 | `docs/sql/15_tenant_config_v2.sql` | V2 config: `tutorial_seen`, rename `onboarding_complete`, drop unit columns, RLS |
+| 18 | `docs/sql/18_user_roles_location_access.sql` | Admin/Përdorues roles, account ownership, and per-location access |
 
-**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql` (does not delete rows — wrapped in a transaction with row-count checks).
+**Existing database** that already has products: run `07`, then `APPLY_08_through_11.sql`, then `13_perdorues_emri_unique.sql`, then `14_tenant_config.sql`, then `15_tenant_config_v2.sql`, then `18_user_roles_location_access.sql` (does not delete rows — wrapped in a transaction with row-count checks where applicable).
 
 **One-time** after migration 07:
 
@@ -134,14 +135,14 @@ The browser does not use Supabase keys directly. All data goes through the backe
 ### Accounts
 
 - **Legacy** (`ui_lloji = legacy_fixed`): Kosovo + Albania UI, `gjendje_kosove` / `gjendje_shqiperi` on products, country-based actions and summary.
-- **Dynamic** (new sign-ups): custom locations; onboarding wizard collects location count/names + price tracking (`tenant_config.track_price`); dashboard hides price/total UI when `track_price = false`
+- **Dynamic** (new sign-ups): custom locations; onboarding wizard collects location count/names + price tracking (`tenant_config.track_price`); dashboard hides price/total UI when `track_price = false`. Admins can manage other users from the top-right settings modal with Admin/Përdorues roles and per-location access.
 
 ### Auth & core flows
 
 - **Emri** + password login and sign-up on one screen (`/login`); legacy users can also sign in with their email in the Emri field; errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
 - **Dynamic onboarding wizard** (`/onboarding`): five screens — welcome → location count (1–20) → all location name rows with emoji picker → pricing (Me çmime / Vetëm sasi) → confirm. Navy/blue app styling (`styles/features/onboarding-wizard.css`). **← Kthehu** on every step after welcome; **Kthehu te hyrja** on welcome logs out. Saves `track_price` on screen 4, creates locations + `onboarding_complete` on confirm.
 - **Post-onboarding tutorial** (desktop + mobile): one-time spotlight overlay; persisted in `tenant_config.tutorial_seen` via `POST /api/tenant-config/tutorial-seen` (not localStorage)
-- Location `kodi` is server-derived (UI shows emoji + name only); edit locations at `/settings/locations` (includes read-only tenant config summary)
+- Location `kodi` is server-derived (UI shows emoji + name only); manage users and locations from the top-right settings modal. Location delete is a soft delete: it hides/deactivates the location for future work while preserving historical data.
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)
 - **Historiku** — paginated batches, server filters (type, date range) + client filters (location checkboxes for dynamic, Ora range, Pershkrimi, Totali, Produkte); invalid min/max ranges blocked with snackbar feedback; edit and delete with stock rollback
@@ -153,7 +154,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 | Export | Legacy | Dynamic |
 | --- | --- | --- |
 | Products `.xlsx` | Kodi, Emri, Gjendje Kosove, Gjendje Shqiperi | Kodi, Emri, one column per location |
-| Permbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** + **Permbledhje** sheets; omits price/value columns when `track_price = false` |
+| Përmbledhje `.xlsx` | 13-column template (Kosova + Shqiperi blocks) | **Veprime** + **Përmbledhje** sheets; omits price/value columns when `track_price = false` |
 | Historiku `.xlsx` / `.pdf` / `.docx` | Filtered action batches via **Shkarko** dropdown (card layout for PDF/Word; Excel uses legacy/dynamic templates) | Same; location filter + `track_price` respected server-side |
 
 Historiku file downloads use `POST /api/exports/history.{xlsx,pdf,docx}` with `batchIds` plus full filter metadata (`filterLines`, client ora/totali/produkte bounds, etc.) after the frontend applies the same client filters as the UI. PDF and Word use the same card-per-action layout as the print preview (24-hour timestamps; no username in the report header). The print preview route is `/history/print` (query params mirror active filters).
@@ -162,7 +163,7 @@ Historiku file downloads use `POST /api/exports/history.{xlsx,pdf,docx}` with `b
 
 - **Legacy:** full desktop (`DashboardPage`) + mobile (`src/mobile/MobileApp.tsx`) for Kosovo/Albania.
 - **Dynamic:** full desktop (`DynamicDashboardPage`) + purpose-built mobile tabs (`src/features/dynamic/mobile/`) with the same five bottom tabs as legacy. Dynamic mobile Produkte shows all location stock inline on each product card; header and bottom nav share the `--surface` theme.
-- **Permbledhje on mobile:** bottom **Permbledhje** tab (not a separate route). Dynamic accounts get per-location **Hyrje/Dalje sasi and vlerë** for every `show_in_summary` location, including zeros when the date range has no activity; legacy shows Kosovo + Albania blocks with the same four metrics.
+- **Përmbledhje on mobile:** bottom **Përmbledhje** tab (not a separate route). Dynamic accounts get per-location **Hyrje/Dalje sasi and vlerë** for every `show_in_summary` location, including zeros when the date range has no activity; legacy shows Kosovo + Albania blocks with the same four metrics.
 - **Mobile sheets & overlays:** date/time pickers slide up from the bottom (`DatePickerSheet`, `DateRangePickerSheet`, `TimePickerSheet`). **Nga** / **Deri** date fields open the calendar for that bound only; if the chosen date would invert the range, values swap automatically. Dismiss by tapping the dimmed backdrop closes the sheet/modal without triggering buttons underneath (`lib/pointerDismissGuard.ts`).
 - **Histori tab (mobile):** structured action cards (`MobileHistoriActionCard`); sticky footer with **Shkarko** dropdown (~30%) + compact pagination (~70%); same filtered export scope as desktop.
 - **Transfer tab (mobile):** `Nga` / `Te` and **Data** / **Ora** use two-column `mobile-field-row` layouts (half width each).

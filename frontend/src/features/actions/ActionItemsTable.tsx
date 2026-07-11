@@ -50,7 +50,7 @@ export function ActionItemsTable(props: {
             <thead>
               <tr>
                 <th>Produkti</th>
-                {showPrice ? <th>Cmimi/Njesi</th> : null}
+                {showPrice ? <th>Cmimi/Njësi</th> : null}
                 <th>Sasia</th>
                 {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
                 <th />

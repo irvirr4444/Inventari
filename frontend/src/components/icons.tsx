@@ -223,7 +223,7 @@ export function TabHistoriIcon() {
   )
 }
 
-export function TabPermbledhjeIcon() {
+export function TabPërmbledhjeIcon() {
   return (
     <TabIcon>
       <path d="M6 20V14" />

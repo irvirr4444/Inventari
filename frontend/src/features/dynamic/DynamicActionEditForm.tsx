@@ -115,7 +115,7 @@ export function DynamicActionEditForm(props: {
             </>
           ) : (
             <div className="form-group">
-              <label className="label">Lokacioni</label>
+              <label className="label">Vendndodhja</label>
               <DynamicLocationSelect
                 value={meta.lokacioni_id}
                 onChange={(id) => setMeta((m) => ({ ...m, lokacioni_id: id }))}
@@ -152,7 +152,7 @@ export function DynamicActionEditForm(props: {
           <thead>
             <tr>
               <th>Produkti</th>
-              {showPrice ? <th>Cmimi/Njesi</th> : null}
+              {showPrice ? <th>Cmimi/Njësi</th> : null}
               <th>Sasia</th>
               {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
             </tr>

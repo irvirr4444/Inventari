@@ -38,6 +38,8 @@ export function ProductSearchSelect(props: {
   placeholder?: string
   id?: string
   disabled?: boolean
+  clearable?: boolean
+  clearLabel?: string
   'aria-label'?: string
 }) {
   const rootRef = React.useRef<HTMLDivElement | null>(null)
@@ -96,7 +98,7 @@ export function ProductSearchSelect(props: {
     setOpen(true)
     setQuery('')
     setActiveIndex(0)
-  }, [])
+  }, [props.disabled])
 
   const toggleMenu = React.useCallback(() => {
     if (props.disabled) return
@@ -106,16 +108,21 @@ export function ProductSearchSelect(props: {
     }
     openMenu()
     requestAnimationFrame(() => inputRef.current?.focus())
-  }, [closeMenu, openMenu, open])
+  }, [closeMenu, openMenu, open, props.disabled])
 
   const selectProduct = React.useCallback(
     (kodi: string) => {
-      if (disabledKodis.has(kodi)) return
+      if (kodi && disabledKodis.has(kodi)) return
       props.onChange(kodi)
       closeMenu()
     },
     [closeMenu, disabledKodis, props],
   )
+
+  const clearSelection = React.useCallback(() => {
+    props.onChange('')
+    closeMenu()
+  }, [closeMenu, props])
 
   React.useLayoutEffect(() => {
     if (!open) return
@@ -170,15 +177,12 @@ export function ProductSearchSelect(props: {
     }
   }, [open, activeIndex, selectableProducts, closeMenu, repositionList, selectProduct])
 
-  React.useEffect(() => {
-    setActiveIndex(0)
-  }, [query])
-
   const inputValue = open
     ? query
     : selectedProduct
       ? productLabel(selectedProduct.emri, selectedProduct.kodi)
       : ''
+  const showClearToggle = Boolean(props.clearable && props.value && !props.disabled)
 
   const list =
     open && listPos ? (
@@ -193,25 +197,30 @@ export function ProductSearchSelect(props: {
           width: listPos.width,
         }}
       >
+        {props.clearable ? (
+          <button
+            type="button"
+            role="option"
+            aria-selected={!props.value}
+            className={[
+              'product-search-option',
+              'product-search-option-clear',
+              !props.value && 'selected',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => selectProduct('')}
+          >
+            {props.clearLabel ?? 'Të gjitha produktet'}
+          </button>
+        ) : null}
+
         <div className="product-search-list-header">
           {isFiltering ? (
-            <>
               <span className="product-search-list-meta">
                 {filteredProducts.length} rezultat{filteredProducts.length === 1 ? '' : 'e'}
               </span>
-              <button
-                type="button"
-                className="product-search-show-all"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  setQuery('')
-                  setActiveIndex(0)
-                  inputRef.current?.focus()
-                }}
-              >
-                Shfaq të gjitha
-              </button>
-            </>
           ) : (
             <span className="product-search-list-meta">
               {sortedProducts.length} produkte — kerko ose zgjedh nga lista
@@ -259,7 +268,14 @@ export function ProductSearchSelect(props: {
   return (
     <div
       ref={rootRef}
-      className={`product-search-select${open ? ' open' : ''}`}
+      className={[
+        'product-search-select',
+        open && 'open',
+        props.clearable && 'product-search-select--clearable',
+        props.clearable && props.value && 'product-search-select--has-value',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <input
         ref={inputRef}
@@ -279,6 +295,7 @@ export function ProductSearchSelect(props: {
         onChange={(e) => {
           if (props.disabled) return
           setQuery(e.target.value)
+          setActiveIndex(0)
           if (!open) {
             const trigger = inputRef.current
             if (trigger) setListPos(computeListPosition(trigger))
@@ -289,25 +306,48 @@ export function ProductSearchSelect(props: {
       <button
         type="button"
         className="product-search-toggle"
-        aria-label={open ? 'Mbyll listen e produkteve' : 'Shfaq të gjitha produktet'}
+        aria-label={
+          showClearToggle
+            ? 'Pastro produktin'
+            : open
+              ? 'Mbyll listen e produkteve'
+              : 'Shfaq të gjitha produktet'
+        }
         aria-expanded={open}
         disabled={props.disabled}
         onMouseDown={(e) => e.preventDefault()}
-        onClick={toggleMenu}
+        onClick={showClearToggle ? clearSelection : toggleMenu}
       >
-        <svg
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        {showClearToggle ? (
+          <svg
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        )}
       </button>
 
       {list && typeof document !== 'undefined' ? createPortal(list, document.body) : null}

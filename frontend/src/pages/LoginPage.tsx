@@ -32,7 +32,7 @@ function mapAuthError(err: unknown, mode: AuthMode): string {
     if (err.status === 400 && err.message === 'Use sign in for email accounts') {
       return 'Per hyrje me email, perdor tab-in Hyr.'
     }
-    if (err.status === 401) return 'Emri ose fjalekalimi i pasakte.'
+    if (err.status === 401) return 'Emri ose fjalëkalimi i pasaktë.'
     if (err.status === 409) return 'Ky emer eshte i regjistruar.'
     if (err.status >= 500) return 'Gabim ne rrjet. Provo perseri.'
     return err.message || 'Gabim ne rrjet. Provo perseri.'
@@ -53,6 +53,7 @@ export function LoginPage() {
   const [mode, setMode] = React.useState<AuthMode>(initialMode)
   const [emri, setEmri] = React.useState('')
   const [password, setPassword] = React.useState('')
+  const [showPassword, setShowPassword] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const [googleLoading, setGoogleLoading] = React.useState(false)
   const [acceptedLegal, setAcceptedLegal] = React.useState(false)
@@ -99,7 +100,7 @@ export function LoginPage() {
       return 'Per hyrje me email, perdor tab-in Hyr.'
     }
     if (mode === 'signup' && trimmedPassword.length < 8) {
-      return 'Fjalekalimi duhet te kete te pakten 8 karaktere.'
+      return 'Fjalëkalimi duhet të ketë të paktën 8 karaktere.'
     }
     if (mode === 'signup' && !acceptedLegal) {
       return 'Duhet te pranosh Politiken e privatësisë dhe Kushtet e përdorimit.'
@@ -182,15 +183,59 @@ export function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label className="label">Fjalekalimi</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              disabled={formBusy}
-            />
+            <label className="label">Fjalëkalimi</label>
+            <div className="auth-password-field">
+              <input
+                className="input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                disabled={formBusy}
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                onClick={() => setShowPassword((value) => !value)}
+                disabled={formBusy}
+                aria-label={showPassword ? 'Fshih fjalëkalimin' : 'Shfaq fjalëkalimin'}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? (
+                  <svg
+                    aria-hidden="true"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.9 10.9 0 0 1 12 20C7 20 2.7 16.9 1 12a11.8 11.8 0 0 1 5.06-5.94" />
+                    <path d="M9.9 4.24A10.6 10.6 0 0 1 12 4c5 0 9.3 3.1 11 8a11.7 11.7 0 0 1-2.16 3.19" />
+                    <path d="M14.12 14.12A3 3 0 0 1 9.88 9.88" />
+                    <path d="M1 1l22 22" />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="btn primary" disabled={formBusy || signupBlocked}>

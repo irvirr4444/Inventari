@@ -202,6 +202,14 @@
   background: var(--mobile-sheet-selected-bg);
 }
 
+.mobile-sheet.mobile-sheet--chrome .date-picker-day.in-range:hover::before {
+  background: var(--mobile-sheet-selected-bg);
+}
+
+.mobile-sheet.mobile-sheet--chrome .date-picker-day.in-range:hover .date-picker-day-label {
+  background: transparent;
+}
+
 /* Time picker (inline in sheet body) */
 .mobile-sheet.mobile-sheet--chrome .time-picker-preview {
   background: var(--mobile-sheet-panel-bg);

@@ -1,4 +1,4 @@
-import type { SummaryByCountry, SummaryByLocation } from '@inventari/shared'
+import type { GroupedSummaryResult, SummaryByCountry, SummaryGroupBy } from '@inventari/shared'
 import type { Country } from './country'
 import { http, API_BASE } from './api/http'
 export { login, logout, signup, loginWithGoogle, fetchSession } from './api/auth'
@@ -202,6 +202,7 @@ export type ActionBatch = {
   ora?: string | null
   pershkrimi?: string | null
   totali: number
+  created_by_user_id?: string
   created_at: string
   item_count: number
   matched_items?: ActionBatchMatchedItem[]
@@ -230,6 +231,8 @@ export async function listActionBatches(params: {
   dateFrom?: string
   dateTo?: string
   shenim?: string
+  kodiProduktit?: string
+  createdByUserId?: string
 }): Promise<{ actions: ActionBatch[]; total: number }> {
   const qs = new URLSearchParams()
   if (params.page) qs.set('page', String(params.page))
@@ -239,7 +242,16 @@ export async function listActionBatches(params: {
   if (params.dateFrom) qs.set('dateFrom', params.dateFrom)
   if (params.dateTo) qs.set('dateTo', params.dateTo)
   if (params.shenim?.trim()) qs.set('shenim', params.shenim.trim())
-  return http<{ actions: ActionBatch[]; total: number }>(`/action-batches?${qs.toString()}`)
+  if (params.kodiProduktit?.trim()) qs.set('kodiProduktit', params.kodiProduktit.trim())
+  if (params.createdByUserId?.trim()) qs.set('createdByUserId', params.createdByUserId.trim())
+  return http<{ actions: ActionBatch[]; total: number; creator_user_ids?: string[] }>(
+    `/action-batches?${qs.toString()}`,
+  )
+}
+
+export async function listActionBatchCreatorUserIds(): Promise<string[]> {
+  const res = await http<{ creator_user_ids?: string[] }>(`/action-batches?page=1&limit=1`)
+  return res.creator_user_ids ?? []
 }
 
 export async function getActionBatch(id: string): Promise<ActionBatchDetail> {
@@ -323,13 +335,19 @@ export async function deleteActionBatch(id: string): Promise<void> {
 }
 
 export type { CountrySummary as CountrySummaryData, SummaryByCountry } from '@inventari/shared'
+export type {
+  GroupedSummaryResult,
+  GroupedSummaryRow,
+  SummaryGroupBy,
+} from '@inventari/shared'
 
 export async function analyticsSummary(opts: {
   from: string
   to: string
-}): Promise<SummaryByCountry | SummaryByLocation> {
+  groupBy?: SummaryGroupBy
+}): Promise<SummaryByCountry | GroupedSummaryResult> {
   const qs = new URLSearchParams(opts)
-  const res = await http<{ data: SummaryByCountry | SummaryByLocation }>(
+  const res = await http<{ data: SummaryByCountry | GroupedSummaryResult }>(
     `/analytics/summary?${qs.toString()}`,
   )
   return res.data
@@ -337,13 +355,20 @@ export async function analyticsSummary(opts: {
 
 export function exportUrl(
   format: 'csv' | 'xlsx',
-  opts: { shteti?: Country; from?: string; to?: string; lloji?: 'Hyrje' | 'Dalje' },
+  opts: {
+    shteti?: Country
+    from?: string
+    to?: string
+    lloji?: 'Hyrje' | 'Dalje'
+    groupBy?: SummaryGroupBy
+  },
 ) {
   const qs = new URLSearchParams()
   if (opts.shteti) qs.set('shteti', opts.shteti)
   if (opts.from) qs.set('from', opts.from)
   if (opts.to) qs.set('to', opts.to)
   if (opts.lloji) qs.set('lloji', opts.lloji)
+  if (opts.groupBy) qs.set('groupBy', opts.groupBy)
   return `${API_BASE}/exports/actions.${format}?${qs.toString()}`
 }
 

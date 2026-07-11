@@ -3,6 +3,8 @@ import { useTenantConfig } from '../../hooks/useTenantConfig'
 import { ActionReviewModal } from '../actions/ActionReviewModal'
 import { validateActionItems } from '../../hooks/useActionItems'
 import { productLabel } from '../../lib/format'
+import { useAuth } from '../../lib/auth/AuthProvider'
+import { canEditDeleteInLocation, isAdmin } from '../../lib/permissions'
 import type { useDynamicDashboardPage } from '../../pages/useDynamicDashboardPage'
 import { DynamicHistoryModal } from './DynamicHistoryModal'
 import { DynamicProductFormModal } from './DynamicProductFormModal'
@@ -17,8 +19,13 @@ export function DynamicDashboardModals(props: {
 }) {
   const d = props.d
   const { trackPrice } = useTenantConfig()
+  const { user } = useAuth()
   const showTransfer = props.showTransferModal ?? true
   const showHistory = props.showHistoryModal ?? true
+  const canEditProductDetails = isAdmin(user)
+  const editableProductLocationIds = d.sortedLocations
+    .filter((loc) => canEditDeleteInLocation(user, loc.id))
+    .map((loc) => loc.id)
 
   return (
     <>
@@ -97,6 +104,8 @@ export function DynamicDashboardModals(props: {
           mode="edit"
           product={d.editing}
           locations={d.sortedLocations}
+          canEditProductDetails={canEditProductDetails}
+          editableLocationIds={editableProductLocationIds}
           onClose={() => d.setEditing(null)}
           onSave={d.scheduleProductUpdateSuccess}
           saving={d.updateProductMut.isPending}

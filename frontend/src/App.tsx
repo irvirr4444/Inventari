@@ -8,7 +8,10 @@ import {
 } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AuthLoading } from './components/AuthLoading'
+import { UserMenu } from './components/UserMenu'
+import { SettingsModal, type SettingsTab } from './features/settings/SettingsModal'
 import { useAuth } from './lib/auth/AuthProvider'
+import { isAdmin } from './lib/permissions'
 import { useMobileClient } from './hooks/useMobileClient'
 import { isCapacitorNativeApp } from './lib/capacitorClient'
 import { shouldShowOnboarding, shouldShowTutorial } from './lib/auth/postAuthRedirect'
@@ -18,11 +21,6 @@ const LoginPage = React.lazy(() =>
 )
 const OnboardingWizard = React.lazy(() =>
   import('./features/onboarding/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard })),
-)
-const LocationsSettingsPage = React.lazy(() =>
-  import('./features/settings/LocationsSettingsPage').then((m) => ({
-    default: m.LocationsSettingsPage,
-  })),
 )
 const DashboardPage = React.lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -54,7 +52,11 @@ function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
 }
 
-function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }) {
+function LegacyDashboardShell(props: {
+  isMobile: boolean
+  onLogout: () => void
+  user: NonNullable<ReturnType<typeof useAuth>['user']>
+}) {
   if (props.isMobile) {
     return (
       <RouteSuspense>
@@ -69,9 +71,7 @@ function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }
     <RouteSuspense>
       <div className="desktop-shell">
         <div className="app-actions">
-          <button type="button" className="btn" onClick={props.onLogout}>
-            Dil
-          </button>
+          <UserMenu user={props.user} onOpenSettings={() => {}} onLogout={props.onLogout} />
         </div>
         <main className="container">
           <DashboardPage />
@@ -81,11 +81,32 @@ function LegacyDashboardShell(props: { isMobile: boolean; onLogout: () => void }
   )
 }
 
+type OpenSettingsState = { openSettings?: SettingsTab }
+
 function DynamicDashboardShell(props: {
   isMobile: boolean
   onLogout: () => void
   showTutorial?: boolean
+  user: NonNullable<ReturnType<typeof useAuth>['user']>
+  initialSettingsTab?: SettingsTab
 }) {
+  const admin = isAdmin(props.user)
+  const [settingsOpen, setSettingsOpen] = React.useState(Boolean(props.initialSettingsTab))
+  const [settingsTab, setSettingsTab] = React.useState<SettingsTab>(
+    props.initialSettingsTab ?? 'users',
+  )
+
+  const openSettings = React.useCallback((tab: SettingsTab) => {
+    setSettingsTab(tab)
+    setSettingsOpen(true)
+  }, [])
+
+  React.useEffect(() => {
+    const closeOverlays = () => setSettingsOpen(false)
+    window.addEventListener('inventari:close-overlays', closeOverlays)
+    return () => window.removeEventListener('inventari:close-overlays', closeOverlays)
+  }, [])
+
   if (props.isMobile) {
     return (
       <RouteSuspense>
@@ -98,13 +119,23 @@ function DynamicDashboardShell(props: {
     <RouteSuspense>
       <div className="desktop-shell">
         <div className="app-actions">
-          <button type="button" className="btn" onClick={props.onLogout}>
-            Dil
-          </button>
+          <UserMenu
+            user={props.user}
+            onOpenSettings={openSettings}
+            onLogout={props.onLogout}
+          />
         </div>
         <main className="container">
           <DynamicDashboardPage showTutorial={props.showTutorial} />
         </main>
+        {admin ? (
+          <SettingsModal
+            open={settingsOpen}
+            tab={settingsTab}
+            onTabChange={setSettingsTab}
+            onClose={() => setSettingsOpen(false)}
+          />
+        ) : null}
       </div>
     </RouteSuspense>
   )
@@ -112,7 +143,9 @@ function DynamicDashboardShell(props: {
 
 function ProtectedHome() {
   const isMobile = useMobileClient()
+  const location = useLocation()
   const { user, logout, loading } = useAuth()
+  const initialSettingsTab = (location.state as OpenSettingsState | null)?.openSettings
 
   if (loading && !user) {
     if (isCapacitorNativeApp() || isMobile) {
@@ -133,7 +166,9 @@ function ProtectedHome() {
   const showTutorial = shouldShowTutorial(user)
 
   if (user.uiLloji === 'legacy_fixed') {
-    return <LegacyDashboardShell isMobile={isMobile} onLogout={handleLogout} />
+    return (
+      <LegacyDashboardShell isMobile={isMobile} onLogout={handleLogout} user={user} />
+    )
   }
 
   return (
@@ -141,8 +176,14 @@ function ProtectedHome() {
       isMobile={isMobile}
       onLogout={handleLogout}
       showTutorial={showTutorial}
+      user={user}
+      initialSettingsTab={initialSettingsTab}
     />
   )
+}
+
+function OpenSettingsRedirect(props: { tab: SettingsTab }) {
+  return <Navigate to="/" replace state={{ openSettings: props.tab }} />
 }
 
 function PublicOnly(props: { children: React.ReactNode }) {
@@ -210,12 +251,18 @@ export default function App() {
         />
         <Route path="/onboarding/locations" element={<Navigate to="/onboarding" replace />} />
         <Route
+          path="/settings/users"
+          element={
+            <RequireAuth>
+              <OpenSettingsRedirect tab="users" />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/settings/locations"
           element={
             <RequireAuth>
-              <RouteSuspense>
-                <LocationsSettingsPage />
-              </RouteSuspense>
+              <OpenSettingsRedirect tab="locations" />
             </RequireAuth>
           }
         />

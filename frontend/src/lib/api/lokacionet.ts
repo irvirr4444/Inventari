@@ -32,3 +32,7 @@ export async function patchLokacioni(
     body: JSON.stringify(patch),
   })
 }
+
+export async function deleteLokacioni(id: string): Promise<void> {
+  await http<{ ok: true }>(`/lokacionet/${id}`, { method: 'DELETE' })
+}

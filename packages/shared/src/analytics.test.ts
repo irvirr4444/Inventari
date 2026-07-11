@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildSummaryByCountry, buildSummaryByLocation } from './analytics.js'
+import {
+  buildGroupedSummaryRows,
+  buildSummaryByCountry,
+  buildSummaryByLocation,
+  buildSummaryByProduct,
+  buildSummaryByUser,
+} from './analytics.js'
 import { productLabel } from './format.js'
 
 describe('productLabel', () => {
@@ -41,5 +47,76 @@ describe('buildSummaryByLocation', () => {
     )
     expect(summary[locA].in_qty).toBe(5)
     expect(summary[locB].out_qty).toBe(2)
+  })
+})
+
+describe('buildSummaryByProduct', () => {
+  it('groups by product code with labels', () => {
+    const rows = buildSummaryByProduct(
+      [
+        { lloji: 'Hyrje', kodi_produktit: 'A1', sasia: 4, totali: 40 },
+        { lloji: 'Dalje', kodi_produktit: 'A1', sasia: 1, totali: 10 },
+        { lloji: 'Hyrje', kodi_produktit: 'B2', sasia: 2, totali: 20 },
+      ],
+      [{ kodi: 'A1', emri: 'Alpha' }, { kodi: 'B2', emri: 'Beta' }],
+    )
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({
+      id: 'A1',
+      label: 'Alpha (A1)',
+      in_qty: 4,
+      out_qty: 1,
+    })
+    expect(rows[1]).toMatchObject({
+      id: 'B2',
+      label: 'Beta (B2)',
+      in_qty: 2,
+      out_qty: 0,
+    })
+  })
+})
+
+describe('buildSummaryByUser', () => {
+  it('groups by creator and prefers display name', () => {
+    const userA = '00000000-0000-4000-8000-000000000201'
+    const rows = buildSummaryByUser(
+      [
+        { lloji: 'Hyrje', created_by_user_id: userA, sasia: 3, totali: 30 },
+        { lloji: 'Dalje', created_by_user_id: userA, sasia: 1, totali: 10 },
+      ],
+      [{ id: userA, emri: 'Arben', email: 'arben@example.com' }],
+    )
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      id: userA,
+      label: 'Arben',
+      in_qty: 3,
+      out_qty: 1,
+    })
+  })
+})
+
+describe('buildGroupedSummaryRows', () => {
+  it('returns ordered location rows with zeros', () => {
+    const locA = '00000000-0000-4000-8000-000000000101'
+    const locB = '00000000-0000-4000-8000-000000000102'
+    const rows = buildGroupedSummaryRows('location', {
+      locationRows: [{ lloji: 'Hyrje', lokacioni_id: locA, sasia: 2, totali: 20 }],
+      productRows: [],
+      userRows: [],
+      locationIds: [locA, locB],
+      locations: [
+        { id: locA, emri: 'Kosova' },
+        { id: locB, emri: 'Shqiperi' },
+      ],
+      products: [],
+      users: [],
+    })
+
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ id: locA, label: 'Kosova', in_qty: 2 })
+    expect(rows[1]).toMatchObject({ id: locB, label: 'Shqiperi', in_qty: 0 })
   })
 })

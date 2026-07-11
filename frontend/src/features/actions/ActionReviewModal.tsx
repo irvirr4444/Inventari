@@ -141,7 +141,7 @@ export function ActionReviewModal(props: ActionReviewModalProps) {
               <tr>
                 <th>Produkti</th>
                 <th className="action-review-shenim-col">Shënim</th>
-                {showPrice ? <th>Cmimi/Njesi</th> : null}
+                {showPrice ? <th>Cmimi/Njësi</th> : null}
                 <th>Sasia</th>
                 {showPrice ? <th style={{ textAlign: 'right' }}>Totali</th> : null}
               </tr>

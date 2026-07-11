@@ -44,9 +44,10 @@
 
 .location-picker-menu-portal {
   position: fixed;
-  z-index: 100;
+  z-index: 1000;
   overflow-y: auto;
   overflow-x: hidden;
+  pointer-events: auto;
 }
 
 .location-picker-menu-item {
@@ -163,10 +164,7 @@
 }
 
 .location-emoji-picker {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
-  max-width: 180px;
+  display: inline-block;
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -175,7 +173,54 @@
 .location-emoji-picker-wide {
   width: 100%;
   max-width: none;
+}
+
+.location-emoji-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--card-soft);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.location-emoji-trigger:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: rgba(47, 125, 246, 0.1);
+}
+
+.location-emoji-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-emoji-menu {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  width: 180px;
+  padding: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+}
+
+.location-emoji-menu-portal {
+  position: fixed;
+  z-index: 1000;
+}
+
+.location-emoji-picker-wide .location-emoji-menu {
   grid-template-columns: repeat(10, minmax(0, 1fr));
+  width: min(420px, calc(100vw - 32px));
   gap: 6px;
 }
 
@@ -259,6 +304,16 @@
   gap: 8px;
 }
 
+.location-draft-cancel-btn {
+  background: #eef1f4;
+  color: var(--text-muted);
+}
+
+.location-draft-cancel-btn:hover {
+  background: #e1e5ea;
+  color: var(--text);
+}
+
 .locations-inactive-list {
   list-style: none;
   padding: 0;
@@ -289,6 +344,25 @@
   padding-right: 0;
 }
 
+.location-add-inline-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 12px;
+}
+
+.location-add-inline-fields .form-group {
+  margin-bottom: 0;
+}
+
+.location-add-emoji-field .location-emoji-picker-wide {
+  width: auto;
+}
+
+.location-add-name-field .input {
+  width: 100%;
+}
+
 @media (max-width: 640px) {
   .location-card-row {
     flex-direction: column;
@@ -301,5 +375,9 @@
 
   .location-emoji-picker {
     max-width: none;
+  }
+
+  .location-emoji-menu {
+    width: min(280px, calc(100vw - 32px));
   }
 }

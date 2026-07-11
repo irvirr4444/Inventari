@@ -69,7 +69,7 @@ function ProductPickerForm(props: {
       return
     }
     if (showPrice && Number(price) < 0) {
-      setError('Cmimi/Njesi duhet te jete >= 0.')
+      setError('Cmimi/Njësi duhet te jete >= 0.')
       return
     }
     props.onSave({
@@ -142,7 +142,7 @@ function ProductPickerForm(props: {
         <div className={`mobile-field-row${showPrice ? '' : ' mobile-field-row-single'}`}>
           {showPrice ? (
             <div>
-              <label className="mobile-label">Cmimi/Njesi</label>
+              <label className="mobile-label">Cmimi/Njësi</label>
               <NumericInput
                 className="mobile-input"
                 step="0.01"

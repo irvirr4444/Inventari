@@ -21,6 +21,10 @@ import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
 import { resolveLokacioniIdForCountry } from './legacyDtoService.js'
 import { lokacioniToCountry } from '../domain/lokacioni.js'
 import { getTrackPriceForTenant } from './tenantConfigService.js'
+import {
+  requireLocationAccess,
+  tenantIdFor,
+} from './accessControlService.js'
 
 export function validateTransfer(body: NormalizedActionBody) {
   if (body.lloji !== 'Transfer') return
@@ -243,7 +247,7 @@ export async function createAction(
     : normalizeActionBody(parsedBody as Parameters<typeof normalizeActionBody>[0])
 
   if (opts?.dynamic) {
-    const trackPrice = await getTrackPriceForTenant(supabase, user.id)
+    const trackPrice = await getTrackPriceForTenant(supabase, tenantIdFor(user))
     if (!trackPrice) {
       for (const item of body.items) {
         item.cmimi_njesi = 0
@@ -253,14 +257,21 @@ export async function createAction(
 
   validateTransfer(body)
 
+  if (body.lokacioni_id) {
+    requireLocationAccess(user, body.lokacioni_id, 'add')
+    if (body.lloji === 'Transfer' && body.destination_lokacioni_id) {
+      requireLocationAccess(user, body.destination_lokacioni_id, 'add')
+    }
+  }
+
   if (body.lloji === 'Dalje' || body.lloji === 'Transfer') {
-    await validateStock(supabase, user.id, body.items, {
+    await validateStock(supabase, tenantIdFor(user), body.items, {
       shteti: body.shteti,
       lokacioni_id: body.lokacioni_id,
     })
   }
 
-  const lokacionet = await listLokacionetByOwner(supabase, user.id)
+  const lokacionet = await listLokacionetByOwner(supabase, tenantIdFor(user))
   const { rows, mirrorRows } = buildVeprimRows(body, {
     mirrorToAlbania: user.isLegacy,
     lokacionet,
@@ -285,7 +296,7 @@ export async function createAction(
 
   let batchId: string | null = null
   try {
-    batchId = await insertVeprimBatch(supabase, user.id, {
+    batchId = await insertVeprimBatch(supabase, tenantIdFor(user), {
       lloji: body.lloji,
       data: body.data,
       shteti: batchShteti,
@@ -294,6 +305,7 @@ export async function createAction(
       destination_lokacioni_id: destLoc,
       ora: body.ora ?? null,
       pershkrimi: body.pershkrimi ?? null,
+      created_by_user_id: user.id,
     })
   } catch (batchErr) {
     throw new AppError(
@@ -307,7 +319,7 @@ export async function createAction(
     batch_id: batchId,
   }))
 
-  const data = await insertVeprimet(supabase, user.id, insertRows)
+  const data = await insertVeprimet(supabase, tenantIdFor(user), insertRows)
 
   return {
     data,
@@ -336,7 +348,7 @@ export async function listActions(
   },
 ) {
   const { listVeprimet } = await import('../repositories/veprimiRepository.js')
-  return listVeprimet(supabase, user.id, query)
+  return listVeprimet(supabase, tenantIdFor(user), query)
 }
 
 export type { NormalizedActionBody, BatchLloji }
@@ -351,6 +363,7 @@ export async function createActionBatchRecord(
     destination_shteti?: Country
     ora?: string
     pershkrimi?: string
+    created_by_user_id?: string
   },
 ) {
   const lokacionet = await listLokacionetByOwner(supabase, tenantId)
@@ -369,5 +382,6 @@ export async function createActionBatchRecord(
     destination_lokacioni_id: destLoc,
     ora: input.ora ?? null,
     pershkrimi: input.pershkrimi ?? null,
+    created_by_user_id: input.created_by_user_id ?? tenantId,
   })
 }

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Country } from '../lib/country'
+import type { HistoryServerFilters } from '../lib/historyClientFilters'
 import {
   deleteActionBatch,
   listActionBatches,
@@ -10,13 +10,10 @@ import { queryKeys } from '../lib/queryKeys'
 import { useAuth } from '../lib/auth/AuthProvider'
 import { historyListRefreshState } from './useHistoryBatchListQuery'
 
-export type HistoryFilterState = {
-  lloji?: 'Hyrje' | 'Dalje' | 'Transfer'
-  shteti?: Country
-  dateFrom?: string
-  dateTo?: string
-  shenim?: string
-}
+export type HistoryFilterState = Pick<
+  HistoryServerFilters,
+  'lloji' | 'shteti' | 'dateFrom' | 'dateTo' | 'shenim' | 'kodiProduktit' | 'createdByUserId'
+>
 
 export const HISTORY_PAGE_SIZE = 8
 
@@ -56,6 +53,8 @@ export function useHistoryBatches(options?: {
         dateFrom: filters.dateFrom,
         dateTo: filters.dateTo,
         shenim: filters.shenim,
+        kodiProduktit: filters.kodiProduktit,
+        createdByUserId: filters.createdByUserId,
       }),
     placeholderData: keepPreviousData,
   })

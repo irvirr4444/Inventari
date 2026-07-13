@@ -1,5 +1,8 @@
 import * as React from 'react'
-import type { ActionBatch } from '../../../../lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { showPerdoruesiControls } from '@inventari/shared'
+import { listActionBatchCreatorUserIds, type ActionBatch } from '../../../../lib/api'
+import { listUsers, type ManagedUser } from '../../../../lib/api/users'
 import { DaljeIcon, HyrjeIcon, LlojiTransferIcon } from '../../../../components/icons'
 import { MobileHistoriActionCard } from '../../../../mobile/components/MobileHistoriActionCard'
 import {
@@ -16,6 +19,8 @@ import { HISTORY_PAGE_SIZE, useHistoryBatches } from '../../../../hooks/useHisto
 import { useDynamicProductsQuery } from '../../../../hooks/useDynamicProductsQuery'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
+import { queryKeys } from '../../../../lib/queryKeys'
+import { useAuth } from '../../../../lib/auth/AuthProvider'
 import {
   fmtEuro,
   formatDisplayDate,
@@ -26,7 +31,10 @@ import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { FilterChips } from '../../../../mobile/components/FilterChips'
 import { ALL_VEPRIMET_LABEL } from '../../../../mobile/constants/historiFilters'
-import { HistoriAdvancedFiltersPanel } from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
+import {
+  HistoriAdvancedFiltersPanel,
+  type MobileHistoryUserFilterOption,
+} from '../../../../mobile/components/HistoriAdvancedFiltersPanel'
 import { HistoryExportActions } from '../../../history/HistoryExportActions'
 import { MobileHistoriListPending } from '../../../../mobile/components/MobileHistoriListPending'
 import { MobilePagination } from '../../../../mobile/components/MobilePagination'
@@ -47,15 +55,32 @@ const LLOJI_FILTER_OPTIONS = [
   { id: 'Transfer' as const, label: 'Transfer', icon: LlojiTransferIcon, tone: 'transfer' },
 ]
 
+function managedUserLabel(user: ManagedUser): string {
+  return user.emri?.trim() || user.email?.trim() || 'Përdorues pa emër'
+}
+
 export function DynamicHistoriTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
   isActive: boolean
   onHeaderChange: (header: MobileHeaderState) => void
   onNavigateToHistori?: () => void
 }) {
+  const { user } = useAuth()
   const productsQuery = useDynamicProductsQuery()
   const { trackPrice } = useTenantConfig()
   const history = useHistoryBatches({ onNotify: props.notify })
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users(user?.id),
+    queryFn: () => listUsers(),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  })
+  const creatorUserIdsQuery = useQuery({
+    queryKey: queryKeys.actionBatchCreatorUserIds(user?.id),
+    queryFn: () => listActionBatchCreatorUserIds(),
+    enabled: user?.role === 'admin',
+    staleTime: 60_000,
+  })
   const { activeLokacionet } = useLokacioni()
   const [screen, setScreen] = React.useState<{ mode: 'list' | 'detail'; batchId?: string }>({
     mode: 'list',
@@ -74,6 +99,8 @@ export function DynamicHistoriTab(props: {
   const [draftDateFrom, setDraftDateFrom] = React.useState('')
   const [draftDateTo, setDraftDateTo] = React.useState('')
   const [draftShenim, setDraftShenim] = React.useState('')
+  const [draftKodiProduktit, setDraftKodiProduktit] = React.useState('')
+  const [draftCreatedByUserId, setDraftCreatedByUserId] = React.useState('')
   const [draftLlojet, setDraftLlojet] = React.useState<HistoriLloji[]>([])
   const [rangeIssues, setRangeIssues] = React.useState<HistoryFilterRangeIssue[]>([])
 
@@ -84,6 +111,31 @@ export function DynamicHistoriTab(props: {
   }, [appliedClientFilters.llojet, history.filters.lloji])
 
   const products = productsQuery.data ?? []
+  const managedUsers = React.useMemo(() => usersQuery.data ?? [], [usersQuery.data])
+  const creatorUserIds = React.useMemo(
+    () => new Set(creatorUserIdsQuery.data ?? []),
+    [creatorUserIdsQuery.data],
+  )
+  const shouldShowPerdoruesiControls =
+    user?.role === 'admin' &&
+    showPerdoruesiControls(
+      managedUsers.map((managedUser) => ({
+        id: managedUser.id,
+        role: managedUser.role,
+        aktiv: managedUser.aktiv,
+      })),
+      creatorUserIds,
+    )
+  const userFilterOptions = React.useMemo<MobileHistoryUserFilterOption[]>(
+    () =>
+      managedUsers
+        .filter((managedUser) => managedUser.aktiv || creatorUserIds.has(managedUser.id))
+        .map((managedUser) => ({
+          id: managedUser.id,
+          label: managedUserLabel(managedUser),
+        })),
+    [creatorUserIds, managedUsers],
+  )
 
   const filteredActions = React.useMemo(
     () => applyHistoryClientFilters(history.actions, appliedClientFilters, { trackPrice }),
@@ -118,9 +170,18 @@ export function DynamicHistoriTab(props: {
     setDraftDateFrom(history.filters.dateFrom ?? '')
     setDraftDateTo(history.filters.dateTo ?? '')
     setDraftShenim(history.filters.shenim ?? '')
+    setDraftKodiProduktit(history.filters.kodiProduktit ?? '')
+    setDraftCreatedByUserId(history.filters.createdByUserId ?? '')
     setRangeIssues([])
     setAdvancedFiltersOpen(true)
-  }, [appliedClientFilters, history.filters.dateFrom, history.filters.dateTo, history.filters.shenim])
+  }, [
+    appliedClientFilters,
+    history.filters.createdByUserId,
+    history.filters.dateFrom,
+    history.filters.dateTo,
+    history.filters.kodiProduktit,
+    history.filters.shenim,
+  ])
 
   const closeAdvancedFilters = React.useCallback(() => {
     setAdvancedFiltersOpen(false)
@@ -153,6 +214,8 @@ export function DynamicHistoriTab(props: {
       dateFrom: draftDateFrom || undefined,
       dateTo: draftDateTo || undefined,
       shenim: draftShenim || undefined,
+      kodiProduktit: draftKodiProduktit || undefined,
+      createdByUserId: shouldShowPerdoruesiControls ? draftCreatedByUserId || undefined : undefined,
     }
     const issues = getHistoryFilterRangeIssues(server, draftClientFilters, { trackPrice })
     if (issues.length > 0) {
@@ -168,7 +231,20 @@ export function DynamicHistoriTab(props: {
       llojet: appliedClientFilters.llojet,
     })
     setAdvancedFiltersOpen(false)
-  }, [draftClientFilters, draftDateFrom, draftDateTo, draftShenim, history, props, trackPrice])
+  }, [
+    draftClientFilters,
+    draftCreatedByUserId,
+    draftDateFrom,
+    draftDateTo,
+    draftKodiProduktit,
+    draftShenim,
+    history,
+    props,
+    appliedClientFilters.locationIds,
+    appliedClientFilters.llojet,
+    shouldShowPerdoruesiControls,
+    trackPrice,
+  ])
 
   const clearAdvancedFilters = React.useCallback(() => {
     const preserved = {
@@ -180,10 +256,18 @@ export function DynamicHistoriTab(props: {
     setDraftDateFrom('')
     setDraftDateTo('')
     setDraftShenim('')
+    setDraftKodiProduktit('')
+    setDraftCreatedByUserId('')
     setRangeIssues([])
-    history.updateFilters({ shenim: undefined, dateFrom: undefined, dateTo: undefined })
+    history.updateFilters({
+      shenim: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+      kodiProduktit: undefined,
+      createdByUserId: undefined,
+    })
     setAdvancedFiltersOpen(false)
-  }, [appliedClientFilters, history])
+  }, [appliedClientFilters.locationIds, appliedClientFilters.llojet, history])
 
   const applyLocationFilter = React.useCallback((ids: string[]) => {
     setAppliedClientFilters((prev) => ({ ...prev, locationIds: ids }))
@@ -208,11 +292,11 @@ export function DynamicHistoriTab(props: {
   }, [])
 
   const goToList = React.useCallback(() => setScreen({ mode: 'list' }), [])
+  const { onHeaderChange, onNavigateToHistori } = props
   const handleSaveSuccess = React.useCallback(() => {
-    props.onNavigateToHistori?.()
+    onNavigateToHistori?.()
     goToList()
-  }, [goToList, props.onNavigateToHistori])
-  const { onHeaderChange } = props
+  }, [goToList, onNavigateToHistori])
 
   React.useEffect(() => {
     if (!props.isActive) return
@@ -440,7 +524,12 @@ export function DynamicHistoriTab(props: {
         dateFrom={draftDateFrom}
         dateTo={draftDateTo}
         shenim={draftShenim}
+        kodiProduktit={draftKodiProduktit}
+        createdByUserId={draftCreatedByUserId}
+        products={products}
+        users={userFilterOptions}
         rangeIssues={rangeIssues}
+        showUserFilter={shouldShowPerdoruesiControls}
         showTotali={trackPrice}
         onDraftChange={(patch) => setDraftClientFilters((prev) => ({ ...prev, ...patch }))}
         onOraFromChange={(value) => tryDraftOraChange({ oraFrom: value })}
@@ -450,6 +539,8 @@ export function DynamicHistoriTab(props: {
           setDraftDateTo(to)
         }}
         onShenimChange={setDraftShenim}
+        onKodiProduktitChange={setDraftKodiProduktit}
+        onCreatedByUserIdChange={setDraftCreatedByUserId}
         onApply={applyAdvancedFilters}
         onClear={clearAdvancedFilters}
       />

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isAppError, parseOrThrow } from '../errors.js'
+import { parseOrThrow } from '../errors.js'
 import {
   ActionsExportQuerySchema,
   exportActionsCsv,
@@ -12,7 +12,8 @@ import {
   HistoryExportQuerySchema,
   HistoryExportBodySchema,
   ProductsExportQuerySchema,
-} from '../services/exportsService.js'
+} from '../services/exports/index.js'
+import { handleRouteError } from './routeError.js'
 
 export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/exports/actions.csv', async (req, reply) => {
@@ -26,11 +27,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', 'attachment; filename="veprime.csv"')
       return csv
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -48,11 +45,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -70,11 +63,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -92,11 +81,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -111,11 +96,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -127,11 +108,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -146,11 +123,7 @@ export function registerExportRoutes(app: FastifyInstance, supabase: SupabaseCli
       reply.header('Content-Disposition', `attachment; filename="${filename}"`)
       return buffer
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 }

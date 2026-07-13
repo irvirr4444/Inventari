@@ -7,7 +7,7 @@ import {
   getDynamicGroupedSummary,
   getLegacySummary,
   requireSummaryAccess,
-} from '../services/summaryService.js'
+} from '../services/summary/index.js'
 
 export function registerAnalyticsRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/analytics/stock', async (req) => {
@@ -19,7 +19,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance, supabase: Supabase
     )
 
     const { listProduktet } = await import('../repositories/produktiRepository.js')
-    const { tenantIdFor } = await import('../services/accessControlService.js')
+    const { tenantIdFor } = await import('../services/access/index.js')
     const rows = await listProduktet(supabase, tenantIdFor(req.user), {})
     const mapped = rows.map((p) => ({
       id: p.id,

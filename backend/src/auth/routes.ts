@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { parseOrThrow } from '../errors.js'
-import { isAppError } from '../errors.js'
 import {
   clearSessionCookie,
   decodeSessionToken,
@@ -15,7 +14,8 @@ import {
   loginWithPassword,
   resolveSessionUser,
   signupWithPassword,
-} from '../services/authService.js'
+} from '../services/auth/index.js'
+import { handleRouteError } from '../routes/routeError.js'
 
 export type AuthRoutesDeps = {
   sessionSecret: string
@@ -45,11 +45,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
       setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
       return { ok: true }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -63,11 +59,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
         setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
         return { ok: true }
       } catch (err) {
-        if (isAppError(err)) {
-          reply.code(err.statusCode)
-          return { error: err.message }
-        }
-        throw err
+        return handleRouteError(err, reply)
       }
     },
   )
@@ -86,11 +78,7 @@ export function registerAuthRoutes(app: FastifyInstance, deps: AuthRoutesDeps) {
         setSessionCookie(reply, deps.sessionSecret, { id: user.id, email: user.email })
         return { ok: true }
       } catch (err) {
-        if (isAppError(err)) {
-          reply.code(err.statusCode)
-          return { error: err.message }
-        }
-        throw err
+        return handleRouteError(err, reply)
       }
     },
   )

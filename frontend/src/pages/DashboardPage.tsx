@@ -10,7 +10,7 @@ import { ProductsPanel } from '../features/products/ProductsPanel'
 import { SummaryPanel } from '../features/summary/SummaryPanel'
 import { validateActionItems } from '../hooks/useActionItems'
 import { productLabel } from '../lib/format'
-import { useDashboardPage } from './useDashboardPage'
+import { useDashboardPage } from '../features/dashboard/legacy/useDashboardPage'
 
 export function DashboardPage() {
   const d = useDashboardPage()

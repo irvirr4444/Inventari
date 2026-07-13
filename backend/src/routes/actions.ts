@@ -5,8 +5,9 @@ import {
   ActionCreateDynamicBodySchema,
   ActionsListQuerySchema,
 } from '@inventari/shared'
-import { isAppError, parseOrThrow } from '../errors.js'
-import { createAction, listActions } from '../services/actionsService.js'
+import { parseOrThrow } from '../errors.js'
+import { createAction, listActions } from '../services/actions/index.js'
+import { handleRouteError } from './routeError.js'
 
 export function registerActionRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.post('/api/actions', async (req, reply) => {
@@ -18,11 +19,7 @@ export function registerActionRoutes(app: FastifyInstance, supabase: SupabaseCli
       const parsed = parseOrThrow(ActionCreateDynamicBodySchema, req.body)
       return await createAction(supabase, req.user, parsed, { dynamic: true })
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 

@@ -1,21 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isAppError } from '../errors.js'
 import {
   completeOnboardingForUser,
   getTenantConfigForUser,
   markTutorialSeenForUser,
   patchTenantConfigForUser,
   postTenantConfigForUser,
-} from '../services/tenantConfigService.js'
-
-function handleError(err: unknown, reply: { code: (n: number) => void }) {
-  if (isAppError(err)) {
-    reply.code(err.statusCode)
-    return { error: err.message }
-  }
-  throw err
-}
+} from '../services/tenant/index.js'
+import { handleRouteError } from './routeError.js'
 
 export function registerTenantConfigRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/tenant-config', async (req) => {
@@ -28,7 +20,7 @@ export function registerTenantConfigRoutes(app: FastifyInstance, supabase: Supab
       const data = await postTenantConfigForUser(supabase, req.user, req.body)
       return { data }
     } catch (err) {
-      return handleError(err, reply)
+      return handleRouteError(err, reply)
     }
   })
 
@@ -37,7 +29,7 @@ export function registerTenantConfigRoutes(app: FastifyInstance, supabase: Supab
       const data = await patchTenantConfigForUser(supabase, req.user, req.body)
       return { data }
     } catch (err) {
-      return handleError(err, reply)
+      return handleRouteError(err, reply)
     }
   })
 
@@ -46,7 +38,7 @@ export function registerTenantConfigRoutes(app: FastifyInstance, supabase: Supab
       const data = await completeOnboardingForUser(supabase, req.user)
       return { data }
     } catch (err) {
-      return handleError(err, reply)
+      return handleRouteError(err, reply)
     }
   })
 
@@ -55,7 +47,7 @@ export function registerTenantConfigRoutes(app: FastifyInstance, supabase: Supab
       const data = await completeOnboardingForUser(supabase, req.user)
       return { data }
     } catch (err) {
-      return handleError(err, reply)
+      return handleRouteError(err, reply)
     }
   })
 
@@ -64,7 +56,7 @@ export function registerTenantConfigRoutes(app: FastifyInstance, supabase: Supab
       const data = await markTutorialSeenForUser(supabase, req.user)
       return { data }
     } catch (err) {
-      return handleError(err, reply)
+      return handleRouteError(err, reply)
     }
   })
 }

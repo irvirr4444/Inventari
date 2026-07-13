@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { isAppError } from '../errors.js'
 import {
   createManagedUser,
   deleteManagedUser,
@@ -9,7 +8,8 @@ import {
   listManagedUsers,
   replaceManagedUserAccess,
   updateManagedUser,
-} from '../services/userManagementService.js'
+} from '../services/users/index.js'
+import { handleRouteError } from './routeError.js'
 
 const UserIdParamsSchema = z.object({ id: z.string().uuid() })
 
@@ -20,11 +20,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const data = await listManagedUsers(supabase, req.user, { search })
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -33,11 +29,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const data = await createManagedUser(supabase, req.user, req.body)
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -47,11 +39,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const data = await updateManagedUser(supabase, req.user, params.id, req.body)
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -60,11 +48,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const params = UserIdParamsSchema.parse(req.params)
       return await deleteManagedUser(supabase, req.user, params.id)
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -73,11 +57,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const params = UserIdParamsSchema.parse(req.params)
       return await getManagedUserAccess(supabase, req.user, params.id)
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -86,11 +66,7 @@ export function registerUserRoutes(app: FastifyInstance, supabase: SupabaseClien
       const params = UserIdParamsSchema.parse(req.params)
       return await replaceManagedUserAccess(supabase, req.user, params.id, req.body)
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 }

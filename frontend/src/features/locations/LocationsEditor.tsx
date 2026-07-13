@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { ConfirmModal } from '../../components/ConfirmModal'
 import { createLokacioni, deleteLokacioni, patchLokacioni } from '../../lib/api/lokacionet'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'

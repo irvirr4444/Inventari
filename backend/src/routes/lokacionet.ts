@@ -2,13 +2,14 @@ import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { CreateLokacioniSchema, PatchLokacioniSchema } from '@inventari/shared'
 import { z } from 'zod'
-import { parseOrThrow, isAppError } from '../errors.js'
+import { parseOrThrow } from '../errors.js'
 import {
   createUserLokacioni,
   deleteUserLokacioni,
   listUserLokacionet,
   patchUserLokacioni,
-} from '../services/lokacioniService.js'
+} from '../services/locations/index.js'
+import { handleRouteError } from './routeError.js'
 
 const LokacioniIdParamsSchema = z.object({ id: z.string().uuid() })
 
@@ -25,11 +26,7 @@ export function registerLokacionetRoutes(app: FastifyInstance, supabase: Supabas
       const data = await createUserLokacioni(supabase, req.user, body)
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -40,11 +37,7 @@ export function registerLokacionetRoutes(app: FastifyInstance, supabase: Supabas
       const result = await patchUserLokacioni(supabase, req.user, params.id, body)
       return result
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -53,11 +46,7 @@ export function registerLokacionetRoutes(app: FastifyInstance, supabase: Supabas
       const params = parseOrThrow(LokacioniIdParamsSchema, req.params)
       return await deleteUserLokacioni(supabase, req.user, params.id)
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 }

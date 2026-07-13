@@ -1,13 +1,14 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ProductSearchQuerySchema, ProductIdParamsSchema } from '@inventari/shared'
-import { isAppError, parseOrThrow } from '../errors.js'
+import { parseOrThrow } from '../errors.js'
 import {
   createProduct,
   deleteProduct,
   listProducts,
   updateProduct,
-} from '../services/productsService.js'
+} from '../services/products/index.js'
+import { handleRouteError } from './routeError.js'
 
 export function registerProductRoutes(app: FastifyInstance, supabase: SupabaseClient) {
   app.get('/api/products', async (req) => {
@@ -21,11 +22,7 @@ export function registerProductRoutes(app: FastifyInstance, supabase: SupabaseCl
       const data = await createProduct(supabase, req.user, req.body)
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -35,11 +32,7 @@ export function registerProductRoutes(app: FastifyInstance, supabase: SupabaseCl
       const data = await updateProduct(supabase, req.user, params.id, req.body)
       return { data }
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 
@@ -48,11 +41,7 @@ export function registerProductRoutes(app: FastifyInstance, supabase: SupabaseCl
       const params = parseOrThrow(ProductIdParamsSchema, req.params)
       return await deleteProduct(supabase, req.user, params.id)
     } catch (err) {
-      if (isAppError(err)) {
-        reply.code(err.statusCode)
-        return { error: err.message }
-      }
-      throw err
+      return handleRouteError(err, reply)
     }
   })
 }

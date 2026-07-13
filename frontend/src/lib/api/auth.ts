@@ -46,3 +46,8 @@ export async function logout(): Promise<void> {
 export async function fetchSession(init?: RequestInit): Promise<SessionResponse> {
   return http<SessionResponse>(`/session`, init)
 }
+
+export async function currentSession(): Promise<boolean> {
+  const res = await http<{ ok: boolean }>(`/session`)
+  return res.ok
+}

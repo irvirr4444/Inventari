@@ -1,14 +1,22 @@
+import * as React from 'react'
 import type { HistoryClientFilters, HistoryFilterRangeIssue } from '../../lib/historyClientFilters'
 import { getHistoryFilterRangeIssueMessage } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { InputClearButton } from '../../components/InputClearButton'
 import { NumericInput } from '../../components/NumericInput'
 import { OraRangeInput, type OraRangeChangeHandler } from '../../components/OraRangeInput'
+import { ProductSearchSelect } from '../../components/ProductSearchSelect'
+import type { ProductListItem } from '../../lib/api'
 import { parseNumericFilterValue } from '../../lib/numericInput'
 import { HistoryFilterRangeError } from '../../features/history/HistoryFilterRangeError'
 import { BottomSheet } from './BottomSheet'
 import { SheetFooterRow } from './SheetActions'
 import { MobileDateRangeInput } from './MobileDateRangeInput'
+
+export type MobileHistoryUserFilterOption = {
+  id: string
+  label: string
+}
 
 type HistoriAdvancedFiltersPanelProps = {
   open: boolean
@@ -17,15 +25,93 @@ type HistoriAdvancedFiltersPanelProps = {
   dateFrom: string
   dateTo: string
   shenim: string
+  kodiProduktit: string
+  createdByUserId: string
+  products: ProductListItem[]
+  users?: MobileHistoryUserFilterOption[]
   rangeIssues?: HistoryFilterRangeIssue[]
+  showUserFilter?: boolean
   showTotali?: boolean
   onDraftChange: (patch: Partial<HistoryClientFilters>) => void
   onOraFromChange: OraRangeChangeHandler
   onOraToChange: OraRangeChangeHandler
   onDateRangeChange: (from: string, to: string) => void
   onShenimChange: (value: string) => void
+  onKodiProduktitChange: (value: string) => void
+  onCreatedByUserIdChange: (value: string) => void
   onApply: () => void
   onClear: () => void
+}
+
+function MobileHistoryUserSearch(props: {
+  users: MobileHistoryUserFilterOption[]
+  value: string
+  onChange: (id: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState('')
+  const selected = props.users.find((user) => user.id === props.value) ?? null
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredUsers = normalizedQuery
+    ? props.users.filter((user) => user.label.toLowerCase().includes(normalizedQuery))
+    : props.users
+  const inputValue = open ? query : selected?.label ?? ''
+
+  const selectUser = (id: string) => {
+    props.onChange(id)
+    setQuery('')
+    setOpen(false)
+  }
+
+  return (
+    <div className="mobile-list-stack">
+      <span className={`clearable-field${props.value ? ' clearable-field--has-value' : ''}`}>
+        <input
+          type="text"
+          className="mobile-input clearable-field__control"
+          value={inputValue}
+          placeholder="Kërko person…"
+          onFocus={() => {
+            setQuery('')
+            setOpen(true)
+          }}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+        />
+        <InputClearButton
+          className="clearable-field__clear"
+          onClick={() => selectUser('')}
+        />
+      </span>
+      {open ? (
+        <>
+          <button
+            type="button"
+            className={`mobile-tap-field${!props.value ? ' selected' : ''}`}
+            onClick={() => selectUser('')}
+          >
+            Të gjithë personat
+          </button>
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <button
+                key={user.id}
+                type="button"
+                className={`mobile-tap-field${props.value === user.id ? ' selected' : ''}`}
+                onClick={() => selectUser(user.id)}
+              >
+                {user.label}
+              </button>
+            ))
+          ) : (
+            <div className="mobile-picker-empty">Nuk u gjet person.</div>
+          )}
+        </>
+      ) : null}
+    </div>
+  )
 }
 
 export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelProps) {
@@ -36,12 +122,16 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
     dateFrom,
     dateTo,
     shenim,
+    kodiProduktit,
+    createdByUserId,
     rangeIssues = [],
     onDraftChange,
     onOraFromChange,
     onOraToChange,
     onDateRangeChange,
     onShenimChange,
+    onKodiProduktitChange,
+    onCreatedByUserIdChange,
     onApply,
     onClear,
   } = props
@@ -96,7 +186,7 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
         </div>
 
         <div className="mobile-advanced-filters-section">
-          <div className="mobile-section-label">Përshkrimi</div>
+          <div className="mobile-section-label">Përshkrimi (veprimi)</div>
           <span
             className={`clearable-field${draft.pershkriminQuery.trim() ? ' clearable-field--has-value' : ''}`}
           >
@@ -113,6 +203,30 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
             />
           </span>
         </div>
+
+        <div className="mobile-advanced-filters-section">
+          <div className="mobile-section-label">Produkti</div>
+          <ProductSearchSelect
+            products={props.products}
+            value={kodiProduktit}
+            clearable
+            clearLabel="Të gjitha produktet"
+            placeholder="Kërko produkt…"
+            aria-label="Filtro sipas produktit"
+            onChange={onKodiProduktitChange}
+          />
+        </div>
+
+        {props.showUserFilter ? (
+          <div className="mobile-advanced-filters-section">
+            <div className="mobile-section-label">Personi</div>
+            <MobileHistoryUserSearch
+              users={props.users ?? []}
+              value={createdByUserId}
+              onChange={onCreatedByUserIdChange}
+            />
+          </div>
+        ) : null}
 
         <div className="mobile-advanced-filters-section">
           <div className="mobile-section-label">Shenim (produkt)</div>

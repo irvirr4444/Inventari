@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decodeSessionToken, SESSION_COOKIE } from '../auth/session.js'
-import { resolveSessionUser } from '../services/authService.js'
+import { resolveSessionUser } from '../services/auth/index.js'
 
 export type AuthPluginDeps = {
   sessionSecret: string

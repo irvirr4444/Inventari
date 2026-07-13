@@ -1,7 +1,7 @@
 import * as React from 'react'
 import type { GroupedSummaryResult } from '@inventari/shared'
 import { Snackbar } from '../../components/Snackbar'
-import { useDynamicDashboardPage } from '../../pages/useDynamicDashboardPage'
+import { useDynamicDashboardPage } from '../dashboard/dynamic/useDynamicDashboardPage'
 import { DynamicActionEntryPanel } from './DynamicActionEntryPanel'
 import { DynamicDashboardModals } from './DynamicDashboardModals'
 import { DynamicProductsPanel } from './DynamicProductsPanel'

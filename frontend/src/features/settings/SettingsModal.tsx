@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { useEscapeToClose } from '../../hooks/useEscapeToClose'
 import { useFocusModalOnOpen } from '../../hooks/useFocusModalOnOpen'
 import { handleOverlayDismiss } from '../../lib/pointerDismissGuard'
-import { UsersSettingsPanel } from './UsersSettingsPanel'
-import { LocationsSettingsPanel } from './LocationsSettingsPanel'
+import { UsersSettingsPanel } from './users/UsersSettingsPanel'
+import { LocationsSettingsPanel } from './locations/LocationsSettingsPanel'
 
 export type SettingsTab = 'users' | 'locations'
 

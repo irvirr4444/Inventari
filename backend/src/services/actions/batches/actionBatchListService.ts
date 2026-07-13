@@ -8,7 +8,7 @@ import {
   fetchVeprimBatchesFiltered,
   fetchVeprimetByBatchIds,
 } from '../../../repositories/batchRepository.js'
-import { listLokacionetByOwner } from '../../../repositories/lokacioniRepository.js'
+import { lokacionetByIdForHistory } from '../../../repositories/lokacioniRepository.js'
 import type { LokacioniRow } from '../../../domain/lokacioni.js'
 import { fetchLegacyActionBatches, mergeAndPaginateActions } from './legacyBatches.js'
 import type { HistoryExportBatch } from '../../exports/index.js'
@@ -82,8 +82,7 @@ export async function fetchAllActionBatchesForExport(
 
   let lokacioniById: Map<string, LokacioniRow> | undefined
   if (!isLegacy) {
-    const lokacionet = await listLokacionetByOwner(supabase, tenantId)
-    lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+    lokacioniById = await lokacionetByIdForHistory(supabase, tenantId)
   }
 
   let batchedActions: HistoryExportBatch[] = []

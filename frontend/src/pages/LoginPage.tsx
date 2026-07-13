@@ -84,7 +84,7 @@ export function LoginPage() {
       navigate(qs ? `${path}?${qs}` : path, { replace: true })
     }).catch(() => {
       showError(
-        'Hyrja u krye por sesioni nuk u ruajt. Mbyll aplikacionin, hape perseri dhe provo.',
+        'Hyrja u krye por sesioni nuk u ruajt. Mbyll aplikacionin, hape përsëri dhe provo.',
       )
     })
   }
@@ -94,16 +94,16 @@ export function LoginPage() {
     const trimmedPassword = password.trim()
 
     if (!trimmedEmri || !trimmedPassword) {
-      return 'Ploteso te gjitha fushat e detyrueshme.'
+      return 'Plotëso të gjitha fushat e detyrueshme.'
     }
     if (mode === 'signup' && trimmedEmri.includes('@')) {
-      return 'Per hyrje me email, perdor tab-in Hyr.'
+      return 'Për hyrje me email, përdor tab-in Hyr.'
     }
     if (mode === 'signup' && trimmedPassword.length < 8) {
       return 'Fjalëkalimi duhet të ketë të paktën 8 karaktere.'
     }
     if (mode === 'signup' && !acceptedLegal) {
-      return 'Duhet te pranosh Politiken e privatësisë dhe Kushtet e përdorimit.'
+      return 'Duhet të pranosh Politikën e privatësisë dhe Kushtet e përdorimit.'
     }
     return null
   }

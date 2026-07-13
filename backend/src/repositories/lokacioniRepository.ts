@@ -25,6 +25,15 @@ export async function listLokacionetByOwner(
   return (data ?? []) as LokacioniRow[]
 }
 
+/** Active + inactive locations for resolving names on historical batches. */
+export async function lokacionetByIdForHistory(
+  supabase: SupabaseClient,
+  tenantId: string,
+): Promise<Map<string, LokacioniRow>> {
+  const rows = await listLokacionetByOwner(supabase, tenantId, { includeInactive: true })
+  return new Map(rows.map((row) => [row.id, row]))
+}
+
 export async function countActiveLokacionet(
   supabase: SupabaseClient,
   tenantId: string,

@@ -14,6 +14,7 @@ import { DynamicTransferTab } from './tabs/DynamicTransferTab'
 import { DynamicVeprimeTab } from './tabs/DynamicVeprimeTab'
 import { markTutorialSeen } from '../../../lib/api/tenantConfig'
 import { useAuth } from '../../../lib/auth/AuthProvider'
+import { MobileAccountMenu } from '../../../mobile/components/MobileAccountMenu'
 import { TutorialOverlay } from '../../onboarding/TutorialOverlay'
 import '../../../mobile/styles/mobile.css'
 import './dynamic-mobile.css'
@@ -35,10 +36,11 @@ export function DynamicMobileApp(props: {
   const [tab, setTab] = React.useState<TabId>('veprime')
   const [header, setHeader] = React.useState<MobileHeaderState>({ kind: 'tab' })
   const { snackbar, notify } = useSnackbar()
-  const { refreshSession } = useAuth()
+  const { user, refreshSession } = useAuth()
   const contentRef = React.useRef<HTMLElement>(null)
   const [tutorialOpen, setTutorialOpen] = React.useState(props.showTutorial ?? false)
   const [tutorialTarget, setTutorialTarget] = React.useState<string | null>(null)
+  const [accountSheetOpen, setAccountSheetOpen] = React.useState(false)
 
   useOverscrollLock(contentRef)
 
@@ -64,9 +66,16 @@ export function DynamicMobileApp(props: {
     ? 'mobile-content mobile-content-with-cta'
     : 'mobile-content'
 
+  if (!user) return null
+
   return (
     <div className="mobile-app dynamic-mobile-app">
-      <MobileAppHeader header={header} tabTitle={TAB_TITLES[tab]} onLogout={props.onLogout} />
+      <MobileAppHeader
+        header={header}
+        tabTitle={TAB_TITLES[tab]}
+        user={user}
+        onAccountMenuOpen={() => setAccountSheetOpen(true)}
+      />
 
       <main ref={contentRef} className={contentClass}>
         <MobileTabSlot tab="veprime" activeTab={tab}>
@@ -99,6 +108,14 @@ export function DynamicMobileApp(props: {
         onChange={setTab}
       />
       <Snackbar snackbar={snackbar} />
+      <MobileAccountMenu
+        open={accountSheetOpen}
+        user={user}
+        showAdminSettings
+        onClose={() => setAccountSheetOpen(false)}
+        onLogout={props.onLogout}
+        onNotify={notify}
+      />
       {tutorialOpen ? (
         <TutorialOverlay
           isMobile

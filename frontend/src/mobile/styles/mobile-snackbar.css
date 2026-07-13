@@ -1,9 +1,11 @@
-.snackbar {
+html.mobile-client .snackbar {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--mobile-tab-height) + env(safe-area-inset-bottom) + 12px);
-  z-index: 120;
-  max-width: min(400px, calc(100vw - 32px));
+  top: auto;
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  z-index: 2000;
   transform: translateX(-50%);
   background: rgba(12, 31, 54, 0.96);
   color: #fff;
@@ -13,19 +15,49 @@
   box-shadow: var(--shadow-lg);
   font-size: 14px;
   font-weight: 500;
-  animation: mobileSnackbarIn 0.2s ease;
+  line-height: 1.45;
+  text-align: center;
+  white-space: nowrap;
+  animation: mobileSnackbarInFromBottom 0.2s ease;
 }
 
-.snackbar.success {
+html.mobile-client:has(.mobile-bottom-nav) .snackbar {
+  bottom: calc(var(--mobile-tab-height) + env(safe-area-inset-bottom) + 12px);
+}
+
+html.mobile-client.mobile-sheet-open .snackbar {
+  top: calc(env(safe-area-inset-top) + 12px);
+  bottom: auto;
+  animation: mobileSnackbarInFromTop 0.2s ease;
+}
+
+html.mobile-client .snackbar.success {
   background: rgba(22, 101, 52, 0.96);
   border-color: rgba(187, 247, 208, 0.35);
   color: #ecfdf5;
 }
 
-@keyframes mobileSnackbarIn {
+html.mobile-client .snackbar.error {
+  background: rgba(153, 27, 27, 0.96);
+  border-color: rgba(254, 202, 202, 0.35);
+  color: #fef2f2;
+}
+
+@keyframes mobileSnackbarInFromBottom {
   from {
     opacity: 0;
     transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes mobileSnackbarInFromTop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
   }
   to {
     opacity: 1;

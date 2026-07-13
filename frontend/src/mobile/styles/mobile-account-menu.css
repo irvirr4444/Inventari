@@ -1,0 +1,397 @@
+.mobile-header-account {
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+}
+
+.mobile-header-account:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.mobile-account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+}
+
+.mobile-account-avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.mobile-account-sheet-panel.mobile-sheet {
+  max-height: none;
+  height: auto;
+}
+
+.mobile-account-sheet-panel--expanded.mobile-sheet {
+  max-height: 92vh;
+  height: auto;
+}
+
+.mobile-account-sheet-panel--expanded .mobile-sheet-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-account-sheet-panel .mobile-sheet-body {
+  flex: 0 1 auto;
+  padding-top: 0;
+  padding-bottom: var(--mobile-space-sm);
+  overflow: hidden;
+}
+
+.mobile-account-nav {
+  overflow: hidden;
+  width: 100%;
+}
+
+.mobile-account-nav-track {
+  display: flex;
+  width: 200%;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+.mobile-account-nav--ready .mobile-account-nav-track {
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.mobile-account-nav--settings .mobile-account-nav-track {
+  transform: translateX(-50%);
+}
+
+.mobile-account-nav-panel {
+  flex: 0 0 50%;
+  min-width: 0;
+}
+
+.mobile-account-nav-panel[aria-hidden='true'] {
+  pointer-events: none;
+  user-select: none;
+}
+
+.mobile-account-nav--dragging .mobile-account-nav-track {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-account-nav--ready .mobile-account-nav-track {
+    transition: none;
+  }
+}
+
+.mobile-account-sheet-panel--expanded .mobile-sheet-body {
+  padding-bottom: var(--mobile-space-sm);
+}
+
+.mobile-account-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-space-sm);
+}
+
+.mobile-account-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card-soft, rgba(47, 125, 246, 0.06));
+  border: 1px solid var(--border-light);
+}
+
+.mobile-sheet--chrome .mobile-account-group {
+  background: var(--mobile-sheet-panel-bg);
+  border-color: var(--mobile-sheet-panel-border);
+}
+
+.mobile-account-group-logout {
+  margin-top: 2px;
+}
+
+.mobile-account-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-sheet--chrome .mobile-account-row {
+  color: var(--mobile-sheet-text);
+}
+
+.mobile-account-row + .mobile-account-row {
+  border-top: 1px solid var(--border-light);
+}
+
+.mobile-sheet--chrome .mobile-account-row + .mobile-account-row {
+  border-top-color: var(--mobile-sheet-panel-border);
+}
+
+.mobile-account-row:active,
+.mobile-account-row:focus-visible {
+  background: rgba(47, 125, 246, 0.08);
+  outline: none;
+}
+
+.mobile-account-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.mobile-sheet--chrome .mobile-account-row-icon {
+  color: var(--mobile-sheet-text-muted);
+}
+
+.mobile-account-row-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-account-row-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.mobile-account-row-danger {
+  color: var(--danger, #ff3b30);
+}
+
+.mobile-account-row-danger .mobile-account-row-icon {
+  color: currentColor;
+}
+
+.mobile-account-settings-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+.mobile-settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mobile-space-sm);
+  min-height: 0;
+  flex: 0 1 auto;
+  max-height: calc(92vh - 6.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-settings-user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-settings-user-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.mobile-settings-user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.mobile-settings-user-you {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(47, 125, 246, 0.16);
+  color: var(--primary);
+}
+
+.mobile-settings-user-meta {
+  font-size: 13px;
+  color: var(--mobile-sheet-text-muted);
+}
+
+.mobile-sheet--chrome .mobile-account-avatar-sm {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--mobile-sheet-panel-border);
+  color: var(--mobile-sheet-text);
+  box-shadow: none;
+}
+
+.mobile-tap-field-muted {
+  opacity: 0.72;
+}
+
+.mobile-tap-field-self {
+  cursor: default;
+}
+
+.mobile-tap-field--loading {
+  position: relative;
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.mobile-tap-field--loading::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 0 rgba(47, 125, 246, 0.32);
+  animation: mobile-access-loading-pulse 0.95s ease-out infinite;
+}
+
+@keyframes mobile-access-loading-pulse {
+  70% {
+    box-shadow: 0 0 0 8px rgba(47, 125, 246, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 125, 246, 0);
+  }
+}
+
+.mobile-password-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.mobile-password-field__control {
+  padding-right: 44px;
+}
+
+.mobile-password-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.mobile-password-field__toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mobile-tap-field-danger {
+  color: #ff6b63;
+}
+
+.mobile-settings-role-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-settings-role-chips .mobile-chip {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--mobile-sheet-panel-border);
+  background: transparent;
+  color: var(--mobile-sheet-text-muted);
+  font-weight: 600;
+}
+
+.mobile-settings-role-chips .mobile-chip.active {
+  border-color: var(--mobile-sheet-selected-border);
+  background: var(--mobile-sheet-selected-bg);
+  color: var(--mobile-sheet-text);
+}
+
+.mobile-field-chevron {
+  flex-shrink: 0;
+  color: var(--mobile-sheet-text-muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.mobile-tap-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-tap-field-leading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-btn-outline--nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 14px;
+  text-align: center;
+  border-color: transparent;
+  outline: none;
+}
+
+.mobile-btn-outline--nav:focus-visible {
+  outline: 2px solid rgba(47, 125, 246, 0.45);
+  outline-offset: 2px;
+}
+

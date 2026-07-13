@@ -3,11 +3,11 @@ import { LocationLabel } from '../locations/LocationPicker'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
 
 export function DynamicLocationCell(props: { action: ActionBatch }) {
-  const { activeLokacionet } = useLokacioni()
+  const { lokacionet } = useLokacioni()
 
   if (props.action.lloji === 'Transfer' && props.action.destination_lokacioni_id) {
     const from =
-      activeLokacionet.find((l) => l.id === props.action.lokacioni_id) ??
+      lokacionet.find((l) => l.id === props.action.lokacioni_id) ??
       (props.action.lokacioni_emri
         ? {
             id: props.action.lokacioni_id ?? '',
@@ -20,7 +20,7 @@ export function DynamicLocationCell(props: { action: ActionBatch }) {
           }
         : null)
     const to =
-      activeLokacionet.find((l) => l.id === props.action.destination_lokacioni_id) ??
+      lokacionet.find((l) => l.id === props.action.destination_lokacioni_id) ??
       (props.action.destination_lokacioni_emri
         ? {
             id: props.action.destination_lokacioni_id ?? '',
@@ -45,7 +45,7 @@ export function DynamicLocationCell(props: { action: ActionBatch }) {
   }
 
   const loc =
-    activeLokacionet.find((l) => l.id === props.action.lokacioni_id) ??
+    lokacionet.find((l) => l.id === props.action.lokacioni_id) ??
     (props.action.lokacioni_emri
       ? {
           id: props.action.lokacioni_id ?? '',

@@ -23,8 +23,10 @@ export function DynamicMobileStockLevels(props: {
   const { locations, stock } = props
   if (locations.length === 0) return null
 
+  const scrollable = locations.length >= 4
+
   return (
-    <div className="dynamic-mobile-stock-stat-chips">
+    <div className={`dynamic-mobile-stock-stat-chips${scrollable ? ' is-scrollable' : ''}`}>
       {locations.map((loc) => (
         <StockStatChip key={loc.id} loc={loc} qty={stock[loc.id] ?? 0} />
       ))}

@@ -58,8 +58,6 @@ h3 {
 
 .summary-group-by-trigger {
   justify-content: space-between;
-  min-width: 108px;
-  min-height: 31px;
   gap: 6px;
 }
 
@@ -108,7 +106,26 @@ h3 {
 }
 
 .summary-group-by--mobile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   margin: 0 0 14px;
+}
+
+.summary-group-by:not(.summary-group-by--mobile) .summary-group-by-trigger {
+  min-width: 108px;
+  min-height: 31px;
+}
+
+.summary-group-by--mobile .summary-group-by-trigger {
+  width: 100%;
+}
+
+.summary-group-by--mobile .summary-group-by-trigger.is-open {
+  background: rgba(47, 125, 246, 0.08);
+  border-color: var(--primary);
 }
 
 .summary-panel-pending {

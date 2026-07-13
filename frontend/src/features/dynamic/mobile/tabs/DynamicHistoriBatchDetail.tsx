@@ -23,6 +23,7 @@ import { formatActionDateTime } from '../../../../lib/actionMeta'
 import { scheduleInvalidate } from '../../../../lib/invalidateAppData'
 import { queryKeys } from '../../../../lib/queryKeys'
 import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { canEditDeleteBatch } from '../../../../lib/permissions'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
@@ -74,6 +75,7 @@ function DynamicHistoriDetailProductRow(props: {
   trackPrice: boolean
   changeKind: ProductChangeKind
   canRemove: boolean
+  canEdit: boolean
   busy: boolean
   onEdit: () => void
   onRemove: () => void
@@ -100,14 +102,14 @@ function DynamicHistoriDetailProductRow(props: {
     >
       <div
         className="mobile-row-card-body"
-        role="button"
-        tabIndex={props.busy ? -1 : 0}
-        aria-disabled={props.busy}
+        role={props.canEdit ? 'button' : undefined}
+        tabIndex={props.canEdit && !props.busy ? 0 : undefined}
+        aria-disabled={props.busy || !props.canEdit}
         onClick={() => {
-          if (!props.busy) props.onEdit()
+          if (!props.busy && props.canEdit) props.onEdit()
         }}
         onKeyDown={(e) => {
-          if (!props.busy && e.key === 'Enter') props.onEdit()
+          if (!props.busy && props.canEdit && e.key === 'Enter') props.onEdit()
         }}
       >
         <div className="mobile-row-card-title-row">
@@ -140,32 +142,34 @@ function DynamicHistoriDetailProductRow(props: {
           </div>
         ) : null}
       </div>
-      <div className="mobile-row-card-actions">
-        <button
-          type="button"
-          className={`mobile-row-card-action-btn mobile-row-card-action-btn--edit${shenim ? ' has-note' : ''}`}
-          aria-label="Ndrysho produktin"
-          disabled={props.busy}
-          onClick={(e) => {
-            e.stopPropagation()
-            props.onEdit()
-          }}
-        >
-          <EditIcon />
-        </button>
-        <button
-          type="button"
-          className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
-          aria-label="Fshi produktin"
-          disabled={props.busy || !props.canRemove}
-          onClick={(e) => {
-            e.stopPropagation()
-            props.onRemove()
-          }}
-        >
-          <DeleteIcon />
-        </button>
-      </div>
+      {props.canEdit ? (
+        <div className="mobile-row-card-actions">
+          <button
+            type="button"
+            className={`mobile-row-card-action-btn mobile-row-card-action-btn--edit${shenim ? ' has-note' : ''}`}
+            aria-label="Ndrysho produktin"
+            disabled={props.busy}
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onEdit()
+            }}
+          >
+            <EditIcon />
+          </button>
+          <button
+            type="button"
+            className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
+            aria-label="Fshi produktin"
+            disabled={props.busy || !props.canRemove}
+            onClick={(e) => {
+              e.stopPropagation()
+              props.onRemove()
+            }}
+          >
+            <DeleteIcon />
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -183,10 +187,14 @@ export function DynamicHistoriBatchDetail(props: {
   const qc = useQueryClient()
   const { user } = useAuth()
   const { trackPrice } = useTenantConfig()
-  const { activeLokacionet } = useLokacioni()
+  const { activeLokacionet, lokacionet } = useLokacioni()
   const sortedLocations = React.useMemo(
     () => [...activeLokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
     [activeLokacionet],
+  )
+  const allLocations = React.useMemo(
+    () => [...lokacionet].sort((a, b) => a.rradhitja - b.rradhitja),
+    [lokacionet],
   )
   const pickerProducts = props.products as unknown as Produkti[]
 
@@ -328,8 +336,13 @@ export function DynamicHistoriBatchDetail(props: {
   }
 
   const busy = saveMut.isPending
-  const loc = sortedLocations.find((l) => l.id === draftMeta.lokacioni_id)
-  const dest = sortedLocations.find((l) => l.id === draftMeta.destination_lokacioni_id)
+  const canEditBatch = canEditDeleteBatch(
+    user,
+    detail.lokacioni_id,
+    detail.destination_lokacioni_id,
+  )
+  const loc = allLocations.find((l) => l.id === draftMeta.lokacioni_id)
+  const dest = allLocations.find((l) => l.id === draftMeta.destination_lokacioni_id)
   const locLabel = loc?.emri ?? detail.lokacioni_emri
   const destLabel = dest?.emri ?? detail.destination_lokacioni_emri
   const pershkrimi = draftMeta.pershkrimi.trim()
@@ -373,28 +386,30 @@ export function DynamicHistoriBatchDetail(props: {
         <div className="dynamic-histori-detail-section">
           <div className="dynamic-histori-detail-section-head">
             <div className="mobile-section-label">Veprimi</div>
-            <div className="mobile-row-card-actions">
-              <button
-                type="button"
-                className="mobile-row-card-action-btn mobile-row-card-action-btn--edit"
-                aria-label="Ndrysho veprimin"
-                disabled={busy}
-                onClick={() => setActionMetaSheetOpen(true)}
-              >
-                <EditIcon />
-              </button>
-              <button
-                type="button"
-                className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
-                aria-label="Fshi veprimin"
-                disabled={busy}
-                onClick={() =>
-                  props.onDeleteRequest({ id: detail.id, lloji: detail.lloji, data: detail.data })
-                }
-              >
-                <DeleteIcon />
-              </button>
-            </div>
+            {canEditBatch ? (
+              <div className="mobile-row-card-actions">
+                <button
+                  type="button"
+                  className="mobile-row-card-action-btn mobile-row-card-action-btn--edit"
+                  aria-label="Ndrysho veprimin"
+                  disabled={busy}
+                  onClick={() => setActionMetaSheetOpen(true)}
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  type="button"
+                  className="mobile-row-card-action-btn mobile-row-card-action-btn--delete"
+                  aria-label="Fshi veprimin"
+                  disabled={busy}
+                  onClick={() =>
+                    props.onDeleteRequest({ id: detail.id, lloji: detail.lloji, data: detail.data })
+                  }
+                >
+                  <DeleteIcon />
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div
@@ -461,14 +476,16 @@ export function DynamicHistoriBatchDetail(props: {
 
         <div className="dynamic-histori-detail-section">
           <div className="mobile-section-label">Produktet</div>
-          <button
-            type="button"
-            className="mobile-btn-outline dynamic-histori-add-product-btn"
-            disabled={busy}
-            onClick={openProductAdd}
-          >
-            + Shto produkt
-          </button>
+          {canEditBatch ? (
+            <button
+              type="button"
+              className="mobile-btn-outline dynamic-histori-add-product-btn"
+              disabled={busy}
+              onClick={openProductAdd}
+            >
+              + Shto produkt
+            </button>
+          ) : null}
 
           <div className="mobile-list-stack">
             {draftRows.map((row) => (
@@ -480,6 +497,7 @@ export function DynamicHistoriBatchDetail(props: {
                 trackPrice={trackPrice}
                 changeKind={getProductChangeKind(row, detail.items)}
                 canRemove={canRemoveProducts}
+                canEdit={canEditBatch}
                 busy={busy}
                 onEdit={() => openProductEdit(row.key)}
                 onRemove={() => handleProductRemove(row.key)}
@@ -489,7 +507,7 @@ export function DynamicHistoriBatchDetail(props: {
         </div>
       </div>
 
-      {isDirty ? (
+      {canEditBatch && isDirty ? (
         <StickyCta
           label="FINALIZO NDRYSHIMET"
           loading={saveMut.isPending}

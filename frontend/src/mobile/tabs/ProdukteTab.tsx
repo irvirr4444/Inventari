@@ -10,10 +10,11 @@ import {
 } from '../../lib/invalidateAppData'
 import { useAuth } from '../../lib/auth/AuthProvider'
 import { NumericInput } from '../../components/NumericInput'
-import { BottomSheet } from '../components/BottomSheet'
+import { MobileSheetStack } from '../components/MobileSheetStack'
 import { SheetActionFooter, SheetEditButton, SheetFooterRow, SheetConfirmButton } from '../components/SheetActions'
 import { MobileProductListPending } from '../components/MobileProductListPending'
 import { MobileStockLevels } from '../components/MobileStockLevels'
+import { useFloatingScreenStack } from '../hooks/useScreenStack'
 
 function ProductFormFields(props: {
   kodi: string
@@ -69,16 +70,19 @@ function ProductFormFields(props: {
   )
 }
 
+type ProductScreen =
+  | { type: 'detail'; product: Produkti }
+  | { type: 'add' }
+  | { type: 'edit'; product: Produkti }
+  | { type: 'delete'; product: Produkti }
+
 export function ProdukteTab(props: { notify: (message: string, variant?: 'success' | 'default') => void }) {
   const productsQuery = useProductsQuery()
   const qc = useQueryClient()
   const { user } = useAuth()
   const crud = useProductCrud()
+  const sheet = useFloatingScreenStack<ProductScreen>()
   const [search, setSearch] = React.useState('')
-  const [detailProduct, setDetailProduct] = React.useState<Produkti | null>(null)
-  const [addOpen, setAddOpen] = React.useState(false)
-  const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   const [newKodi, setNewKodi] = React.useState('')
   const [newEmri, setNewEmri] = React.useState('')
@@ -104,6 +108,11 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
     crud.setProductError(null)
   }
 
+  const openAdd = () => {
+    resetAddForm()
+    sheet.push({ type: 'add' })
+  }
+
   const submitAdd = () => {
     crud.setProductError(null)
     if (!newKodi.trim() || !newEmri.trim()) {
@@ -120,7 +129,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
       {
         onSuccess: () => {
           resetAddForm()
-          setAddOpen(false)
+          sheet.close()
           props.notify('Produkti u shtua me sukses.', 'success')
           scheduleInvalidate(qc, 'products', { userId: user?.id })
         },
@@ -130,20 +139,129 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
 
   const openEdit = (p: Produkti) => {
     setEditDraft({ ...p })
-    setDetailProduct(null)
-    setEditOpen(true)
+    sheet.push({ type: 'edit', product: p })
   }
 
   const submitEdit = () => {
     if (!editDraft) return
     crud.updateMut.mutate(editDraft, {
       onSuccess: () => {
-        setEditOpen(false)
         setEditDraft(null)
+        sheet.close()
         props.notify('Produkti u perditesua me sukses.', 'success')
         scheduleInvalidate(qc, 'products', { userId: user?.id })
       },
     })
+  }
+
+  const current = sheet.current
+  let sheetTitle: React.ReactNode = ''
+  let sheetFooter: React.ReactNode
+
+  if (current?.type === 'detail') {
+    sheetTitle = productLabel(current.product.emri, current.product.kodi)
+    sheetFooter = (
+      <SheetFooterRow>
+        <SheetEditButton label="Ndrysho" onClick={() => openEdit(current.product)} />
+        <SheetConfirmButton
+          label="Fshi"
+          variant="danger"
+          icon="delete"
+          onClick={() => sheet.push({ type: 'delete', product: current.product })}
+        />
+      </SheetFooterRow>
+    )
+  } else if (current?.type === 'add') {
+    sheetTitle = 'Shto produkt'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.close}
+        confirmLabel={crud.createMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
+        confirmLoading={crud.createMut.isPending}
+        onConfirm={submitAdd}
+      />
+    )
+  } else if (current?.type === 'edit') {
+    sheetTitle = 'Ndrysho produktin'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.pop}
+        confirmLabel={crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
+        confirmLoading={crud.updateMut.isPending}
+        onConfirm={submitEdit}
+      />
+    )
+  } else if (current?.type === 'delete') {
+    sheetTitle = 'Fshi produktin?'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.pop}
+        confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
+        confirmLoading={crud.deleteMut.isPending}
+        confirmVariant="danger"
+        confirmIcon="delete"
+        onConfirm={() => {
+          crud.deleteMut.mutate(current.product.id, {
+            onSuccess: () => {
+              sheet.close()
+              props.notify('Produkti u fshi me sukses.', 'success')
+              scheduleProductDeleteInvalidation(qc, user?.id)
+            },
+          })
+        }}
+      />
+    )
+  }
+
+  const renderScreen = (screen: ProductScreen) => {
+    switch (screen.type) {
+      case 'detail':
+        return (
+          <div className="mobile-list-stack">
+            <MobileStockLevels
+              gjendjeKosove={screen.product.gjendje_kosove}
+              gjendjeShqiperi={screen.product.gjendje_shqiperi}
+            />
+          </div>
+        )
+      case 'add':
+        return (
+          <ProductFormFields
+            kodi={newKodi}
+            emri={newEmri}
+            gjendjeKosove={newGjendjeKosove}
+            gjendjeShqiperi={newGjendjeShqiperi}
+            error={crud.productError}
+            onKodiChange={setNewKodi}
+            onEmriChange={setNewEmri}
+            onGjendjeKosoveChange={setNewGjendjeKosove}
+            onGjendjeShqiperiChange={setNewGjendjeShqiperi}
+          />
+        )
+      case 'edit':
+        return editDraft ? (
+          <ProductFormFields
+            kodi={editDraft.kodi}
+            emri={editDraft.emri}
+            gjendjeKosove={editDraft.gjendje_kosove}
+            gjendjeShqiperi={editDraft.gjendje_shqiperi}
+            error={crud.productError}
+            onKodiChange={(v) => setEditDraft((d) => d && { ...d, kodi: v })}
+            onEmriChange={(v) => setEditDraft((d) => d && { ...d, emri: v })}
+            onGjendjeKosoveChange={(v) => setEditDraft((d) => d && { ...d, gjendje_kosove: v })}
+            onGjendjeShqiperiChange={(v) => setEditDraft((d) => d && { ...d, gjendje_shqiperi: v })}
+          />
+        ) : null
+      case 'delete':
+        return (
+          <p className="mobile-card-meta">
+            Produkti &quot;{productLabel(screen.product.emri, screen.product.kodi)}&quot; do te fshihet
+            bashke me historikun e veprimeve te tij.
+          </p>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -167,7 +285,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
         ) : products.length === 0 ? (
           <div className="mobile-empty">
             <div className="mobile-empty-title">Nuk ka produkte</div>
-            <button type="button" className="mobile-btn-outline" onClick={() => setAddOpen(true)}>
+            <button type="button" className="mobile-btn-outline" onClick={openAdd}>
               + Shto produkt
             </button>
           </div>
@@ -179,7 +297,7 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
                 type="button"
                 className="mobile-row-card"
                 style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
-                onClick={() => setDetailProduct(p)}
+                onClick={() => sheet.push({ type: 'detail', product: p })}
               >
                 <div className="mobile-row-card-body">
                   <div className="mobile-row-card-title">{productLabel(p.emri, p.kodi)}</div>
@@ -194,130 +312,29 @@ export function ProdukteTab(props: { notify: (message: string, variant?: 'succes
         )}
       </div>
 
-      <button type="button" className="mobile-fab" aria-label="Shto produkt" onClick={() => setAddOpen(true)}>
+      <button type="button" className="mobile-fab" aria-label="Shto produkt" onClick={openAdd}>
         +
       </button>
 
-      <BottomSheet
-        open={!!detailProduct}
-        title={detailProduct ? productLabel(detailProduct.emri, detailProduct.kodi) : ''}
-        onClose={() => setDetailProduct(null)}
-        footer={
-          detailProduct ? (
-            <SheetFooterRow>
-              <SheetEditButton label="Ndrysho" onClick={() => openEdit(detailProduct)} />
-              <SheetConfirmButton
-                label="Fshi"
-                variant="danger"
-                icon="delete"
-                onClick={() => setDeleteOpen(true)}
-              />
-            </SheetFooterRow>
-          ) : undefined
-        }
+      <MobileSheetStack
+        open={sheet.open}
+        nav={sheet.nav}
+        panelCount={sheet.panelCount}
+        panelWidth={sheet.panelWidth}
+        trackStyle={sheet.trackStyle}
+        transitionLocked={sheet.transitionLocked}
+        animating={sheet.animating}
+        canPop={sheet.canPop}
+        onPop={sheet.pop}
+        onClose={sheet.close}
+        title={sheetTitle}
+        footer={sheetFooter}
+        className="mobile-sheet--chrome"
       >
-        {detailProduct ? (
-          <div className="mobile-list-stack">
-            <MobileStockLevels
-              gjendjeKosove={detailProduct.gjendje_kosove}
-              gjendjeShqiperi={detailProduct.gjendje_shqiperi}
-            />
-          </div>
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={addOpen}
-        title="Shto produkt"
-        onClose={() => {
-          setAddOpen(false)
-          resetAddForm()
-        }}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setAddOpen(false)}
-            confirmLabel={crud.createMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
-            confirmLoading={crud.createMut.isPending}
-            onConfirm={submitAdd}
-          />
-        }
-      >
-        <ProductFormFields
-          kodi={newKodi}
-          emri={newEmri}
-          gjendjeKosove={newGjendjeKosove}
-          gjendjeShqiperi={newGjendjeShqiperi}
-          error={crud.productError}
-          onKodiChange={setNewKodi}
-          onEmriChange={setNewEmri}
-          onGjendjeKosoveChange={setNewGjendjeKosove}
-          onGjendjeShqiperiChange={setNewGjendjeShqiperi}
-        />
-      </BottomSheet>
-
-      <BottomSheet
-        open={editOpen && !!editDraft}
-        title="Ndrysho produktin"
-        onClose={() => {
-          setEditOpen(false)
-          setEditDraft(null)
-        }}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setEditOpen(false)}
-            confirmLabel={crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
-            confirmLoading={crud.updateMut.isPending}
-            onConfirm={submitEdit}
-          />
-        }
-      >
-        {editDraft ? (
-          <ProductFormFields
-            kodi={editDraft.kodi}
-            emri={editDraft.emri}
-            gjendjeKosove={editDraft.gjendje_kosove}
-            gjendjeShqiperi={editDraft.gjendje_shqiperi}
-            error={crud.productError}
-            onKodiChange={(v) => setEditDraft((d) => d && { ...d, kodi: v })}
-            onEmriChange={(v) => setEditDraft((d) => d && { ...d, emri: v })}
-            onGjendjeKosoveChange={(v) => setEditDraft((d) => d && { ...d, gjendje_kosove: v })}
-            onGjendjeShqiperiChange={(v) => setEditDraft((d) => d && { ...d, gjendje_shqiperi: v })}
-          />
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={deleteOpen && !!detailProduct}
-        title="Fshi produktin?"
-        onClose={() => setDeleteOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setDeleteOpen(false)}
-            confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
-            confirmLoading={crud.deleteMut.isPending}
-            confirmVariant="danger"
-            confirmIcon="delete"
-            onConfirm={() => {
-              if (!detailProduct) return
-              crud.deleteMut.mutate(detailProduct.id, {
-                onSuccess: () => {
-                  setDeleteOpen(false)
-                  setDetailProduct(null)
-                  props.notify('Produkti u fshi me sukses.', 'success')
-                  scheduleProductDeleteInvalidation(qc, user?.id)
-                },
-              })
-            }}
-          />
-        }
-      >
-        {detailProduct ? (
-          <p className="mobile-card-meta">
-            Produkti &quot;{productLabel(detailProduct.emri, detailProduct.kodi)}&quot; do te fshihet
-            bashke me historikun e veprimeve te tij.
-          </p>
-        ) : null}
-      </BottomSheet>
+        {sheet.screens.map((screen, index) => (
+          <React.Fragment key={index}>{renderScreen(screen)}</React.Fragment>
+        ))}
+      </MobileSheetStack>
     </>
   )
 }

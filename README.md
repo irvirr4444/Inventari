@@ -122,6 +122,7 @@ The browser does not use Supabase keys directly. All data goes through the backe
 
 ## Documentation
 
+- **Docs index:** [docs/README.md](docs/README.md) — feature docs, setup/deploy notes, SQL migration references
 - **Frontend UI:** [frontend/README.md](frontend/README.md) — setup, auth, API; links to [desktop](frontend/README-DESKTOP.md) and [mobile](frontend/README-MOBILE.md) UI docs
 - **Backend API and architecture:** [backend/README.md](backend/README.md)
 - **Android APK:** [docs/android-apk.md](docs/android-apk.md) — Capacitor shell in `android-shell/`; run `npm run android:sync` then `npm run android:open`
@@ -129,20 +130,27 @@ The browser does not use Supabase keys directly. All data goes through the backe
 - **Deploy (Render):** [docs/render.md](docs/render.md)
 - **SQL migrations:** [docs/sql/](docs/sql/)
 - **Onboarding wizard & tenant config (V2 spec):** [onboarding_revamp.md](onboarding_revamp.md)
+- **Users and access:** [docs/features/users-and-access.md](docs/features/users-and-access.md) — Përdoruesit, Admin/Përdorues roles, and per-location access
+- **Settings modal flow:** [docs/SETTINGS_MODAL_FLOW.md](docs/SETTINGS_MODAL_FLOW.md) — implementation-level modal behavior
 
 ## Features
 
 ### Accounts
 
 - **Legacy** (`ui_lloji = legacy_fixed`): Kosovo + Albania UI, `gjendje_kosove` / `gjendje_shqiperi` on products, country-based actions and summary.
-- **Dynamic** (new sign-ups): custom locations; onboarding wizard collects location count/names + price tracking (`tenant_config.track_price`); dashboard hides price/total UI when `track_price = false`. Admins can manage other users from the top-right settings modal with Admin/Përdorues roles and per-location access.
+- **Dynamic** (new sign-ups): custom locations; onboarding wizard collects location count/names + price tracking (`tenant_config.track_price`); dashboard hides price/total UI when `track_price = false`.
+
+### Settings modal and Përdoruesit
+
+- Dynamic desktop accounts use a top-right user menu. Admins can open **Përdoruesit** and **Vendndodhjet** inside the settings modal without leaving the dashboard; regular Përdorues users and legacy users only see **Dil**.
+- User management supports Admin/Përdorues roles, per-location access levels, credential edits, deactivate/reactivate, and history-preserving delete behavior. See [Users and access](docs/features/users-and-access.md) for details.
 
 ### Auth & core flows
 
 - **Emri** + password login and sign-up on one screen (`/login`); legacy users can also sign in with their email in the Emri field; errors as a **red snackbar** at the bottom of the screen; optional Google sign-in
 - **Dynamic onboarding wizard** (`/onboarding`): five screens — welcome → location count (1–20) → all location name rows with emoji picker → pricing (Me çmime / Vetëm sasi) → confirm. Navy/blue app styling (`styles/features/onboarding-wizard.css`). **← Kthehu** on every step after welcome; **Kthehu te hyrja** on welcome logs out. Saves `track_price` on screen 4, creates locations + `onboarding_complete` on confirm.
 - **Post-onboarding tutorial** (desktop + mobile): one-time spotlight overlay; persisted in `tenant_config.tutorial_seen` via `POST /api/tenant-config/tutorial-seen` (not localStorage)
-- Location `kodi` is server-derived (UI shows emoji + name only); manage users and locations from the top-right settings modal. Location delete is a soft delete: it hides/deactivates the location for future work while preserving historical data.
+- Location `kodi` is server-derived (UI shows emoji + name only)
 - `Hyrje` and `Dalje` with automatic totals; optional batch **Ora** and **Pershkrimi**
 - Transfers between countries (legacy) or between any two locations (dynamic)
 - **Historiku** — paginated batches, server filters (type, date range) + client filters (location checkboxes for dynamic, Ora range, Pershkrimi, Totali, Produkte); invalid min/max ranges blocked with snackbar feedback; edit and delete with stock rollback

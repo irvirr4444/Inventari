@@ -253,6 +253,25 @@ export function LogOutIcon() {
   )
 }
 
+export function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+
 export function CloseIcon() {
   return (
     <svg
@@ -286,6 +305,47 @@ export function CheckIcon() {
       strokeLinejoin="round"
     >
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+export function PowerOnIcon(props: { size?: number }) {
+  const size = props.size ?? 18
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2v10" />
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+    </svg>
+  )
+}
+
+export function PowerOffIcon(props: { size?: number }) {
+  const size = props.size ?? 18
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2v10" />
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <path d="m2 2 20 20" />
     </svg>
   )
 }

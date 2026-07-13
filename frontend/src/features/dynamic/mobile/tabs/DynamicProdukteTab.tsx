@@ -18,7 +18,8 @@ import {
 } from '../../../../lib/permissions'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import type { Lokacioni } from '../../../../lib/lokacioni/types'
-import { BottomSheet } from '../../../../mobile/components/BottomSheet'
+import { MobileSheetStack } from '../../../../mobile/components/MobileSheetStack'
+import { useFloatingScreenStack } from '../../../../mobile/hooks/useScreenStack'
 import {
   SheetActionFooter,
   SheetConfirmButton,
@@ -92,6 +93,12 @@ function DynamicProductFormFields(props: {
   )
 }
 
+type DynamicProductScreen =
+  | { type: 'detail'; product: DynamicProdukti }
+  | { type: 'add' }
+  | { type: 'edit'; product: DynamicProdukti }
+  | { type: 'delete'; product: DynamicProdukti }
+
 export function DynamicProdukteTab(props: {
   notify: (message: string, variant?: 'success' | 'default') => void
 }) {
@@ -104,6 +111,7 @@ export function DynamicProdukteTab(props: {
     [activeLokacionet],
   )
   const crud = useDynamicProductCrud()
+  const sheet = useFloatingScreenStack<DynamicProductScreen>()
   const canAddProduct = canAddProducts(user)
   const canEditProduct = canEditDeleteProducts(user)
   const canDeleteProduct = canEditDeleteProducts(user)
@@ -116,11 +124,7 @@ export function DynamicProdukteTab(props: {
     [sortedLocations, user],
   )
   const [search, setSearch] = React.useState('')
-  const [detailProduct, setDetailProduct] = React.useState<DynamicProdukti | null>(null)
-  const [addOpen, setAddOpen] = React.useState(false)
   const [addLocationOpen, setAddLocationOpen] = React.useState(false)
-  const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   const [newKodi, setNewKodi] = React.useState('')
   const [newEmri, setNewEmri] = React.useState('')
@@ -170,7 +174,7 @@ export function DynamicProdukteTab(props: {
           const hasStock = stockRows.some((s) => s.sasia > 0)
           const finish = () => {
             resetAddForm()
-            setAddOpen(false)
+            sheet.close()
             props.notify('Produkti u shtua me sukses.', 'success')
             scheduleInvalidate(qc, 'products', { userId: user?.id })
           }
@@ -192,8 +196,7 @@ export function DynamicProdukteTab(props: {
 
   const openEdit = (p: DynamicProdukti) => {
     setEditDraft({ product: p, stock: stockRecord(p) })
-    setDetailProduct(null)
-    setEditOpen(true)
+    sheet.push({ type: 'edit', product: p })
   }
 
   const submitEdit = () => {
@@ -214,8 +217,8 @@ export function DynamicProdukteTab(props: {
       },
       {
         onSuccess: () => {
-          setEditOpen(false)
           setEditDraft(null)
+          sheet.close()
           props.notify('Produkti u perditesua me sukses.', 'success')
           scheduleInvalidate(qc, 'products', { userId: user?.id })
         },
@@ -225,7 +228,126 @@ export function DynamicProdukteTab(props: {
 
   const openAdd = () => {
     initStock()
-    setAddOpen(true)
+    sheet.push({ type: 'add' })
+  }
+
+  const current = sheet.current
+  let sheetTitle: React.ReactNode = ''
+  let sheetFooter: React.ReactNode
+
+  if (current?.type === 'detail') {
+    sheetTitle = productLabel(current.product.emri, current.product.kodi)
+    sheetFooter = (
+      <SheetFooterRow>
+        <SheetEditButton
+          label="Ndrysho"
+          onClick={() => openEdit(current.product)}
+          disabled={!canEditProduct}
+        />
+        <SheetConfirmButton
+          label="Fshi"
+          variant="danger"
+          icon="delete"
+          onClick={() => sheet.push({ type: 'delete', product: current.product })}
+          disabled={!canDeleteProduct}
+        />
+      </SheetFooterRow>
+    )
+  } else if (current?.type === 'add') {
+    sheetTitle = 'Shto produkt'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.close}
+        confirmLabel={crud.createMut.isPending || crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
+        confirmLoading={crud.createMut.isPending || crud.updateMut.isPending}
+        onConfirm={submitAdd}
+      />
+    )
+  } else if (current?.type === 'edit') {
+    sheetTitle = 'Ndrysho produktin'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.pop}
+        confirmLabel={crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
+        confirmLoading={crud.updateMut.isPending}
+        onConfirm={submitEdit}
+      />
+    )
+  } else if (current?.type === 'delete') {
+    sheetTitle = 'Fshi produktin?'
+    sheetFooter = (
+      <SheetActionFooter
+        onCancel={sheet.pop}
+        confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
+        confirmLoading={crud.deleteMut.isPending}
+        confirmVariant="danger"
+        confirmIcon="delete"
+        onConfirm={() => {
+          crud.deleteMut.mutate(current.product.id, {
+            onSuccess: () => {
+              sheet.close()
+              props.notify('Produkti u fshi me sukses.', 'success')
+              scheduleProductDeleteInvalidation(qc, user?.id)
+            },
+          })
+        }}
+      />
+    )
+  }
+
+  const renderScreen = (screen: DynamicProductScreen) => {
+    switch (screen.type) {
+      case 'detail':
+        return (
+          <DynamicMobileStockLevels
+            locations={sortedLocations}
+            stock={stockRecord(screen.product)}
+          />
+        )
+      case 'add':
+        return (
+          <DynamicProductFormFields
+            kodi={newKodi}
+            emri={newEmri}
+            stock={newStock}
+            locations={sortedLocations}
+            error={crud.productError}
+            onKodiChange={setNewKodi}
+            onEmriChange={setNewEmri}
+            onStockChange={(id, v) => setNewStock((prev) => ({ ...prev, [id]: v }))}
+          />
+        )
+      case 'edit':
+        return editDraft ? (
+          <DynamicProductFormFields
+            kodi={editDraft.product.kodi}
+            emri={editDraft.product.emri}
+            stock={editDraft.stock}
+            locations={sortedLocations}
+            error={crud.productError}
+            canEditProductDetails={canEditProductDetails}
+            editableLocationIds={editableProductLocationIds}
+            onKodiChange={(v) =>
+              setEditDraft((d) => d && { ...d, product: { ...d.product, kodi: v } })
+            }
+            onEmriChange={(v) =>
+              setEditDraft((d) => d && { ...d, product: { ...d.product, emri: v } })
+            }
+            onStockChange={(id, v) =>
+              setEditDraft((d) => d && { ...d, stock: { ...d.stock, [id]: v } })
+            }
+          />
+        ) : null
+      case 'delete':
+        return (
+          <p className="mobile-card-meta">
+            Produkti &quot;{productLabel(screen.product.emri, screen.product.kodi)}&quot; do te fshihet
+            bashke me historikun e veprimeve te tij.
+          </p>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -280,142 +402,32 @@ export function DynamicProdukteTab(props: {
                 key={p.id}
                 product={p}
                 locations={sortedLocations}
-                onTap={() => setDetailProduct(p)}
+                onTap={() => sheet.push({ type: 'detail', product: p })}
               />
             ))}
           </div>
         )}
       </div>
 
-      <BottomSheet
-        open={!!detailProduct}
-        title={detailProduct ? productLabel(detailProduct.emri, detailProduct.kodi) : ''}
-        onClose={() => setDetailProduct(null)}
-        footer={
-          detailProduct ? (
-            <SheetFooterRow>
-              <SheetEditButton
-                label="Ndrysho"
-                onClick={() => openEdit(detailProduct)}
-                disabled={!canEditProduct}
-              />
-              <SheetConfirmButton
-                label="Fshi"
-                variant="danger"
-                icon="delete"
-                onClick={() => setDeleteOpen(true)}
-                disabled={!canDeleteProduct}
-              />
-            </SheetFooterRow>
-          ) : undefined
-        }
+      <MobileSheetStack
+        open={sheet.open}
+        nav={sheet.nav}
+        panelCount={sheet.panelCount}
+        panelWidth={sheet.panelWidth}
+        trackStyle={sheet.trackStyle}
+        transitionLocked={sheet.transitionLocked}
+        animating={sheet.animating}
+        canPop={sheet.canPop}
+        onPop={sheet.pop}
+        onClose={sheet.close}
+        title={sheetTitle}
+        footer={sheetFooter}
+        className="mobile-sheet--chrome"
       >
-        {detailProduct ? (
-          <DynamicMobileStockLevels
-            locations={sortedLocations}
-            stock={stockRecord(detailProduct)}
-          />
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={addOpen}
-        title="Shto produkt"
-        onClose={() => {
-          setAddOpen(false)
-          resetAddForm()
-        }}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setAddOpen(false)}
-            confirmLabel={crud.createMut.isPending || crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
-            confirmLoading={crud.createMut.isPending || crud.updateMut.isPending}
-            onConfirm={submitAdd}
-          />
-        }
-      >
-        <DynamicProductFormFields
-          kodi={newKodi}
-          emri={newEmri}
-          stock={newStock}
-          locations={sortedLocations}
-          error={crud.productError}
-          onKodiChange={setNewKodi}
-          onEmriChange={setNewEmri}
-          onStockChange={(id, v) => setNewStock((prev) => ({ ...prev, [id]: v }))}
-        />
-      </BottomSheet>
-
-      <BottomSheet
-        open={editOpen && !!editDraft}
-        title="Ndrysho produktin"
-        onClose={() => {
-          setEditOpen(false)
-          setEditDraft(null)
-        }}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setEditOpen(false)}
-            confirmLabel={crud.updateMut.isPending ? 'Duke ruajtur…' : 'Ruaj'}
-            confirmLoading={crud.updateMut.isPending}
-            onConfirm={submitEdit}
-          />
-        }
-      >
-        {editDraft ? (
-          <DynamicProductFormFields
-            kodi={editDraft.product.kodi}
-            emri={editDraft.product.emri}
-            stock={editDraft.stock}
-            locations={sortedLocations}
-            error={crud.productError}
-            canEditProductDetails={canEditProductDetails}
-            editableLocationIds={editableProductLocationIds}
-            onKodiChange={(v) =>
-              setEditDraft((d) => d && { ...d, product: { ...d.product, kodi: v } })
-            }
-            onEmriChange={(v) =>
-              setEditDraft((d) => d && { ...d, product: { ...d.product, emri: v } })
-            }
-            onStockChange={(id, v) =>
-              setEditDraft((d) => d && { ...d, stock: { ...d.stock, [id]: v } })
-            }
-          />
-        ) : null}
-      </BottomSheet>
-
-      <BottomSheet
-        open={deleteOpen && !!detailProduct}
-        title="Fshi produktin?"
-        onClose={() => setDeleteOpen(false)}
-        footer={
-          <SheetActionFooter
-            onCancel={() => setDeleteOpen(false)}
-            confirmLabel={crud.deleteMut.isPending ? 'Duke fshire…' : 'Fshi'}
-            confirmLoading={crud.deleteMut.isPending}
-            confirmVariant="danger"
-            confirmIcon="delete"
-            onConfirm={() => {
-              if (!detailProduct) return
-              crud.deleteMut.mutate(detailProduct.id, {
-                onSuccess: () => {
-                  setDeleteOpen(false)
-                  setDetailProduct(null)
-                  props.notify('Produkti u fshi me sukses.', 'success')
-                  scheduleProductDeleteInvalidation(qc, user?.id)
-                },
-              })
-            }}
-          />
-        }
-      >
-        {detailProduct ? (
-          <p className="mobile-card-meta">
-            Produkti &quot;{productLabel(detailProduct.emri, detailProduct.kodi)}&quot; do te fshihet
-            bashke me historikun e veprimeve te tij.
-          </p>
-        ) : null}
-      </BottomSheet>
+        {sheet.screens.map((screen, index) => (
+          <React.Fragment key={index}>{renderScreen(screen)}</React.Fragment>
+        ))}
+      </MobileSheetStack>
 
       <LocationAddModal
         open={addLocationOpen}

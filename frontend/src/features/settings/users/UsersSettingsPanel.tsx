@@ -17,6 +17,7 @@ import { roleLabel } from '../../../lib/permissions'
 import { AccessLevelControl } from '../../../components/AccessLevelControl'
 import { ConfirmModal } from '../../../components/ConfirmModal'
 import { DropdownMenu } from '../../../components/DropdownMenu'
+import { PowerOffIcon, PowerOnIcon } from '../../../components/icons'
 import { Snackbar } from '../../../components/Snackbar'
 import { useSnackbar } from '../../../hooks/useSnackbar'
 import { SettingsSectionHeading } from '../SettingsSectionHeading'
@@ -375,12 +376,10 @@ export function UsersSettingsPanel(props: { refreshToken?: number; embedded?: bo
     setError(null)
     try {
       const deletedUserId = deleteTarget.id
-      const result = await deleteUser(deletedUserId)
+      await deleteUser(deletedUserId)
       setDeleteTarget(null)
       notify(
-        result.deleted
-          ? 'Përdoruesi u fshi.'
-          : 'Përdoruesi ka historik, prandaj u çaktivizua dhe aksesi u hoq.',
+        'Përdoruesi u fshi. Historiku u ruajt.',
         'success',
       )
       clearManagedUsersCache(user?.id)
@@ -730,20 +729,11 @@ export function UsersSettingsPanel(props: { refreshToken?: number; embedded?: bo
                           className="btn sm settings-status-toggle-btn"
                           onClick={() => setStatusTarget(managedUser)}
                         >
-                          <svg
-                            aria-hidden="true"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M12 2v10" />
-                            <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
-                          </svg>
+                          {managedUser.aktiv ? (
+                            <PowerOffIcon size={14} />
+                          ) : (
+                            <PowerOnIcon size={14} />
+                          )}
                           {managedUser.aktiv ? 'Çaktivizo' : 'Riaktivizo'}
                         </button>
                       ) : null}

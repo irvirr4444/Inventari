@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { PowerOffIcon, PowerOnIcon } from '../../components/icons'
 import { createLokacioni, deleteLokacioni, patchLokacioni } from '../../lib/api/lokacionet'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { useLokacioni } from '../../lib/lokacioni/LokacioniProvider'
@@ -280,36 +281,7 @@ export function LocationsEditor(props: LocationsEditorProps) {
                     onClick={() => (loc.aktiv ? deactivate(loc) : activate(loc))}
                     disabled={savingKey === loc.id}
                   >
-                    {loc.aktiv ? (
-                      <svg
-                        aria-hidden="true"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M12 2v10" />
-                        <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
-                      </svg>
-                    ) : (
-                      <svg
-                        aria-hidden="true"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    )}
+                    {loc.aktiv ? <PowerOffIcon size={14} /> : <PowerOnIcon size={14} />}
                     {loc.aktiv ? 'Çaktivizo' : 'Riaktivizo'}
                   </button>
                   <button

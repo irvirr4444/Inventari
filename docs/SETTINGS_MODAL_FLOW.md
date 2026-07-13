@@ -35,13 +35,13 @@ Replace those controls with a **single user menu** that:
 
 | Tab | Albanian label | Admin can… |
 | --- | --- | --- |
-| **Users** | Përdorues | List users, create users, change roles, assign per-location access, deactivate users |
+| **Users** | Përdorues | Search/list users, create users, edit credentials, change roles, assign per-location access, deactivate/reactivate, and delete users |
 | **Locations** | Vendndodhjet | Manage locations and view tenant configuration (same as old settings page) |
 
 ### What the modal does **not** do (yet)
 
 - Email invitations (no invite/accept flow).
-- Pagination or search on the user list (loads all account users in one request).
+- Pagination on the user list.
 - Mobile settings modal (mobile still uses its own shell; desktop only for now).
 - Settings for **legacy** dashboard users (legacy shell shows menu + logout only).
 
@@ -485,8 +485,8 @@ sequenceDiagram
    - `requireAdmin`.
    - Reject self-delete.
    - Delete access rows for user.
-   - Set `aktiv = false` (soft delete, not hard delete).
-4. Frontend reloads list, shows "Përdoruesi u çaktivizua."
+   - Hard delete user row (history remains).
+4. Frontend reloads list, shows "Përdoruesi u fshi. Historiku u ruajt."
 
 Deactivated users cannot log in (auth layer should reject `aktiv = false`).
 

@@ -66,15 +66,19 @@ export function LocationAddModal(props: {
   const formRef = React.useRef<HTMLFormElement>(null)
   const emriInputId = isMobile ? 'location-add-emri-mobile' : 'location-add-emri'
 
+  const emojiPicker = (
+    <LocationEmojiPicker
+      value={flagEmoji}
+      onChange={setFlagEmoji}
+      disabled={saving}
+      className={isMobile ? undefined : 'location-emoji-picker-wide'}
+    />
+  )
+
   const emojiField = (
     <div className={isMobile ? undefined : 'form-group location-add-emoji-field'}>
       <span className={isMobile ? 'mobile-label' : 'label'}>Ikona</span>
-      <LocationEmojiPicker
-        value={flagEmoji}
-        onChange={setFlagEmoji}
-        disabled={saving}
-        className="location-emoji-picker-wide"
-      />
+      {emojiPicker}
     </div>
   )
 
@@ -92,6 +96,26 @@ export function LocationAddModal(props: {
         disabled={saving}
         onChange={(e) => setEmri(e.target.value)}
       />
+    </div>
+  )
+
+  const mobileNameRow = (
+    <div>
+      <label className="mobile-section-label" htmlFor={emriInputId}>
+        Emri
+      </label>
+      <div className="mobile-location-name-row">
+        {emojiPicker}
+        <input
+          id={emriInputId}
+          className="mobile-input"
+          value={emri}
+          maxLength={40}
+          placeholder="Emri i vendndodhjes"
+          disabled={saving}
+          onChange={(e) => setEmri(e.target.value)}
+        />
+      </div>
     </div>
   )
 
@@ -129,8 +153,7 @@ export function LocationAddModal(props: {
           className="mobile-list-stack"
           onSubmit={submit}
         >
-          {emojiField}
-          {nameField}
+          {mobileNameRow}
           {errorBlock}
         </form>
       </BottomSheet>

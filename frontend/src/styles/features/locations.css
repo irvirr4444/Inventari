@@ -200,6 +200,12 @@
   cursor: not-allowed;
 }
 
+.location-emoji-picker--disabled .location-emoji-trigger:disabled {
+  opacity: 0.45;
+  border-color: var(--border-light);
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .location-emoji-menu {
   position: absolute;
   display: grid;

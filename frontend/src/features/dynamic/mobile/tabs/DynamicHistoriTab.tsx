@@ -21,6 +21,7 @@ import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
 import { queryKeys } from '../../../../lib/queryKeys'
 import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { isAdmin } from '../../../../lib/permissions'
 import {
   fmtEuro,
   formatDisplayDate,
@@ -480,7 +481,7 @@ export function DynamicHistoriTab(props: {
             title="Vendndodhja"
             selectedIds={appliedClientFilters.locationIds}
             onApply={applyLocationFilter}
-            allowAdd
+            allowAdd={isAdmin(user)}
             onNotify={props.notify}
             onClose={() => setLocationOpen(false)}
           />

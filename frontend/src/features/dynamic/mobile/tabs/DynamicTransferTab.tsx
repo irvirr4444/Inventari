@@ -6,6 +6,8 @@ import type { Produkti } from '../../../../lib/api'
 import { fmtEuro } from '../../../../lib/format'
 import { useLokacioni } from '../../../../lib/lokacioni/LokacioniProvider'
 import { useTenantConfig } from '../../../../hooks/useTenantConfig'
+import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { canAddInLocation, isAdmin } from '../../../../lib/permissions'
 import { createEmptyActionItem } from '../../../../types/actionItem'
 import { MobileActionReviewSheet } from '../../../../mobile/components/MobileActionReviewSheet'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
@@ -20,6 +22,7 @@ import {
 export function DynamicTransferTab(props: {
   notify: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
+  const { user } = useAuth()
   const { trackPrice } = useTenantConfig()
   const { activeLokacionet } = useLokacioni()
   const sortedLocations = React.useMemo(
@@ -46,6 +49,8 @@ export function DynamicTransferTab(props: {
     ? entry.itemsState.items.find((i) => i.key === editingKey)
     : null
   const hasValidItems = filledItems.length > 0
+  const canTransfer =
+    canAddInLocation(user, entry.transferFrom) && canAddInLocation(user, entry.transferTo)
   const pickerProducts = products as unknown as Produkti[]
 
   const openAdd = () => {
@@ -163,7 +168,7 @@ export function DynamicTransferTab(props: {
 
       <StickyCta
         label="FINALIZO TRANSFERTËN"
-        disabled={!hasValidItems}
+        disabled={!hasValidItems || !canTransfer}
         loading={entry.mutation.isPending}
         onClick={entry.requestFinalize}
       />
@@ -172,7 +177,7 @@ export function DynamicTransferTab(props: {
         open={fromOpen}
         title="Nga"
         value={entry.transferFrom}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.notify}
         onClose={() => setFromOpen(false)}
         onSelect={entry.setTransferFrom}
@@ -181,7 +186,7 @@ export function DynamicTransferTab(props: {
         open={toOpen}
         title="Te"
         value={entry.transferTo}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.notify}
         onClose={() => setToOpen(false)}
         onSelect={entry.setTransferTo}

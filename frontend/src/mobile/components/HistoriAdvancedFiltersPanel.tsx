@@ -2,6 +2,10 @@ import * as React from 'react'
 import type { HistoryClientFilters, HistoryFilterRangeIssue } from '../../lib/historyClientFilters'
 import { getHistoryFilterRangeIssueMessage } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
+import {
+  HistoryUserFilterDropdown,
+  type HistoryUserFilterOption,
+} from '../../components/HistoryUserFilterDropdown'
 import { InputClearButton } from '../../components/InputClearButton'
 import { NumericInput } from '../../components/NumericInput'
 import { OraRangeInput, type OraRangeChangeHandler } from '../../components/OraRangeInput'
@@ -13,10 +17,7 @@ import { BottomSheet } from './BottomSheet'
 import { SheetFooterRow } from './SheetActions'
 import { MobileDateRangeInput } from './MobileDateRangeInput'
 
-export type MobileHistoryUserFilterOption = {
-  id: string
-  label: string
-}
+export type MobileHistoryUserFilterOption = HistoryUserFilterOption
 
 type HistoriAdvancedFiltersPanelProps = {
   open: boolean
@@ -41,77 +42,6 @@ type HistoriAdvancedFiltersPanelProps = {
   onCreatedByUserIdChange: (value: string) => void
   onApply: () => void
   onClear: () => void
-}
-
-function MobileHistoryUserSearch(props: {
-  users: MobileHistoryUserFilterOption[]
-  value: string
-  onChange: (id: string) => void
-}) {
-  const [open, setOpen] = React.useState(false)
-  const [query, setQuery] = React.useState('')
-  const selected = props.users.find((user) => user.id === props.value) ?? null
-  const normalizedQuery = query.trim().toLowerCase()
-  const filteredUsers = normalizedQuery
-    ? props.users.filter((user) => user.label.toLowerCase().includes(normalizedQuery))
-    : props.users
-  const inputValue = open ? query : selected?.label ?? ''
-
-  const selectUser = (id: string) => {
-    props.onChange(id)
-    setQuery('')
-    setOpen(false)
-  }
-
-  return (
-    <div className="mobile-list-stack">
-      <span className={`clearable-field${props.value ? ' clearable-field--has-value' : ''}`}>
-        <input
-          type="text"
-          className="mobile-input clearable-field__control"
-          value={inputValue}
-          placeholder="Kërko person…"
-          onFocus={() => {
-            setQuery('')
-            setOpen(true)
-          }}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setOpen(true)
-          }}
-        />
-        <InputClearButton
-          className="clearable-field__clear"
-          onClick={() => selectUser('')}
-        />
-      </span>
-      {open ? (
-        <>
-          <button
-            type="button"
-            className={`mobile-tap-field${!props.value ? ' selected' : ''}`}
-            onClick={() => selectUser('')}
-          >
-            Të gjithë personat
-          </button>
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                className={`mobile-tap-field${props.value === user.id ? ' selected' : ''}`}
-                onClick={() => selectUser(user.id)}
-              >
-                {user.label}
-              </button>
-            ))
-          ) : (
-            <div className="mobile-picker-empty">Nuk u gjet person.</div>
-          )}
-        </>
-      ) : null}
-    </div>
-  )
 }
 
 export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelProps) {
@@ -220,9 +150,15 @@ export function HistoriAdvancedFiltersPanel(props: HistoriAdvancedFiltersPanelPr
         {props.showUserFilter ? (
           <div className="mobile-advanced-filters-section">
             <div className="mobile-section-label">Personi</div>
-            <MobileHistoryUserSearch
+            <HistoryUserFilterDropdown
               users={props.users ?? []}
               value={createdByUserId}
+              clearLabel="Të gjithë personat"
+              placeholder="Kërko person…"
+              emptyLabel="Nuk u gjet person."
+              listAriaLabel="Lista e personave"
+              aria-label="Filtro sipas personit"
+              listCountLabel={(count) => `${count} persona — kerko ose zgjedh nga lista`}
               onChange={onCreatedByUserIdChange}
             />
           </div>

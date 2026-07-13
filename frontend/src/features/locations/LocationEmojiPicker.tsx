@@ -36,7 +36,13 @@ export function LocationEmojiPicker(props: {
 
   useEscapeToClose(() => setOpen(false), { enabled: open })
 
-  const className = ['location-emoji-picker', props.className].filter(Boolean).join(' ')
+  const className = [
+    'location-emoji-picker',
+    props.disabled ? 'location-emoji-picker--disabled' : null,
+    props.className,
+  ]
+    .filter(Boolean)
+    .join(' ')
   const openMenu = () => {
     const rect = triggerRef.current?.getBoundingClientRect()
     if (!rect) return

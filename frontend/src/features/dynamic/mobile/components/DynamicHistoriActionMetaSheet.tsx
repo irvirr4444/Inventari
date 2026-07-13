@@ -8,6 +8,8 @@ import {
 import { BottomSheet } from '../../../../mobile/components/BottomSheet'
 import { SheetActionFooter } from '../../../../mobile/components/SheetActions'
 import { MobileDateInput } from '../../../../mobile/components/MobileDateInput'
+import { useAuth } from '../../../../lib/auth/AuthProvider'
+import { isAdmin } from '../../../../lib/permissions'
 import { DynamicLocationField, DynamicLocationPickerSheet } from './DynamicLocationPickerSheet'
 
 const FORM_ID = 'dynamic-histori-action-meta-form'
@@ -21,6 +23,7 @@ export function DynamicHistoriActionMetaSheet(props: {
   onSave: (meta: DynamicHistoryBatchMetaDraft) => void
   onNotify?: (message: string, variant?: 'success' | 'default' | 'error') => void
 }) {
+  const { user } = useAuth()
   const [meta, setMeta] = React.useState<DynamicHistoryBatchMetaDraft>(() =>
     dynamicMetaFromDetail(props.detail),
   )
@@ -140,7 +143,7 @@ export function DynamicHistoriActionMetaSheet(props: {
         title="Nga"
         value={meta.lokacioni_id}
         excludeIds={[meta.destination_lokacioni_id]}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.onNotify}
         onClose={() => setFromOpen(false)}
         onSelect={setFrom}
@@ -150,7 +153,7 @@ export function DynamicHistoriActionMetaSheet(props: {
         title="Te"
         value={meta.destination_lokacioni_id}
         excludeIds={[meta.lokacioni_id]}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.onNotify}
         onClose={() => setToOpen(false)}
         onSelect={(id) => setMeta({ ...meta, destination_lokacioni_id: id })}
@@ -159,7 +162,7 @@ export function DynamicHistoriActionMetaSheet(props: {
         open={locOpen}
         title="Vendndodhja"
         value={meta.lokacioni_id}
-        allowAdd
+        allowAdd={isAdmin(user)}
         onNotify={props.onNotify}
         onClose={() => setLocOpen(false)}
         onSelect={(id) => setMeta({ ...meta, lokacioni_id: id })}

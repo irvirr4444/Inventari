@@ -38,6 +38,13 @@
   padding-left: 8px;
   padding-right: 8px;
   font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dynamic-produkte-list {
@@ -102,6 +109,24 @@
   margin-top: 2px;
 }
 
+.dynamic-mobile-stock-stat-chips.is-scrollable {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.dynamic-mobile-stock-stat-chips.is-scrollable .dynamic-mobile-stock-stat-chip {
+  flex: 0 0 auto;
+}
+
+.dynamic-mobile-stock-stat-chips.is-scrollable .dynamic-mobile-stock-stat-chip-name {
+  max-width: clamp(120px, 45vw, 220px);
+}
+
 .dynamic-mobile-stock-stat-chip {
   display: inline-flex;
   align-items: center;
@@ -113,6 +138,8 @@
   font-size: 12px;
   line-height: 1.3;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .dynamic-mobile-stock-stat-chip--zero {
@@ -134,7 +161,8 @@
 .dynamic-mobile-stock-stat-chip-name {
   font-weight: 500;
   color: var(--mobile-sheet-text-subtle, rgba(255, 255, 255, 0.78));
-  max-width: 80px;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }

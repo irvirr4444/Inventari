@@ -74,6 +74,16 @@ export function canEditDeleteBatch(
   return Boolean(lokacioniId)
 }
 
+export function filterLocationsByMinimumAccess<T extends { id: string }>(
+  user: SessionUser | null | undefined,
+  locations: T[],
+  minimum: LokacioniAkses,
+): T[] {
+  if (!user) return []
+  if (isAdmin(user)) return locations
+  return locations.filter((loc) => hasMinimumAccess(user, loc.id, minimum))
+}
+
 export function accessLabel(akses: LokacioniAkses): string {
   switch (akses) {
     case 'view':

@@ -2,25 +2,7 @@ import * as React from 'react'
 import { COUNTRY_META, type Country } from '../../lib/country'
 import { countryLabel } from '../../lib/format'
 import { CountryPickerSheet } from './CountryPickerSheet'
-
-function FieldChevron() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="mobile-field-chevron"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  )
-}
+import { MobileFieldChevron } from './MobileFieldChevron'
 
 export function MobileCountryField(props: {
   label: string
@@ -47,7 +29,7 @@ export function MobileCountryField(props: {
             <img className="flagIcon" src={meta.flagSrc} alt="" width={20} height={14} />
             {countryLabel(props.value)}
           </span>
-          <FieldChevron />
+          <MobileFieldChevron />
         </button>
       </div>
 

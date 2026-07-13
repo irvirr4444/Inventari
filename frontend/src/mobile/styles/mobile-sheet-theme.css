@@ -13,6 +13,27 @@
   color: var(--mobile-sheet-text);
 }
 
+.mobile-sheet.mobile-sheet--chrome .mobile-sheet-header-back {
+  color: var(--mobile-sheet-text);
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-sheet-header-back:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobile-sheet-title-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-sheet-title-emoji {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
 .mobile-sheet.mobile-sheet--chrome .mobile-sheet-footer {
   border-top-color: var(--mobile-sheet-footer-border);
 }
@@ -53,6 +74,12 @@
   background: var(--mobile-sheet-selected-bg);
   color: var(--mobile-sheet-text);
   font-weight: 600;
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-tap-field.mobile-tap-field--saved {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--mobile-sheet-selected-border) 70%, rgba(255, 255, 255, 0.22));
+  background: color-mix(in srgb, var(--mobile-sheet-selected-bg) 35%, transparent);
 }
 
 .mobile-sheet.mobile-sheet--chrome .mobile-picker-empty--selected {
@@ -112,6 +139,7 @@
 .mobile-sheet.mobile-sheet--chrome .mobile-search-input,
 .mobile-sheet.mobile-sheet--chrome .clearable-field__control,
 .mobile-sheet.mobile-sheet--chrome .debounced-search-input input,
+.mobile-sheet.mobile-sheet--chrome .product-search-input,
 .mobile-sheet.mobile-sheet--chrome .time-input-trigger,
 .mobile-sheet.mobile-sheet--chrome .date-input-trigger {
   background: var(--mobile-sheet-panel-bg);
@@ -119,10 +147,31 @@
   color: var(--mobile-sheet-text);
 }
 
+.mobile-sheet.mobile-sheet--chrome .mobile-input:disabled,
+.mobile-sheet.mobile-sheet--chrome .mobile-search-input:disabled,
+.mobile-sheet.mobile-sheet--chrome .clearable-field__control:disabled,
+.mobile-sheet.mobile-sheet--chrome .debounced-search-input input:disabled,
+.mobile-sheet.mobile-sheet--chrome .product-search-input:disabled {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+  color: rgba(255, 255, 255, 0.55);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-input:disabled::placeholder,
+.mobile-sheet.mobile-sheet--chrome .mobile-search-input:disabled::placeholder,
+.mobile-sheet.mobile-sheet--chrome .clearable-field__control:disabled::placeholder,
+.mobile-sheet.mobile-sheet--chrome .debounced-search-input input:disabled::placeholder,
+.mobile-sheet.mobile-sheet--chrome .product-search-input:disabled::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
 .mobile-sheet.mobile-sheet--chrome .mobile-input::placeholder,
 .mobile-sheet.mobile-sheet--chrome .mobile-search-input::placeholder,
 .mobile-sheet.mobile-sheet--chrome .clearable-field__control::placeholder,
-.mobile-sheet.mobile-sheet--chrome .debounced-search-input input::placeholder {
+.mobile-sheet.mobile-sheet--chrome .debounced-search-input input::placeholder,
+.mobile-sheet.mobile-sheet--chrome .product-search-input::placeholder {
   color: rgba(255, 255, 255, 0.38);
   font-weight: 400;
 }
@@ -140,8 +189,94 @@
 
 .mobile-sheet.mobile-sheet--chrome .input-clear-btn,
 .mobile-sheet.mobile-sheet--chrome .clearable-field__clear,
+.mobile-sheet.mobile-sheet--chrome .mobile-password-field__toggle {
+  color: var(--mobile-sheet-text-muted);
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-password-field__toggle:hover:not(:disabled),
+.mobile-sheet.mobile-sheet--chrome .mobile-password-field__toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--mobile-sheet-text);
+}
+
 .mobile-sheet.mobile-sheet--chrome .debounced-search-input__clear {
   background: rgba(13, 31, 54, 0.85);
+  color: var(--mobile-sheet-text-muted);
+}
+
+.mobile-sheet.mobile-sheet--chrome .product-search-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .product-search-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 40px 0 12px;
+  border: 1px solid var(--mobile-sheet-panel-border-strong);
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.mobile-sheet.mobile-sheet--chrome .product-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.mobile-sheet.mobile-sheet--chrome .product-search-toggle {
+  color: var(--mobile-sheet-text-muted);
+  border-radius: 0 10px 10px 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .product-search-toggle:hover,
+.mobile-sheet.mobile-sheet--chrome .product-search-toggle:focus-visible {
+  color: var(--mobile-sheet-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.mobile-client .product-search-list.product-search-list-portal {
+  z-index: 1200;
+  background: var(--mobile-sheet-bg, #0d1f36);
+  border-color: var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+html.mobile-client .product-search-list-portal .product-search-list-header {
+  background: var(--mobile-sheet-bg, #0d1f36);
+  border-bottom-color: var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+}
+
+html.mobile-client .product-search-list-portal .product-search-list-meta {
+  color: var(--mobile-sheet-text-muted);
+}
+
+html.mobile-client .product-search-list-portal .product-search-show-all {
+  color: var(--mobile-sheet-accent-muted, rgba(126, 184, 232, 0.95));
+}
+
+html.mobile-client .product-search-list-portal .product-search-show-all:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.mobile-client .product-search-list-portal .product-search-option {
+  color: var(--mobile-sheet-text);
+}
+
+html.mobile-client .product-search-list-portal .product-search-option:hover,
+html.mobile-client .product-search-list-portal .product-search-option.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.mobile-client .product-search-list-portal .product-search-option.selected {
+  background: var(--mobile-sheet-selected-bg, rgba(47, 125, 246, 0.12));
+  color: var(--mobile-sheet-text);
+}
+
+html.mobile-client .product-search-list-portal .product-search-option-clear {
+  color: var(--mobile-sheet-text-muted);
+}
+
+html.mobile-client .product-search-list-portal .product-search-empty {
   color: var(--mobile-sheet-text-muted);
 }
 
@@ -375,6 +510,89 @@
 }
 
 /* Location add — emoji picker in sheet */
+.mobile-sheet.mobile-sheet--chrome .mobile-location-name-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--mobile-space-sm);
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-location-name-row .location-emoji-picker {
+  flex-shrink: 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-location-name-row .mobile-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .location-emoji-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--mobile-sheet-text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mobile-sheet.mobile-sheet--chrome .location-emoji-trigger:active:not(:disabled) {
+  border-color: var(--mobile-sheet-panel-border-strong);
+  background: var(--mobile-sheet-panel-bg);
+}
+
+.mobile-sheet.mobile-sheet--chrome .location-emoji-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Make the emoji picker read like a disabled field. */
+.mobile-sheet.mobile-sheet--chrome .location-emoji-picker--disabled .location-emoji-trigger:disabled {
+  opacity: 0.45;
+  border-color: var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html.mobile-client .location-emoji-menu.location-emoji-menu-portal {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  width: 180px;
+  padding: 6px;
+  border: 1px solid var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: var(--mobile-sheet-bg, #0d1f36);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  z-index: 1200;
+}
+
+html.mobile-client .location-emoji-option {
+  border: 1px solid var(--mobile-sheet-panel-border, rgba(255, 255, 255, 0.12));
+  background: var(--mobile-sheet-panel-bg, #0d1f36);
+  border-radius: 10px;
+  padding: 8px 4px;
+  font-size: 1.15rem;
+  min-height: 44px;
+  color: var(--mobile-sheet-text, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+html.mobile-client .location-emoji-option.active {
+  border-color: var(--mobile-sheet-selected-border, rgba(47, 125, 246, 0.65));
+  background: var(--mobile-sheet-selected-bg, rgba(47, 125, 246, 0.18));
+  box-shadow: 0 0 0 1px rgba(47, 125, 246, 0.2);
+}
+
 .mobile-sheet.mobile-sheet--chrome .location-emoji-picker-wide {
   width: 100%;
   max-width: none;
@@ -395,4 +613,64 @@
   border-color: var(--mobile-sheet-selected-border);
   background: var(--mobile-sheet-selected-bg);
   box-shadow: 0 0 0 1px rgba(47, 125, 246, 0.2);
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-segmented {
+  background: var(--mobile-sheet-panel-bg);
+  border-color: var(--mobile-sheet-panel-border-strong, rgba(255, 255, 255, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  padding: 3px;
+  gap: 3px;
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-segmented-btn {
+  min-height: 38px;
+  font-size: 14px;
+  color: var(--mobile-sheet-text-muted);
+  font-weight: 600;
+}
+
+.mobile-sheet.mobile-sheet--chrome .mobile-segmented-btn.active:not(.success):not(.danger) {
+  background: var(--mobile-sheet-selected-bg);
+  color: var(--mobile-sheet-text);
+  box-shadow:
+    0 0 0 1px rgba(47, 125, 246, 0.2),
+    0 10px 22px rgba(0, 0, 0, 0.22);
+}
+
+/* User access editor — segmented switching */
+.mobile-settings-access-row {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-settings-access-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .access-level-control {
+  --access-paper: var(--mobile-sheet-panel-bg);
+  --access-rule: var(--mobile-sheet-panel-border-strong);
+  --access-ink: var(--mobile-sheet-text);
+  --access-muted: var(--mobile-sheet-text-muted);
+  --access-stamp: var(--primary);
+  min-width: 0;
+  width: 100%;
+}
+
+.mobile-sheet.mobile-sheet--chrome .access-level-control-sm {
+  min-width: 0;
+}
+
+.mobile-sheet.mobile-sheet--chrome .access-level-segment {
+  padding: 5px 4px;
+  font-size: 9px;
+  letter-spacing: 0.01em;
+}
+
+.mobile-sheet.mobile-sheet--chrome .access-level-current {
+  color: var(--mobile-sheet-text-muted);
 }

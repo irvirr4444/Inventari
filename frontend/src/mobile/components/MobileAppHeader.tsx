@@ -1,11 +1,13 @@
-import { LogOutIcon } from '../../components/icons'
 import { APP_LOGO_SRC, APP_NAME } from '../../lib/appBrand'
+import type { SessionUser } from '../../lib/auth/types'
 import type { MobileHeaderState } from '../types'
+import { MobileHeaderAccountAvatar } from './MobileAccountMenu'
 
 export function MobileAppHeader(props: {
   header: MobileHeaderState
   tabTitle: string
-  onLogout: () => void
+  user: SessionUser
+  onAccountMenuOpen: () => void
 }) {
   return (
     <header className="mobile-header">
@@ -32,9 +34,13 @@ export function MobileAppHeader(props: {
       </div>
 
       <div className="mobile-header-side mobile-header-side--end">
-        <button type="button" className="mobile-header-logout" onClick={props.onLogout}>
-          <LogOutIcon />
-          <span>Dil</span>
+        <button
+          type="button"
+          className="mobile-header-account"
+          onClick={props.onAccountMenuOpen}
+          aria-label="Hap menunë e përdoruesit"
+        >
+          <MobileHeaderAccountAvatar />
         </button>
       </div>
     </header>

@@ -30,7 +30,6 @@ import {
   normalizeEmri,
   updatePerdorues,
 } from '../../repositories/perdoruesRepository.js'
-import { hasVeprimBatchByCreator } from '../../repositories/veprimBatchRepository.js'
 
 function toManagedUser(row: {
   id: string
@@ -191,14 +190,8 @@ export async function deleteManagedUser(
   await assertAccountMember(supabase, accountOwnerId, userId)
   await deleteAccessForPerdorues(supabase, userId)
 
-  const hasHistory = await hasVeprimBatchByCreator(supabase, accountOwnerId, userId)
-  if (!hasHistory) {
-    await deletePerdorues(supabase, userId)
-    return { ok: true as const, deleted: true as const }
-  }
-
-  await updatePerdorues(supabase, userId, { aktiv: false })
-  return { ok: true as const, deleted: false as const }
+  await deletePerdorues(supabase, userId)
+  return { ok: true as const, deleted: true as const }
 }
 
 export async function getManagedUserAccess(

@@ -9,7 +9,7 @@ import {
   fetchVeprimBatchById,
   fetchVeprimetByBatchId,
 } from '../../../repositories/batchRepository.js'
-import { listLokacionetByOwner } from '../../../repositories/lokacioniRepository.js'
+import { lokacionetByIdForHistory } from '../../../repositories/lokacioniRepository.js'
 import { fetchAllActionBatchesForExport, isLegacyBatchId, loadLegacyBatchDetail } from '../../actions/index.js'
 import {
   applyHistoryExportClientFilters,
@@ -228,8 +228,7 @@ export async function buildHistoryReportDocument(
   const trackPrice = query.trackPrice ?? true
   let lokacioniById: Map<string, LokacioniRow> | undefined
   if (!user.isLegacy) {
-    const lokacionet = await listLokacionetByOwner(supabase, user.id)
-    lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+    lokacioniById = await lokacionetByIdForHistory(supabase, user.id)
   }
 
   let details: BatchDetail[]

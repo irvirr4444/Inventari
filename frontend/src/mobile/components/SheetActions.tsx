@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { CheckIcon, CloseIcon, DeleteIcon, EditIcon, PlusIcon } from '../../components/icons'
+import { CheckIcon, CloseIcon, DeleteIcon, EditIcon, PlusIcon, PowerOffIcon, PowerOnIcon } from '../../components/icons'
 import { useEnterToConfirm } from '../../hooks/useEnterToConfirm'
 
 type SheetButtonProps = {
@@ -11,8 +11,12 @@ type SheetButtonProps = {
   form?: string
 }
 
-export function SheetFooterRow(props: { children: React.ReactNode }) {
-  return <div className="mobile-sheet-footer-row">{props.children}</div>
+export function SheetFooterRow(props: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`mobile-sheet-footer-row${props.className ? ` ${props.className}` : ''}`}>
+      {props.children}
+    </div>
+  )
 }
 
 export function SheetCancelButton(props: SheetButtonProps) {
@@ -31,11 +35,22 @@ export function SheetCancelButton(props: SheetButtonProps) {
 }
 
 export function SheetConfirmButton(
-  props: SheetButtonProps & { variant?: 'primary' | 'danger'; icon?: 'check' | 'plus' | 'delete' },
+  props: SheetButtonProps & {
+    variant?: 'primary' | 'danger'
+    icon?: 'check' | 'plus' | 'delete' | 'power-on' | 'power-off'
+  },
 ) {
   const variant = props.variant ?? 'primary'
   const Icon =
-    props.icon === 'plus' ? PlusIcon : props.icon === 'delete' ? DeleteIcon : CheckIcon
+    props.icon === 'plus'
+      ? PlusIcon
+      : props.icon === 'delete'
+        ? DeleteIcon
+        : props.icon === 'power-on'
+          ? PowerOnIcon
+          : props.icon === 'power-off'
+            ? PowerOffIcon
+            : CheckIcon
 
   return (
     <button
@@ -73,7 +88,7 @@ export function SheetActionFooter(props: {
   confirmLoading?: boolean
   confirmDisabled?: boolean
   confirmVariant?: 'primary' | 'danger'
-  confirmIcon?: 'check' | 'plus' | 'delete'
+  confirmIcon?: 'check' | 'plus' | 'delete' | 'power-on' | 'power-off'
   confirmType?: 'button' | 'submit'
   form?: string
 }) {

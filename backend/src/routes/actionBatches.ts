@@ -34,7 +34,7 @@ import {
   touchVeprimBatchUpdatedAt,
 } from '../repositories/batchRepository.js'
 import { validateStock } from '../services/actions/index.js'
-import { listLokacionetByOwner } from '../repositories/lokacioniRepository.js'
+import { listLokacionetByOwner, lokacionetByIdForHistory } from '../repositories/lokacioniRepository.js'
 import type { LokacioniRow } from '../domain/lokacioni.js'
 import { lokacioniToCountry } from '../domain/lokacioni.js'
 import {
@@ -239,8 +239,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     let lokacioniById: Map<string, LokacioniRow> | undefined
     if (!isLegacy) {
-      const lokacionet = await listLokacionetByOwner(supabase, tenantId)
-      lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+      lokacioniById = await lokacionetByIdForHistory(supabase, tenantId)
     }
 
     let batchedActions: ReturnType<typeof aggregateBatch>[] = []
@@ -403,8 +402,7 @@ export function registerActionBatchRoutes(app: FastifyInstance, supabase: Supaba
 
     let lokacioniById: Map<string, LokacioniRow> | undefined
     if (!req.user.isLegacy) {
-      const lokacionet = await listLokacionetByOwner(supabase, tenantId)
-      lokacioniById = new Map(lokacionet.map((l) => [l.id, l]))
+      lokacioniById = await lokacionetByIdForHistory(supabase, tenantId)
     }
 
     const base = aggregateBatch(batch, rows, lokacioniById)

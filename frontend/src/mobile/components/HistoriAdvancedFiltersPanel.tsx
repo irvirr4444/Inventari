@@ -1,4 +1,3 @@
-import * as React from 'react'
 import type { HistoryClientFilters, HistoryFilterRangeIssue } from '../../lib/historyClientFilters'
 import { getHistoryFilterRangeIssueMessage } from '../../lib/historyClientFilters'
 import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'

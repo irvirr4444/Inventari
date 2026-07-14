@@ -120,7 +120,6 @@ export function MobileAccountMenu(props: {
     push,
     pop,
     reset,
-    canPop,
     panelCount,
     panelWidth,
     trackStyle,

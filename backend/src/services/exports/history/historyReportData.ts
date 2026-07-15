@@ -16,6 +16,12 @@ import {
   assertHistoryExportFilterRanges,
   type HistoryExportClientFilters,
 } from './historyExportFilters.js'
+import {
+  assertExportBatchCount,
+  assertHistoryExportGuards,
+  EXPORT_LIMITS,
+  mapWithConcurrency,
+} from './exportGuards.js'
 import { formatExportTimestamp } from '../excel/index.js'
 import type { HistoryExportQuery } from './historyExportService.js'
 
@@ -224,6 +230,7 @@ export async function buildHistoryReportDocument(
   query: HistoryExportQuery,
 ): Promise<HistoryReportDocument> {
   assertHistoryExportFilterRanges(query)
+  assertHistoryExportGuards(query)
 
   const trackPrice = query.trackPrice ?? true
   let lokacioniById: Map<string, LokacioniRow> | undefined
@@ -234,11 +241,12 @@ export async function buildHistoryReportDocument(
   let details: BatchDetail[]
 
   if (query.batchIds && query.batchIds.length > 0) {
+    assertExportBatchCount(query.batchIds.length)
     details = (
-      await Promise.all(
-        query.batchIds.map((batchId) =>
-          loadBatchDetail(supabase, user.id, batchId, lokacioniById),
-        ),
+      await mapWithConcurrency(
+        query.batchIds,
+        EXPORT_LIMITS.detailConcurrency(),
+        (batchId) => loadBatchDetail(supabase, user.id, batchId, lokacioniById),
       )
     ).filter((detail): detail is BatchDetail => detail !== null)
 
@@ -272,19 +280,21 @@ export async function buildHistoryReportDocument(
       user.id,
       user.isLegacy,
       serverQuery,
+      { maxBatches: EXPORT_LIMITS.maxExportBatches() },
     )
 
     const filteredBatches = applyHistoryExportClientFilters(batches, clientFilters)
+    assertExportBatchCount(filteredBatches.length)
 
     if (filteredBatches.length === 0) {
       throw new Error('Nuk u gjet asnje veprim per eksport.')
     }
 
     details = (
-      await Promise.all(
-        filteredBatches.map((batch) =>
-          loadBatchDetail(supabase, user.id, batch.id, lokacioniById),
-        ),
+      await mapWithConcurrency(
+        filteredBatches,
+        EXPORT_LIMITS.detailConcurrency(),
+        (batch) => loadBatchDetail(supabase, user.id, batch.id, lokacioniById),
       )
     ).filter((detail): detail is BatchDetail => detail !== null)
 

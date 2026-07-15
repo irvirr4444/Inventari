@@ -21,6 +21,11 @@ import {
   type HistoryExportClientFilters,
 } from './historyExportFilters.js'
 import {
+  assertExportBatchCount,
+  assertHistoryExportGuards,
+  EXPORT_LIMITS,
+} from './exportGuards.js'
+import {
   buildHistoryDynamicExcelBuffer,
   buildHistoryLegacyExcelBuffer,
   formatExportTimestamp,
@@ -98,6 +103,7 @@ export async function exportHistoryXlsx(
   query: HistoryExportQuery,
 ) {
   assertHistoryExportFilterRanges(query)
+  assertHistoryExportGuards(query)
 
   const serverQuery = {
     lloji: query.lloji,
@@ -125,6 +131,7 @@ export async function exportHistoryXlsx(
     user.id,
     user.isLegacy,
     serverQuery,
+    { maxBatches: EXPORT_LIMITS.maxExportBatches() },
   )
   const filteredBatches =
     query.batchIds && query.batchIds.length > 0
@@ -133,6 +140,7 @@ export async function exportHistoryXlsx(
           return batches.filter((batch) => allowedIds.has(batch.id))
         })()
       : applyHistoryExportClientFilters(batches, clientFilters)
+  assertExportBatchCount(filteredBatches.length)
   const dateQuery = { from: query.dateFrom, to: query.dateTo }
   const actionFilterQuery = {
     dateFrom: query.dateFrom,

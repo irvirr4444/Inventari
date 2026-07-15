@@ -19,6 +19,8 @@ export function useHistoryBatchListQuery(
         limit: pageSize,
       }),
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   })
 }
 

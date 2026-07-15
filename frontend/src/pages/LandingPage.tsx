@@ -70,11 +70,12 @@ export function LandingPage() {
           <Link className="landing-brand" to="/">
             <img
               className="landing-brand__logo"
-              src="/inventari-profile-icon-transparent.png"
+              src="/inventari-profile-icon-88.png"
               alt="Inventari"
               width={44}
               height={44}
               decoding="async"
+              fetchPriority="high"
             />
             <span className="landing-brand__text">Inventari Im</span>
           </Link>

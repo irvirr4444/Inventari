@@ -462,3 +462,36 @@
     transform: translateY(0);
   }
 }
+
+/* Lightweight skeleton while public lazy routes load */
+.public-route-fallback {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 20px;
+  background: var(--bg, #0b1220);
+}
+
+.public-route-fallback__card {
+  width: min(100%, 720px);
+  height: 220px;
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.04)
+  );
+  background-size: 200% 100%;
+  animation: public-route-fallback-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes public-route-fallback-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}

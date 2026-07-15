@@ -19,7 +19,15 @@ function ConditionalProviders(props: { children: React.ReactNode }) {
   return <LokacioniProvider>{inner}</LokacioniProvider>
 }
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+})
 
 export function AppProviders(props: { children: React.ReactNode }) {
   return (

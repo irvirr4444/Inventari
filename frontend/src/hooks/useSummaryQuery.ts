@@ -12,9 +12,9 @@ export function useSummaryQuery(from: string, to: string, groupBy: SummaryGroupB
     queryKey: queryKeys.analyticsSummary(user?.id, from, to, groupBy),
     queryFn: () => analyticsSummary({ from, to, groupBy }),
     enabled: Boolean(user),
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     placeholderData: (previousData, previousQuery) => {
       if (!previousData || !previousQuery) return undefined
       const previousGroupBy = previousQuery.queryKey[4]

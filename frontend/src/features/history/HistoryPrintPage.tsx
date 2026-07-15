@@ -1,52 +1,34 @@
 import * as React from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getActionBatch } from '../../lib/api'
-import { useAuth } from '../../lib/auth/AuthProvider'
 import { useTenantConfig } from '../../hooks/useTenantConfig'
-import { fetchAllActionBatches } from '../../lib/fetchAllActionBatches'
 import {
-  applyHistoryClientFilters,
   formatHistoryFilterRangeIssuesMessage,
   getHistoryFilterRangeIssues,
 } from '../../lib/historyClientFilters'
+import { parseHistoryFilterSearchParams } from '../../lib/historyFilterSearchParams'
 import {
-  formatHistoryPrintFilterSummary,
-  parseHistoryFilterSearchParams,
-} from '../../lib/historyFilterSearchParams'
-import { downloadHistoryDocument } from '../../lib/historyDocumentDownload'
-import { HistoryPrintPages } from './HistoryPrintPages'
-
-function formatGeneratedAt(date: Date): string {
-  return date.toLocaleString('sq-AL', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+  downloadHistoryDocument,
+  fetchHistoryDocument,
+} from '../../lib/historyDocumentDownload'
 
 export function HistoryPrintPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user } = useAuth()
   const { trackPrice: tenantTrackPrice } = useTenantConfig()
   const [state, setState] = React.useState<
     | { status: 'loading' }
     | { status: 'error'; message: string }
-    | {
-        status: 'ready'
-        details: Awaited<ReturnType<typeof getActionBatch>>[]
-        filterLines: string[]
-        generatedAt: string
-      }
+    | { status: 'ready'; objectUrl: string; filename: string }
   >({ status: 'loading' })
+  const [downloading, setDownloading] = React.useState(false)
+  const objectUrlRef = React.useRef<string | null>(null)
 
   const parsed = React.useMemo(
     () => parseHistoryFilterSearchParams(searchParams),
     [searchParams],
   )
   const trackPrice = parsed.trackPrice ?? tenantTrackPrice
+  const autoPrint = searchParams.get('autoPrint') === '1'
 
   React.useEffect(() => {
     let cancelled = false
@@ -64,37 +46,22 @@ export function HistoryPrintPage() {
       }
 
       try {
-        const batches = await fetchAllActionBatches(parsed.server)
-        const filtered = applyHistoryClientFilters(batches, parsed.client, { trackPrice })
-        if (filtered.length === 0) {
-          if (!cancelled) {
-            setState({ status: 'error', message: 'Nuk u gjet asnje veprim per printim.' })
-          }
+        const doc = await fetchHistoryDocument('pdf', {
+          server: parsed.server,
+          client: parsed.client,
+          trackPrice,
+        })
+        if (cancelled) {
+          URL.revokeObjectURL(doc.objectUrl)
           return
         }
-
-        const details = await Promise.all(filtered.map((batch) => getActionBatch(batch.id)))
-        const locationLabel =
-          parsed.client.locationIds.length > 0
-            ? filtered.find((batch) => batch.lokacioni_id === parsed.client.locationIds[0])
-                ?.lokacioni_emri ??
-              filtered.find(
-                (batch) => batch.destination_lokacioni_id === parsed.client.locationIds[0],
-              )?.destination_lokacioni_emri ??
-              parsed.client.locationIds[0]
-            : undefined
-
-        if (!cancelled) {
-          setState({
-            status: 'ready',
-            details,
-            filterLines: formatHistoryPrintFilterSummary(parsed.server, parsed.client, {
-              trackPrice,
-              locationLabel,
-            }),
-            generatedAt: formatGeneratedAt(new Date()),
-          })
-        }
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = doc.objectUrl
+        setState({
+          status: 'ready',
+          objectUrl: doc.objectUrl,
+          filename: doc.filename,
+        })
       } catch (error) {
         if (!cancelled) {
           setState({
@@ -108,15 +75,22 @@ export function HistoryPrintPage() {
     void load()
     return () => {
       cancelled = true
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
     }
   }, [parsed, trackPrice])
 
   React.useEffect(() => {
-    if (state.status !== 'ready') return
-    if (searchParams.get('autoPrint') !== '1') return
-    const timer = window.setTimeout(() => window.print(), 250)
+    if (state.status !== 'ready' || !autoPrint) return
+    const timer = window.setTimeout(() => {
+      const frame = document.getElementById('history-print-pdf-frame') as HTMLIFrameElement | null
+      frame?.contentWindow?.focus()
+      frame?.contentWindow?.print()
+    }, 400)
     return () => window.clearTimeout(timer)
-  }, [searchParams, state.status])
+  }, [autoPrint, state.status])
 
   const handleClose = React.useCallback(() => {
     if (window.opener && !window.opener.closed) {
@@ -130,28 +104,26 @@ export function HistoryPrintPage() {
     navigate('/', { replace: true })
   }, [navigate])
 
-  const [downloading, setDownloading] = React.useState(false)
-
   const handleDownload = React.useCallback(async () => {
-    if (downloading || state.status !== 'ready') return
+    if (downloading) return
     setDownloading(true)
     try {
       await downloadHistoryDocument('pdf', {
         server: parsed.server,
         client: parsed.client,
         trackPrice,
-        batchIds: state.details.map((detail) => detail.id),
-        filterLines: state.filterLines,
       })
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Gabim gjate shkarkimit.')
     } finally {
       setDownloading(false)
     }
-  }, [downloading, parsed.client, parsed.server, state, trackPrice])
+  }, [downloading, parsed.client, parsed.server, trackPrice])
 
   const handlePrint = React.useCallback(() => {
-    window.print()
+    const frame = document.getElementById('history-print-pdf-frame') as HTMLIFrameElement | null
+    frame?.contentWindow?.focus()
+    frame?.contentWindow?.print()
   }, [])
 
   if (state.status === 'loading') {
@@ -166,7 +138,7 @@ export function HistoryPrintPage() {
           </div>
         </div>
         <div className="history-print-viewport">
-          <div className="history-print-loading">Duke pergatitur faqen per printim…</div>
+          <div className="history-print-loading">Duke pergatitur PDF per printim…</div>
         </div>
       </div>
     )
@@ -190,34 +162,10 @@ export function HistoryPrintPage() {
     )
   }
 
-  const printHeader = React.useMemo(
-    () => (
-      <header className="history-print-header">
-        <h1 className="history-print-title">Histori e veprimeve</h1>
-        <p className="history-print-subtitle">
-          Gjeneruar më {state.generatedAt}
-          {user?.emri ? ` · ${user.emri}` : ''}
-        </p>
-        {state.filterLines.length > 0 ? (
-          <div className="history-print-filters">
-            {state.filterLines.map((line) => (
-              <span key={line} className="history-print-filter-chip">
-                {line}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="history-print-summary">Të gjitha veprimet</p>
-        )}
-      </header>
-    ),
-    [state.filterLines, state.generatedAt, user?.emri],
-  )
-
   return (
     <div className="history-print-page">
       <div className="history-print-toolbar">
-        <strong className="history-print-toolbar-count">{state.details.length} veprime</strong>
+        <strong className="history-print-toolbar-count">{state.filename}</strong>
         <div className="history-print-toolbar-actions">
           <button type="button" className="btn sm" onClick={handleClose}>
             Mbyll
@@ -231,18 +179,23 @@ export function HistoryPrintPage() {
           >
             {downloading ? 'Duke shkarkuar…' : 'Shkarko'}
           </button>
-          <button type="button" className="btn sm primary" title="Printo faqen A4" onClick={handlePrint}>
+          <button
+            type="button"
+            className="btn sm primary"
+            title="Printo PDF"
+            onClick={handlePrint}
+          >
             Printo
           </button>
         </div>
       </div>
 
       <div className="history-print-viewport">
-        <HistoryPrintPages
-          details={state.details}
-          trackPrice={trackPrice}
-          header={printHeader}
-          layoutKey={state.filterLines.join('\0')}
+        <iframe
+          id="history-print-pdf-frame"
+          className="history-print-pdf-frame"
+          title="Histori PDF"
+          src={state.objectUrl}
         />
       </div>
     </div>

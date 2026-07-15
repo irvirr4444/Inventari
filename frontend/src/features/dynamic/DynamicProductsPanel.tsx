@@ -1,10 +1,15 @@
 import * as React from 'react'
 import { HoverTooltip } from '../../components/HoverTooltip'
 import { ErrorAlert } from '../../components/ErrorAlert'
+import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { exportDynamicProductsUrl, stockRecord, type DynamicProdukti } from '../../lib/api'
 import { fmtInt } from '../../lib/format'
 import type { Lokacioni } from '../../lib/lokacioni/types'
 import { locationBadge } from '../../lib/lokacioni/LokacioniProvider'
+import {
+  PRODUCT_TABLE_VIRTUALIZE_THRESHOLD,
+  useVirtualizedWindow,
+} from '../../hooks/useVirtualizedWindow'
 
 export type DynamicProductSortKey = 'kodi' | 'emri' | string
 
@@ -44,19 +49,23 @@ export function DynamicProductsPanel(props: {
   const sortedProducts = React.useMemo(() => {
     const products = [...props.products]
     const key = props.sort.key
-    products.sort((a, b) => {
-      if (key === 'kodi' || key === 'emri') {
-        return (
+    if (key === 'kodi' || key === 'emri') {
+      products.sort(
+        (a, b) =>
           String(a[key]).localeCompare(String(b[key]), undefined, {
             sensitivity: 'base',
             numeric: true,
-          }) * multiplier
-        )
-      }
-      const stockA = stockRecord(a)[key] ?? 0
-      const stockB = stockRecord(b)[key] ?? 0
-      return (stockA - stockB) * multiplier
-    })
+          }) * multiplier,
+      )
+      return products
+    }
+
+    const stockByProductId = new Map(
+      products.map((product) => [product.id, stockRecord(product)[key] ?? 0] as const),
+    )
+    products.sort(
+      (a, b) => ((stockByProductId.get(a.id) ?? 0) - (stockByProductId.get(b.id) ?? 0)) * multiplier,
+    )
     return products
   }, [props.products, props.sort, multiplier])
 
@@ -67,6 +76,14 @@ export function DynamicProductsPanel(props: {
       (p) => p.kodi.toLowerCase().includes(q) || p.emri.toLowerCase().includes(q),
     )
   }, [sortedProducts, props.search])
+
+  const virtualize = filteredProducts.length >= PRODUCT_TABLE_VIRTUALIZE_THRESHOLD
+  const virtual = useVirtualizedWindow({
+    itemCount: filteredProducts.length,
+    enabled: virtualize,
+  })
+  const visibleProducts = filteredProducts.slice(virtual.start, virtual.end)
+  const colSpan = props.locations.length + 3
 
   const sortArrow = (key: DynamicProductSortKey) => {
     if (props.sort.key !== key) return '↕'
@@ -100,13 +117,11 @@ export function DynamicProductsPanel(props: {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <input
+            <DebouncedSearchInput
               className="products-search"
-              type="search"
               value={props.search}
               placeholder="Kerko sipas kodit ose emrit…"
-              aria-label="Kerko produktet sipas kodit ose emrit"
-              onChange={(e) => props.onSearchChange(e.target.value)}
+              onChange={props.onSearchChange}
             />
           </div>
         </div>
@@ -148,7 +163,7 @@ export function DynamicProductsPanel(props: {
         <ErrorAlert message={props.error} style={{ marginBottom: 12, padding: '10px 14px', fontSize: 13 }} />
       )}
 
-      <div className="table-scroll products-table-wrap" data-tutorial="products-table">
+      <div ref={virtual.scrollRef} className="table-scroll products-table-wrap" data-tutorial="products-table">
         <table className="table products-table products-table-dynamic">
           <colgroup>
             <col className="products-col-kodi" />
@@ -255,7 +270,7 @@ export function DynamicProductsPanel(props: {
             {filteredProducts.length === 0 ? (
               <tr>
                 <td
-                  colSpan={props.locations.length + 3}
+                  colSpan={colSpan}
                   style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}
                 >
                   {props.search.trim()
@@ -264,10 +279,16 @@ export function DynamicProductsPanel(props: {
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((p) => {
+              <>
+                {virtualize && virtual.topSpacer > 0 ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={colSpan} style={{ height: virtual.topSpacer, padding: 0, border: 0 }} />
+                  </tr>
+                ) : null}
+                {visibleProducts.map((p) => {
                 const stock = stockRecord(p)
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} style={virtualize ? { height: virtual.rowHeight } : undefined}>
                     <td className="product-text-cell product-kodi-cell">
                       <code className="product-text" data-full={p.kodi} title={p.kodi}>
                         {p.kodi}
@@ -341,7 +362,13 @@ export function DynamicProductsPanel(props: {
                     </td>
                   </tr>
                 )
-              })
+              })}
+                {virtualize && virtual.bottomSpacer > 0 ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={colSpan} style={{ height: virtual.bottomSpacer, padding: 0, border: 0 }} />
+                  </tr>
+                ) : null}
+              </>
             )}
           </tbody>
         </table>

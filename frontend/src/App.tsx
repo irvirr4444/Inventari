@@ -55,6 +55,20 @@ function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
 }
 
+function PublicRouteSuspense(props: { children: React.ReactNode }) {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="public-route-fallback" aria-busy="true" aria-live="polite">
+          <div className="public-route-fallback__card" />
+        </div>
+      }
+    >
+      {props.children}
+    </React.Suspense>
+  )
+}
+
 function LegacyDashboardShell(props: {
   isMobile: boolean
   onLogout: () => void
@@ -147,14 +161,14 @@ function DynamicDashboardShell(props: {
 function ProtectedHome() {
   const isMobile = useMobileClient()
   const location = useLocation()
-  const { user, logout, loading } = useAuth()
+  const { user, logout, loading, waking } = useAuth()
   const initialSettingsTab = (location.state as OpenSettingsState | null)?.openSettings
 
-  if (loading && !user) {
-    if (isCapacitorNativeApp() || isMobile) {
+  if ((loading || waking) && !user) {
+    if (!waking && (isCapacitorNativeApp() || isMobile)) {
       return <Navigate to="/login" replace />
     }
-    return <AuthLoading />
+    return <AuthLoading waking={waking} />
   }
 
   if (!user) return <Navigate to="/login" replace />
@@ -196,8 +210,9 @@ function PublicOnly(props: { children: React.ReactNode }) {
 }
 
 function RequireAuth(props: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
-  if (loading) return <AuthLoading />
+  const { user, loading, waking } = useAuth()
+  // Only block on waking when we don't already have a session.
+  if (loading || (waking && !user)) return <AuthLoading waking={waking} />
   if (!user) return <Navigate to="/login" replace />
   return <>{props.children}</>
 }
@@ -213,17 +228,15 @@ function LoginRoute() {
 }
 
 function LandingRoute() {
-  const { loading } = useAuth()
-  if (loading) return <AuthLoading />
   return (
-    <RouteSuspense>
+    <PublicRouteSuspense>
       <LandingPage />
-    </RouteSuspense>
+    </PublicRouteSuspense>
   )
 }
 
 function LegalRoute(props: { children: React.ReactNode }) {
-  return <RouteSuspense>{props.children}</RouteSuspense>
+  return <PublicRouteSuspense>{props.children}</PublicRouteSuspense>
 }
 
 function MobileRedirect() {

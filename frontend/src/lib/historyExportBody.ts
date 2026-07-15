@@ -1,34 +1,21 @@
-import type { ActionBatch } from './api'
 import type { HistoryClientFilters, HistoryServerFilters } from './historyClientFilters'
 import { formatHistoryPrintFilterSummary } from './historyFilterSearchParams'
 import { resolveHistoriLocationExportLabel } from './historiFilterSelection'
-
-export function resolveHistoryExportLocationLabel(
-  filtered: ActionBatch[],
-  locationIds: string[],
-): string | undefined {
-  if (locationIds.length === 0) return undefined
-  const locationId = locationIds[0]
-  return (
-    filtered.find((batch) => batch.lokacioni_id === locationId)?.lokacioni_emri ??
-    filtered.find((batch) => batch.destination_lokacioni_id === locationId)
-      ?.destination_lokacioni_emri ??
-    locationId
-  )
-}
 
 export function buildHistoryExportRequestBody(opts: {
   server: HistoryServerFilters
   client: HistoryClientFilters
   trackPrice?: boolean
-  filtered: ActionBatch[]
+  batchIds?: string[]
   filterLines?: string[]
   locations?: { id: string; emri: string }[]
+  locationLabel?: string
 }) {
   const locationLabel =
-    opts.locations && opts.locations.length > 0
+    opts.locationLabel ??
+    (opts.locations && opts.locations.length > 0
       ? resolveHistoriLocationExportLabel(opts.client.locationIds, opts.locations)
-      : resolveHistoryExportLocationLabel(opts.filtered, opts.client.locationIds)
+      : undefined)
 
   const llojet =
     opts.client.llojet.length > 0
@@ -45,10 +32,9 @@ export function buildHistoryExportRequestBody(opts: {
     })
 
   return {
-    batchIds: opts.filtered.map((batch) => batch.id),
+    ...(opts.batchIds && opts.batchIds.length > 0 ? { batchIds: opts.batchIds } : {}),
     lloji: opts.server.lloji,
-    llojet:
-      llojet.length > 0 && llojet.length < 3 ? llojet : undefined,
+    llojet: llojet.length > 0 && llojet.length < 3 ? llojet : undefined,
     shteti: opts.server.shteti,
     dateFrom: opts.server.dateFrom,
     dateTo: opts.server.dateTo,

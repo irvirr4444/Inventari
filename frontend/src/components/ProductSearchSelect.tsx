@@ -73,7 +73,20 @@ export function ProductSearchSelect(props: {
     [filteredProducts, disabledKodis],
   )
 
+  const selectableIndexByKodi = React.useMemo(() => {
+    const map = new Map<string, number>()
+    selectableProducts.forEach((product, index) => {
+      map.set(product.kodi, index)
+    })
+    return map
+  }, [selectableProducts])
+
   const isFiltering = query.trim().length > 0
+  const MAX_VISIBLE_OPTIONS = 150
+  const visibleProducts = isFiltering
+    ? filteredProducts
+    : filteredProducts.slice(0, MAX_VISIBLE_OPTIONS)
+  const hiddenCount = Math.max(0, filteredProducts.length - visibleProducts.length)
 
   const repositionList = React.useCallback(() => {
     const trigger = inputRef.current
@@ -232,9 +245,9 @@ export function ProductSearchSelect(props: {
           <div className="product-search-empty">Nuk u gjet produkt.</div>
         ) : (
           <div className="product-search-options">
-            {filteredProducts.map((p) => {
+            {visibleProducts.map((p) => {
               const disabled = disabledKodis.has(p.kodi)
-              const selectableIndex = selectableProducts.findIndex((x) => x.kodi === p.kodi)
+              const selectableIndex = selectableIndexByKodi.get(p.kodi) ?? -1
               const active = !disabled && selectableIndex === activeIndex
               const isSelected = props.value === p.kodi
               return (
@@ -260,6 +273,11 @@ export function ProductSearchSelect(props: {
                 </button>
               )
             })}
+            {hiddenCount > 0 ? (
+              <div className="product-search-empty">
+                +{hiddenCount} te tjera — shkruaj per te filtruar
+              </div>
+            ) : null}
           </div>
         )}
       </div>

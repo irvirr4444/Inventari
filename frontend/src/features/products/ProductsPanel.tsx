@@ -1,8 +1,13 @@
 import * as React from 'react'
 import { HoverTooltip } from '../../components/HoverTooltip'
 import { ErrorAlert } from '../../components/ErrorAlert'
+import { DebouncedSearchInput } from '../../components/DebouncedSearchInput'
 import { exportProductsUrl, type Produkti } from '../../lib/api'
 import { fmtInt } from '../../lib/format'
+import {
+  PRODUCT_TABLE_VIRTUALIZE_THRESHOLD,
+  useVirtualizedWindow,
+} from '../../hooks/useVirtualizedWindow'
 
 export type ProductSortKey = 'kodi' | 'emri' | 'gjendje_kosove' | 'gjendje_shqiperi'
 export type SortDirection = 'asc' | 'desc'
@@ -50,6 +55,13 @@ export function ProductsPanel(props: {
     )
   }, [sortedProducts, props.search])
 
+  const virtualize = filteredProducts.length >= PRODUCT_TABLE_VIRTUALIZE_THRESHOLD
+  const virtual = useVirtualizedWindow({
+    itemCount: filteredProducts.length,
+    enabled: virtualize,
+  })
+  const visibleProducts = filteredProducts.slice(virtual.start, virtual.end)
+
   const sortArrow = (key: ProductSortKey) => {
     if (props.sort.key !== key) return '↕'
     return props.sort.direction === 'asc' ? '↑' : '↓'
@@ -76,13 +88,11 @@ export function ProductsPanel(props: {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
-            <input
+            <DebouncedSearchInput
               className="products-search"
-              type="search"
               value={props.search}
               placeholder="Kerko sipas kodit ose emrit…"
-              aria-label="Kerko produktet sipas kodit ose emrit"
-              onChange={(e) => props.onSearchChange(e.target.value)}
+              onChange={props.onSearchChange}
             />
           </div>
         </div>
@@ -121,7 +131,7 @@ export function ProductsPanel(props: {
         <ErrorAlert message={props.error} style={{ marginBottom: 12, padding: '10px 14px', fontSize: 13 }} />
       )}
 
-      <div className="table-scroll products-table-wrap">
+      <div ref={virtual.scrollRef} className="table-scroll products-table-wrap">
         <table className="table products-table">
           <colgroup>
             <col style={{ width: '18%' }} />
@@ -221,79 +231,91 @@ export function ProductsPanel(props: {
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((p) => (
-                <tr key={p.id}>
-                  <td className="product-text-cell">
-                    <code className="product-text" data-full={p.kodi} title={p.kodi}>
-                      {p.kodi}
-                    </code>
-                  </td>
-                  <td className="product-name-cell product-text-cell">
-                    <span className="product-text" data-full={p.emri} title={p.emri}>
-                      {p.emri}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="stock-badge">{fmtInt(p.gjendje_kosove)}</span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="stock-badge">{fmtInt(p.gjendje_shqiperi)}</span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="product-actions">
-                      <button
-                        type="button"
-                        className="btn sm hover-tooltip"
-                        data-tooltip="Bej ndryshime"
-                        onClick={() => props.onEditProduct(p)}
-                        aria-label="Ndrysho produktin"
-                      >
-                        <svg
-                          aria-hidden="true"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                        </svg>
-                      </button>
-                      <HoverTooltip label="Fshi">
+              <>
+                {virtualize && virtual.topSpacer > 0 ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={5} style={{ height: virtual.topSpacer, padding: 0, border: 0 }} />
+                  </tr>
+                ) : null}
+                {visibleProducts.map((p) => (
+                  <tr key={p.id} style={virtualize ? { height: virtual.rowHeight } : undefined}>
+                    <td className="product-text-cell">
+                      <code className="product-text" data-full={p.kodi} title={p.kodi}>
+                        {p.kodi}
+                      </code>
+                    </td>
+                    <td className="product-name-cell product-text-cell">
+                      <span className="product-text" data-full={p.emri} title={p.emri}>
+                        {p.emri}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="stock-badge">{fmtInt(p.gjendje_kosove)}</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="stock-badge">{fmtInt(p.gjendje_shqiperi)}</span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="product-actions">
                         <button
                           type="button"
-                          className="btn danger sm"
-                          onClick={() => props.onDeleteProduct(p)}
-                          disabled={props.deletePending}
-                          aria-label="Fshi produktin"
+                          className="btn sm hover-tooltip"
+                          data-tooltip="Bej ndryshime"
+                          onClick={() => props.onEditProduct(p)}
+                          aria-label="Ndrysho produktin"
                         >
-                        <svg
-                          aria-hidden="true"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6" />
-                          <path d="M14 11v6" />
-                        </svg>
-                      </button>
-                      </HoverTooltip>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                          <svg
+                            aria-hidden="true"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                        </button>
+                        <HoverTooltip label="Fshi">
+                          <button
+                            type="button"
+                            className="btn danger sm"
+                            onClick={() => props.onDeleteProduct(p)}
+                            disabled={props.deletePending}
+                            aria-label="Fshi produktin"
+                          >
+                          <svg
+                            aria-hidden="true"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                          </svg>
+                        </button>
+                        </HoverTooltip>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {virtualize && virtual.bottomSpacer > 0 ? (
+                  <tr aria-hidden="true">
+                    <td colSpan={5} style={{ height: virtual.bottomSpacer, padding: 0, border: 0 }} />
+                  </tr>
+                ) : null}
+              </>
             )}
           </tbody>
         </table>

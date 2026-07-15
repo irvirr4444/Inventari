@@ -5,7 +5,7 @@ export const HISTORY_FILE_FORMAT_ICONS: Record<
   { src: string; alt: string }
 > = {
   xlsx: {
-    src: '/icons/file-formats/microsoft-excel.png',
+    src: '/icons/file-formats/microsoft-excel-64.png',
     alt: 'Microsoft Excel',
   },
   pdf: {
@@ -13,7 +13,7 @@ export const HISTORY_FILE_FORMAT_ICONS: Record<
     alt: 'PDF',
   },
   docx: {
-    src: '/icons/file-formats/microsoft-word.png',
+    src: '/icons/file-formats/microsoft-word-64.png',
     alt: 'Microsoft Word',
   },
 }

@@ -50,9 +50,11 @@ import {
   historyListRefreshState,
   useHistoryBatchListQuery,
 } from '../../hooks/useHistoryBatchListQuery'
+import { createPrefetchThrottler } from '../../lib/prefetchThrottle'
 import type { HistoryUserFilterOption } from './DynamicHistoryFilterBar'
 
 const PAGE_SIZE = HISTORY_MODAL_PAGE_SIZE
+const detailPrefetch = createPrefetchThrottler({ minIntervalMs: 150 })
 
 function managedUserLabel(user: ManagedUser): string {
   return user.emri?.trim() || user.email?.trim() || 'Përdorues pa emër'
@@ -178,11 +180,21 @@ export function DynamicHistoryModal(props: {
 
   const prefetchDetail = React.useCallback(
     (actionId: string) => {
-      void qc.prefetchQuery({
-        queryKey: queryKeys.actionBatch(user?.id, actionId),
-        queryFn: () => getActionBatch(actionId),
-        staleTime: 30_000,
-      })
+      detailPrefetch.run(
+        actionId,
+        (id) => {
+          void qc.prefetchQuery({
+            queryKey: queryKeys.actionBatch(user?.id, id),
+            queryFn: () => getActionBatch(id),
+            staleTime: 30_000,
+          })
+        },
+        (id) => {
+          const key = queryKeys.actionBatch(user?.id, id)
+          if (qc.getQueryData(key)) return true
+          return qc.getQueryState(key)?.fetchStatus === 'fetching'
+        },
+      )
     },
     [qc, user?.id],
   )

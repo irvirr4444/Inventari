@@ -1,9 +1,6 @@
-import type { ActionBatch } from './api'
 import { API_BASE } from './api/http'
-import { fetchAllActionBatches } from './fetchAllActionBatches'
 import { buildHistoryExportRequestBody } from './historyExportBody'
 import {
-  applyHistoryClientFilters,
   formatHistoryFilterRangeIssuesMessage,
   getHistoryFilterRangeIssues,
   type HistoryClientFilters,
@@ -33,35 +30,26 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function downloadHistoryDocument(
+export type HistoryDocumentExportOpts = {
+  server: HistoryServerFilters
+  client: HistoryClientFilters
+  trackPrice?: boolean
+  /** When set, backend exports only these batches. Otherwise filters select batches server-side. */
+  batchIds?: string[]
+  filterLines?: string[]
+  locations?: { id: string; emri: string }[]
+  locationLabel?: string
+}
+
+async function fetchHistoryDocumentBlob(
   format: HistoryDocumentFormat,
-  opts: {
-    server: HistoryServerFilters
-    client: HistoryClientFilters
-    trackPrice?: boolean
-    batchIds?: string[]
-    filterLines?: string[]
-    locations?: { id: string; emri: string }[]
-  },
-): Promise<void> {
+  opts: HistoryDocumentExportOpts,
+): Promise<{ blob: Blob; filename: string }> {
   const issues = getHistoryFilterRangeIssues(opts.server, opts.client, {
     trackPrice: opts.trackPrice,
   })
   if (issues.length > 0) {
     throw new Error(formatHistoryFilterRangeIssuesMessage(issues))
-  }
-
-  let filtered: ActionBatch[]
-  if (opts.batchIds && opts.batchIds.length > 0) {
-    filtered = opts.batchIds.map((id) => ({ id }) as ActionBatch)
-  } else {
-    const allBatches = await fetchAllActionBatches(opts.server)
-    filtered = applyHistoryClientFilters(allBatches, opts.client, {
-      trackPrice: opts.trackPrice,
-    })
-    if (filtered.length === 0) {
-      throw new Error('Nuk u gjet asnje veprim per eksport.')
-    }
   }
 
   const res = await fetch(`${API_BASE}/exports/history.${format}`, {
@@ -73,9 +61,10 @@ export async function downloadHistoryDocument(
         server: opts.server,
         client: opts.client,
         trackPrice: opts.trackPrice,
-        filtered,
+        batchIds: opts.batchIds,
         filterLines: opts.filterLines,
         locations: opts.locations,
+        locationLabel: opts.locationLabel,
       }),
     ),
   })
@@ -96,5 +85,22 @@ export async function downloadHistoryDocument(
   const filename =
     parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
     DEFAULT_FILENAMES[format]
+  return { blob, filename }
+}
+
+/** Fetch a history document from the backend (no client-side batch fan-out). */
+export async function fetchHistoryDocument(
+  format: HistoryDocumentFormat,
+  opts: HistoryDocumentExportOpts,
+): Promise<{ blob: Blob; filename: string; objectUrl: string }> {
+  const { blob, filename } = await fetchHistoryDocumentBlob(format, opts)
+  return { blob, filename, objectUrl: URL.createObjectURL(blob) }
+}
+
+export async function downloadHistoryDocument(
+  format: HistoryDocumentFormat,
+  opts: HistoryDocumentExportOpts,
+): Promise<void> {
+  const { blob, filename } = await fetchHistoryDocumentBlob(format, opts)
   triggerBlobDownload(blob, filename)
 }

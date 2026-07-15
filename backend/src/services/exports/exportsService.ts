@@ -442,7 +442,8 @@ export const HistoryExportQuerySchema = z.object({
 })
 
 export const HistoryExportBodySchema = z.object({
-  batchIds: z.array(z.string().min(1)).min(1),
+  /** Optional: when omitted, backend resolves batches from filters. */
+  batchIds: z.array(z.string().min(1)).optional(),
   lloji: BatchLlojiSchema.optional(),
   llojet: z.array(BatchLlojiSchema).optional(),
   shteti: CountrySchema.optional(),

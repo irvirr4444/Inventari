@@ -68,6 +68,15 @@
   padding: 24px 16px 48px;
 }
 
+.history-print-pdf-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 72px);
+  border: 0;
+  background: #fff;
+}
+
 .history-print-pages {
   display: flex;
   flex-direction: column;

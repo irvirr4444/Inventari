@@ -1,5 +1,6 @@
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
+import compress from '@fastify/compress'
 import rateLimit from '@fastify/rate-limit'
 import fastifyStatic from '@fastify/static'
 import Fastify from 'fastify'
@@ -95,6 +96,11 @@ export async function buildApp() {
   })
 
   await app.register(cookie)
+  await app.register(compress, {
+    global: true,
+    encodings: ['br', 'gzip'],
+    threshold: 1024,
+  })
   await app.register(rateLimit, {
     global: false,
     max: 5,
@@ -128,6 +134,16 @@ export async function buildApp() {
     await app.register(fastifyStatic, {
       root: FRONTEND_DIST_DIR,
       prefix: '/',
+      setHeaders(res, filePath) {
+        const normalized = filePath.replace(/\\/g, '/')
+        if (normalized.includes('/assets/')) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+          return
+        }
+        if (normalized.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache')
+        }
+      },
     })
 
     app.setNotFoundHandler((req, reply) => {
@@ -141,6 +157,7 @@ export async function buildApp() {
         return
       }
 
+      reply.header('Cache-Control', 'no-cache')
       reply.sendFile('index.html')
     })
   } else {

@@ -127,3 +127,50 @@ export async function listVeprimetForGroupedSummary(
   if (error) throw mapSupabaseError(error)
   return (data ?? []) as GroupedSummaryVeprimRow[]
 }
+
+export type SummaryAggregateRow = {
+  group_id: string
+  in_qty: number
+  in_value: number
+  out_qty: number
+  out_value: number
+}
+
+/** DB-side grouped aggregates. Returns null when the RPC is not installed yet. */
+export async function fetchSummaryAggregates(
+  supabase: SupabaseClient,
+  tenantId: string,
+  query: { from?: string; to?: string; groupBy: 'location' | 'product' | 'user' },
+): Promise<SummaryAggregateRow[] | null> {
+  const { data, error } = await supabase.rpc('inventari_summary_agg', {
+    p_tenant_id: tenantId,
+    p_from: query.from ?? null,
+    p_to: query.to ?? null,
+    p_group_by: query.groupBy,
+  })
+
+  if (error) {
+    const message = error.message ?? ''
+    const code = (error as { code?: string }).code
+    // Function missing / schema cache — fall back to row fetch path.
+    if (
+      code === 'PGRST202' ||
+      code === '42883' ||
+      message.includes('inventari_summary_agg') ||
+      message.toLowerCase().includes('could not find the function')
+    ) {
+      return null
+    }
+    throw mapSupabaseError(error)
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => ({
+      group_id: String(row.group_id ?? ''),
+      in_qty: Number(row.in_qty ?? 0),
+      in_value: Number(row.in_value ?? 0),
+      out_qty: Number(row.out_qty ?? 0),
+      out_value: Number(row.out_value ?? 0),
+    }))
+    .filter((row) => row.group_id.length > 0)
+}

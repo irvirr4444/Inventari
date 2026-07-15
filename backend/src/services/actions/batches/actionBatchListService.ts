@@ -77,8 +77,10 @@ export async function fetchAllActionBatchesForExport(
     dateTo?: string
     shenim?: string
   },
+  opts?: { maxBatches?: number },
 ): Promise<HistoryExportBatch[]> {
   const shenimQuery = query.shenim?.trim() || undefined
+  const maxBatches = opts?.maxBatches
 
   let lokacioniById: Map<string, LokacioniRow> | undefined
   if (!isLegacy) {
@@ -94,6 +96,16 @@ export async function fetchAllActionBatchesForExport(
       dateTo: query.dateTo,
     })) as VeprimBatchRow[]
 
+    // Fail before fetching every veprimi row when the raw batch set is already too large
+    // (skip when shenim filtering may shrink the set further).
+    if (maxBatches !== undefined && !shenimQuery && batchList.length > maxBatches) {
+      const { AppError } = await import('../../../errors.js')
+      throw new AppError(
+        400,
+        `Shume veprime per eksport (${batchList.length}). Maksimumi eshte ${maxBatches}. Ngushto filtrat.`,
+      )
+    }
+
     const batchIds = batchList.map((b) => b.id)
     const rowsByBatch = new Map<string, VeprimRow[]>()
     if (batchIds.length > 0) {
@@ -107,7 +119,6 @@ export async function fetchAllActionBatchesForExport(
     }
 
     if (shenimQuery) {
-      const matchingCodes = new Set<string>()
       const matchesByBatchId = new Map<string, VeprimRow[]>()
 
       for (const batch of batchList) {
@@ -116,7 +127,6 @@ export async function fetchAllActionBatchesForExport(
         const matching = displayRows.filter((r) => shenimMatches(r.shenim, shenimQuery))
         if (matching.length === 0) continue
         matchesByBatchId.set(batch.id, matching)
-        for (const row of matching) matchingCodes.add(row.kodi_produktit)
       }
 
       batchedActions = batchList
@@ -128,7 +138,8 @@ export async function fetchAllActionBatchesForExport(
       )
     }
   } catch (error) {
-    const err = error as { message?: string; code?: string }
+    const err = error as { message?: string; code?: string; statusCode?: number }
+    if (err.statusCode === 400) throw error
     if (!err.message?.includes('veprim_batch') && err.code !== '42P01') {
       throw error
     }
@@ -147,6 +158,14 @@ export async function fetchAllActionBatchesForExport(
     1,
     Number.MAX_SAFE_INTEGER,
   )
+
+  if (maxBatches !== undefined && actions.length > maxBatches) {
+    const { AppError } = await import('../../../errors.js')
+    throw new AppError(
+      400,
+      `Shume veprime per eksport (${actions.length}). Maksimumi eshte ${maxBatches}. Ngushto filtrat.`,
+    )
+  }
 
   return actions as HistoryExportBatch[]
 }

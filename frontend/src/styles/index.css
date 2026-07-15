@@ -14,6 +14,7 @@
 @import './components/forms.css';
 @import './components/auth.css';
 @import './components/legal.css';
+@import './pages/landing.css';
 @import './components/modals.css';
 @import './features/history.css';
 @import './features/history-print.css';

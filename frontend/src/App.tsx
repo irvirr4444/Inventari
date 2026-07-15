@@ -47,6 +47,9 @@ const PrivacyPolicyPage = React.lazy(() =>
 const TermsPage = React.lazy(() =>
   import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })),
 )
+const LandingPage = React.lazy(() =>
+  import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })),
+)
 
 function RouteSuspense(props: { children: React.ReactNode }) {
   return <React.Suspense fallback={<AuthLoading />}>{props.children}</React.Suspense>
@@ -183,12 +186,12 @@ function ProtectedHome() {
 }
 
 function OpenSettingsRedirect(props: { tab: SettingsTab }) {
-  return <Navigate to="/" replace state={{ openSettings: props.tab }} />
+  return <Navigate to="/app" replace state={{ openSettings: props.tab }} />
 }
 
 function PublicOnly(props: { children: React.ReactNode }) {
   const { user } = useAuth()
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to="/app" replace />
   return <>{props.children}</>
 }
 
@@ -209,6 +212,16 @@ function LoginRoute() {
   )
 }
 
+function LandingRoute() {
+  const { loading } = useAuth()
+  if (loading) return <AuthLoading />
+  return (
+    <RouteSuspense>
+      <LandingPage />
+    </RouteSuspense>
+  )
+}
+
 function LegalRoute(props: { children: React.ReactNode }) {
   return <RouteSuspense>{props.children}</RouteSuspense>
 }
@@ -223,6 +236,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<LandingRoute />} />
         <Route
           path="/login"
           element={
@@ -292,7 +306,7 @@ export default function App() {
             </LegalRoute>
           }
         />
-        <Route path="/" element={<ProtectedHome />} />
+        <Route path="/app" element={<ProtectedHome />} />
         <Route path="/mobile/*" element={<MobileRedirect />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

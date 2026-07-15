@@ -40,8 +40,8 @@ export function OnboardingWizard() {
   const [submitting, setSubmitting] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
-  if (user?.isLegacy) return <Navigate to="/" replace />
-  if (user?.tenantConfig?.onboarding_complete) return <Navigate to="/" replace />
+  if (user?.isLegacy) return <Navigate to="/app" replace />
+  if (user?.tenantConfig?.onboarding_complete) return <Navigate to="/app" replace />
 
   const goTo = (next: ScreenId) => {
     setAnimClass('onboarding-wizard__screen--exit')
@@ -117,7 +117,7 @@ export function OnboardingWizard() {
       await completeOnboarding()
       await refreshSession()
       await queryClient.invalidateQueries({ queryKey: queryKeys.lokacionet(user?.id) })
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gabim')
     } finally {

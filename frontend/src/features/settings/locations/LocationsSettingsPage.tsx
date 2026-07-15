@@ -5,14 +5,14 @@ import { LocationsSettingsPanel } from './LocationsSettingsPanel'
 
 export function LocationsSettingsPage() {
   const { user } = useAuth()
-  if (user?.isLegacy) return <Navigate to="/" replace />
-  if (!isAdmin(user)) return <Navigate to="/" replace />
+  if (user?.isLegacy) return <Navigate to="/app" replace />
+  if (!isAdmin(user)) return <Navigate to="/app" replace />
 
   return (
     <main className="container auth-container">
       <LocationsSettingsPanel />
       <p className="muted" style={{ marginTop: 24 }}>
-        <Link to="/">← Kthehu ne panel</Link>
+        <Link to="/app">← Kthehu ne panel</Link>
       </p>
     </main>
   )

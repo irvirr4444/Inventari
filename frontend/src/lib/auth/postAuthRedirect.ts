@@ -5,7 +5,7 @@ export function getPostAuthPath(user: SessionUser): string {
   if (!user.isLegacy && !(user.tenantConfig?.onboarding_complete ?? false)) {
     return '/onboarding'
   }
-  return '/'
+  return '/app'
 }
 
 export function shouldShowOnboarding(user: SessionUser): boolean {
